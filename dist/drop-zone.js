@@ -5,7 +5,7 @@
 // Calculates candidate parent containers and insertion points
 // during drag operations based on container CSS flow layouts.
 // ─────────────────────────────────────────────────────────────
-import { detectLayout, getFlowAxis } from "./layout.js";
+import { detectLayout, getFlowAxis, parseGridTracks, getGridCellAt, getGridAreaRect } from "./layout.js";
 import { isPointInElement } from "./matrix.js";
 /**
  * Traverses the node tree reverse depth-first to find the deepest
@@ -53,6 +53,43 @@ export function findDropTarget(draggedId, canvasPos, tree, getWrapper) {
     const padRight = parseFloat(cs.paddingRight) || 0;
     const padTop = parseFloat(cs.paddingTop) || 0;
     const padBottom = parseFloat(cs.paddingBottom) || 0;
+    // Grid container handling
+    if (layoutInfo.mode === "grid" || layoutInfo.mode === "inline-grid") {
+        const colTracks = parseGridTracks(layoutInfo.gridTemplateColumns || "", layoutInfo.gap.column);
+        const rowTracks = parseGridTracks(layoutInfo.gridTemplateRows || "", layoutInfo.gap.row);
+        const cx = canvasPos.x - parentRect.x - padLeft;
+        const cy = canvasPos.y - parentRect.y - padTop;
+        const { col, row } = getGridCellAt(cx, cy, colTracks, rowTracks, layoutInfo.gap.column, layoutInfo.gap.row);
+        let colSpan = 1;
+        let rowSpan = 1;
+        const draggedWrapper = getWrapper(draggedId);
+        if (draggedWrapper) {
+            const draggedRoot = draggedWrapper.firstElementChild;
+            if (draggedRoot) {
+                colSpan = getGridSpan(draggedRoot, "column");
+                rowSpan = getGridSpan(draggedRoot, "row");
+            }
+        }
+        const cellRect = getGridAreaRect(parentRect, padLeft, padTop, col, row, colSpan, rowSpan, colTracks, rowTracks);
+        return {
+            parentId,
+            insertionIndex: 0,
+            indicator: {
+                x1: cellRect.x,
+                y1: cellRect.y,
+                x2: cellRect.x + cellRect.width,
+                y2: cellRect.y + cellRect.height,
+                side: "before",
+            },
+            gridPlacement: {
+                colStart: col,
+                rowStart: row,
+                colSpan,
+                rowSpan,
+                rect: cellRect,
+            },
+        };
+    }
     const gap = flowAxis === "y" ? layoutInfo.gap.row : layoutInfo.gap.column;
     // Filter out the dragged node from children to get the target layout state.
     const children = tree.getChildren(parentId).filter(c => c.id !== draggedId);
@@ -165,5 +202,24 @@ export function findDropTarget(draggedId, canvasPos, tree, getWrapper) {
             },
         };
     }
+}
+/** Helper to extract grid span (e.g. 'span 2') from content styles. */
+function getGridSpan(element, dimension) {
+    const cs = getComputedStyle(element);
+    const startVal = cs.getPropertyValue(`grid-${dimension}-start`);
+    const endVal = cs.getPropertyValue(`grid-${dimension}-end`);
+    const val = cs.getPropertyValue(`grid-${dimension}`);
+    // Check for "span N" in any of these styles
+    const spanMatch = (startVal + " " + endVal + " " + val).match(/span\s+(\d+)/i);
+    if (spanMatch && spanMatch[1]) {
+        return parseInt(spanMatch[1], 10);
+    }
+    // Check if start and end are numeric indices
+    const startNum = parseInt(startVal, 10);
+    const endNum = parseInt(endVal, 10);
+    if (!isNaN(startNum) && !isNaN(endNum) && endNum > startNum) {
+        return endNum - startNum;
+    }
+    return 1;
 }
 //# sourceMappingURL=drop-zone.js.map

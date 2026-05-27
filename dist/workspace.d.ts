@@ -90,6 +90,7 @@ export declare class Workspace {
     private lastPointerDownId;
     private editAllowedOnDblClick;
     private activeDropTarget;
+    private pointerDownInsideSelection;
     private spaceDown;
     private isPanning;
     private isDragging;
@@ -108,6 +109,7 @@ export declare class Workspace {
     private dragStartParentId;
     private dragStartIndex;
     private resizeStartRect;
+    private dragStartStyles;
     private disposed;
     private renderRequested;
     private readonly onWheel;

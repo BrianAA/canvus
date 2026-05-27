@@ -1,4 +1,5 @@
 import { NodeTree } from "./tree.js";
+import { Rect } from "./types.js";
 /** Visual description of the insertion line segment in canvas-space. */
 export interface InsertionIndicator {
     /** Starting X coordinate in canvas-space. */
@@ -20,6 +21,14 @@ export interface DropTarget {
     insertionIndex: number;
     /** Visual indicator details for rendering. */
     indicator: InsertionIndicator;
+    /** Grid placement details, present only if the parent is a grid container. */
+    gridPlacement?: {
+        colStart: number;
+        rowStart: number;
+        colSpan: number;
+        rowSpan: number;
+        rect: Rect;
+    };
 }
 /**
  * Traverses the node tree reverse depth-first to find the deepest

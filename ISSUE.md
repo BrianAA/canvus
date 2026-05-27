@@ -1,99 +1,145 @@
-# Project Issues: Milestone 6+ Implementation Tasks
+# Project Issues: Active JavaScript & Dynamic States
 
 ---
 
-## Issue #1: rAF-Throttled Redraw Engine
+## Issue #1: Viewport Preview Mode & Event Passthrough
 
 ### What to build
-Transition the `Workspace` rendering orchestrator from synchronous redraws to a throttled rendering cycle driven by `requestAnimationFrame`. When state modifications occur, the workspace is marked as dirty, and a repaint of the HTML5 canvas `Viewport Surface Layer` is scheduled for the next frame. Multiple sequential updates in a single animation tick must be collapsed into a single rendering call.
+
+Introduce a "Preview Mode" to the Workspace. When Preview Mode is enabled:
+- The Viewport Surface Layer (Canvas) is set to `pointer-events: none` and all selection outlines, grid tracks, badging, and drag-guides are hidden.
+- Mouse/pointer events pass directly through to the underlying Shadow DOM content nodes, letting users naturally hover, click, and interact with normal HTML page behaviors.
+- Expose `workspace.setPreviewMode(enabled: boolean)` and `workspace.isPreviewMode(): boolean`.
+- Add a toggle button in the `demo/index.html` dashboard to test switching modes.
 
 ### Acceptance criteria
-- [x] Visual interactions (pan, zoom, drag-node, resize-node, spacing adjusters, guides) do not trigger synchronous redraws.
-- [x] A flag (e.g. `renderRequested` or `dirty`) is used to schedule a single `requestAnimationFrame` render pass.
-- [x] The demo application operates smoothly at the display's native refresh rate without layout thrashing.
-- [x] Performance logs show decreased CPU overhead during continuous visual dragging/panning.
+
+- [ ] `Workspace` class has a public `setPreviewMode(enabled: boolean)` method.
+- [ ] `Workspace` class has a public `isPreviewMode(): boolean` method.
+- [ ] When Preview Mode is enabled, selection, hover, resize, and spacing adjuster guides are hidden on the canvas.
+- [ ] When Preview Mode is enabled, the overlay canvas has `pointer-events: none` style, allowing click and hover events to go through to Shadow DOM.
+- [ ] The demo workspace contains a "Preview Mode" toggle button that functions as expected.
 
 ### Blocked by
+
 None - can start immediately
 
 ---
 
-## Issue #2: Standardized Operation Payload & Event Generation
+## Issue #2: Shadow DOM Script Evaluator Wrapper
 
 ### What to build
-Define a canonical `Operation` type schema to describe styling, classing, hierarchy structure, and text modifications. Implement an event dispatcher in `WorkspaceCallbacks` that fires on `pointerup` (or visual gesture completion) containing the serialized operation payload with the changes made and the reciprocal `undo` payload.
+
+Implement the safe script execution wrapper outlined in ADR 0005. When adding/updating markup, parse and extract `<script>` tags from the raw HTML and execute/evaluate them scoped to the Shadow DOM boundary:
+- When `ShadowMount.addNode()` or `ShadowMount.updateMarkup()` are called, scan the raw HTML for `<script>` tags.
+- Extract their inline code or fetch their `src` sources, wrap them to prevent bleeding into the global window, and evaluate/execute them within the context of the Shadow Root.
+- Ensure any dynamically created scripts are cleaned up on `removeNode()`.
 
 ### Acceptance criteria
-- [x] Define the `Operation` interface in `src/types.ts` to support mutation types: `update-style`, `update-classes`, `reparent`, `reorder`, and `update-text`.
-- [x] Expose an `onOperationsGenerated` callback on `WorkspaceCallbacks`.
-- [x] Construct and trigger the operation payload (with `undoPayload`) upon completion of visual resize, drag, and spacing adjuster gestures.
-- [x] Verify generated operations print clearly to the console log in the demo.
+
+- [ ] Scripts in `rawMarkup` are parsed, extracted, and executed inside the Shadow DOM container.
+- [ ] Executed scripts are evaluated in a closed/scoped context to minimize global scope leakage.
+- [ ] Dynamic event listeners or elements added by these scripts are cleaned up when the corresponding node is removed.
+- [ ] Verify script execution in the demo with a mock active component (e.g., a simple counter button script).
 
 ### Blocked by
+
 None - can start immediately
 
 ---
 
-## Issue #3: Workspace Operation Replay API (`applyOperation`)
+## Issue #3: Edit Mode State Forcing via CSS Pseudo-Class Utility Classes
 
 ### What to build
-Expose a public API `Workspace.applyOperation(op: Operation)` that programmatically replays layout and structure modifications. It must resolve mutations to the custom element styles, tree structure indices, class lists, and text content inside the `Projection Mutation Layer` (Shadow DOM) and trigger a throttled redraw.
+
+Expose an API allowing designers to style hover/active states (like tooltips or dropdowns) inside Edit Mode without leaving it by injecting custom state utility classes:
+- Expose `workspace.forceNodeState(nodeId, state: 'hover' | 'active' | 'focus', enabled: boolean): void`.
+- When enabled, inject corresponding wrapper classes (e.g. `.canvus-state-hover`) directly onto the node's wrapper.
+- Add controls to toggle these forced states in the selected node styling panel in the demo app.
 
 ### Acceptance criteria
-- [x] Implement `applyOperation` on the `Workspace` class.
-- [x] Replaying a `reparent` or `reorder` operation correctly updates both the `NodeTree` hierarchy and the DOM wrappers in `ShadowMount`.
-- [x] Replaying a `update-style` operation updates inline style values and updates the node dimensions.
-- [x] Verify that capturing an emitted operation's `undo` payload and executing `ws.applyOperation(undoPayload)` successfully rolls back the workspace layout.
+
+- [ ] `Workspace` class exposes `forceNodeState(nodeId, state, enabled)`.
+- [ ] Activating a forced state adds the corresponding utility class (e.g., `.canvus-state-hover`) to the target node's Shadow DOM wrapper.
+- [ ] The CSS within `ShadowMount` handles these forced classes appropriately.
+- [ ] The demo app features controls to easily toggle forced states for the active selection.
 
 ### Blocked by
+
+None - can start immediately
+
+---
+
+## Issue #4: Simulated Interactivity via Synthetic DOM Event Dispatcher
+
+### What to build
+
+Build a mechanism to trigger JS-based dynamic behaviors (like tooltips or dropdowns that require JavaScript execution) while in Edit Mode by dispatching synthetic events directly to elements:
+- Expose `workspace.dispatchInteractionEvent(nodeId, eventName: string): void`.
+- Internally dispatch synthetic events (e.g. `element.dispatchEvent(new MouseEvent(eventName))`) to the target element inside the Shadow DOM wrapper.
+- Test this in the demo by adding a "Simulate Event" section to trigger hover-based tooltips while editing.
+
+### Acceptance criteria
+
+- [ ] `Workspace` class exposes `dispatchInteractionEvent(nodeId, eventName)`.
+- [ ] Calling the API dispatches the correct synthetic event to the element inside the Shadow DOM wrapper.
+- [ ] Verify that a simulated event successfully triggers script-bound listeners in the demo.
+
+### Blocked by
+
 - Blocked by Issue #2
 
 ---
 
-## Issue #4: Native Class Manipulation APIs & Operations
+## Issue #5: HTML Page Parser & Stylesheet Extractor
 
 ### What to build
-Build public class manipulation methods into the SDK Workspace (`addClass`, `removeClass`, `toggleClass`). Modifying node classes must update the DOM wrappers, notify the tree model, trigger a layout remeasurement, and generate an `update-classes` operation.
+
+Build a parser utility that takes a full HTML string (`<html>...</html>`), uses `DOMParser` to parse it, extracts stylesheet `<link>` and `<style>` nodes, and injects them scoped to the workspace's Shadow DOM using the existing `injectCSS()` and `injectCSSLink()` APIs.
 
 ### Acceptance criteria
-- [x] Add `addClass`, `removeClass`, and `toggleClass` to `Workspace`.
-- [x] Modifying node classes updates the underlying Shadow DOM element's class list and triggers a synchronous reflow/remeasure loop.
-- [x] Invoking class mutations generates a clean `update-classes` operation sent via `onOperationsGenerated`.
-- [x] Verify that class modifications are correctly reflected in the extracted HTML string from the `Flat String Bridge`.
+
+- [ ] A document importer module `src/importer.ts` exposes `importHTMLDocument(workspace, htmlString, options)`.
+- [ ] Style elements (`<style>`) and absolute/CDN stylesheet link elements are successfully extracted from `<head>` and injected into the Shadow DOM.
+- [ ] Extracted styles do not leak into the host editor page.
 
 ### Blocked by
-- Blocked by Issue #2
-- Blocked by Issue #3
+
+None - can start immediately
 
 ---
 
-## Issue #5: Plain-Text Inline Editor
+## Issue #6: Recursive Node Tree Builder
 
 ### What to build
-Implement the default plain-text inline text editing experience. Double-clicking a text-bearing node enters editing mode, applying `contenteditable="plaintext-only"` to the first child element of the wrapper. The SDK intercepts key bindings to prevent style pollution and, upon blur, returns to normal state and emits a `update-text` operation.
+
+Recursively traverse the parsed `<body>` tree, generate wrapper schemas (`WebHTMLNode`), detect hierarchy structures, and load them into the workspace via `workspace.addNode()`, so that the page mounts inside the Shadow DOM and is registered in the workspace `NodeTree`.
 
 ### Acceptance criteria
-- [x] Double-clicking a text node toggles editing mode, setting `contenteditable="plaintext-only"` inside the Shadow DOM content root.
-- [x] Intercepts copy-paste and keystroke bindings to block formatting tags (e.g. bold, italic, custom fonts).
-- [x] On blur/focus-loss, editing mode exits, the content is locked, and a `update-text` operation is generated.
-- [x] The clean edited text is successfully outputted by the `Flat String Bridge`.
+
+- [ ] The importer walks the entire DOM body and identifies interactive nodes (either tagging all elements or filtering based on options).
+- [ ] All elements are registered inside the workspace with accurate hierarchy structures and parent IDs.
+- [ ] Bounding rect measurements compile properly for all registered nodes.
 
 ### Blocked by
-- Blocked by Issue #2
-- Blocked by Issue #3
 
----
-
-## Issue #6: Custom Editor Mount Escape Hatch
-
-### What to build
-Expose the `onTextEditRequest` callback in `WorkspaceCallbacks` to bypass the default plain-text editor. If configured, double-clicking a text node passes the DOM node and a commit callback to the host application, allowing developers to mount their own rich-text editors (like TipTap or Quill).
-
-### Acceptance criteria
-- [x] Add `onTextEditRequest` to `WorkspaceCallbacks`.
-- [x] If registered, double-clicking a text node delegates control to the callback, skipping the plain-text editing mode.
-- [x] The custom editor commit callback updates the element's content root in the Shadow DOM and generates a `update-text` operation.
-- [x] Verify editing works correctly when integrated with a mock popup text input in the demo.
-
-### Blocked by
 - Blocked by Issue #5
+
+---
+
+## Issue #7: Base URL & Asset Path Resolver
+
+### What to build
+
+Support resolving relative asset URLs (`src`, `href`, `background-image`) by taking an optional `baseUrl` option and rewriting relative paths to absolute URLs (so images, fonts, and stylesheets render correctly even when the editor runs on a separate localhost origin).
+
+### Acceptance criteria
+
+- [ ] The importer accepts a `baseUrl` string option.
+- [ ] Relative `href` stylesheet links are resolved into absolute URLs before being injected.
+- [ ] Relative `src` attributes on images inside the body are resolved into absolute URLs.
+- [ ] Relative URL paths inside CSS text (like `background-image: url(...)`) are resolved.
+
+### Blocked by
+
+- Blocked by Issue #6

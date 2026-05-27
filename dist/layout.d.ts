@@ -94,13 +94,44 @@ export declare function detectChildSlots(container: HTMLElement): ChildSlot[];
  *
  * The browser resolves templates like `1fr 2fr 100px` into
  * computed pixel values like `200px 400px 100px`. This function
- * parses those resolved values.
+ * parses those resolved values, accounting for the layout gap between tracks.
  *
  * @param templateValue - The resolved CSS grid template string
  *                         (e.g. "200px 400px 100px").
+ * @param gap           - The layout gap in pixels between tracks.
  * @returns Array of grid tracks with start offsets and sizes.
  */
-export declare function parseGridTracks(templateValue: string): GridTrack[];
+export declare function parseGridTracks(templateValue: string, gap?: number): GridTrack[];
+/**
+ * Maps a padding-box relative coordinate (x, y) to the grid cell indices (1-indexed).
+ *
+ * @param x - X coordinate relative to container padding edge.
+ * @param y - Y coordinate relative to container padding edge.
+ * @param columns - Parsed column tracks.
+ * @param rows - Parsed row tracks.
+ * @param colGap - Column gap.
+ * @param rowGap - Row gap.
+ * @returns { col: number, row: number } (1-indexed, matching CSS grid-column-start/grid-row-start).
+ */
+export declare function getGridCellAt(x: number, y: number, columns: ReadonlyArray<GridTrack>, rows: ReadonlyArray<GridTrack>, colGap: number, rowGap: number): {
+    col: number;
+    row: number;
+};
+/**
+ * Computes the canvas-space bounding rect of a grid area span.
+ *
+ * @param containerRect - The parent container's canvas-space bounding box.
+ * @param padLeft - Container padding-left.
+ * @param padTop - Container padding-top.
+ * @param colStart - 1-based column start index.
+ * @param rowStart - 1-based row start index.
+ * @param colSpan - Column span.
+ * @param rowSpan - Row span.
+ * @param columns - Parsed column tracks.
+ * @param rows - Parsed row tracks.
+ * @returns The bounding Rect in canvas-space.
+ */
+export declare function getGridAreaRect(containerRect: Rect, padLeft: number, padTop: number, colStart: number, rowStart: number, colSpan: number, rowSpan: number, columns: ReadonlyArray<GridTrack>, rows: ReadonlyArray<GridTrack>): Rect;
 /**
  * Returns a short, human-readable label for a layout mode.
  * Used for layout badge overlays.

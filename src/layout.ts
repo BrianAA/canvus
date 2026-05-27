@@ -209,13 +209,14 @@ export function detectChildSlots(container: HTMLElement): ChildSlot[] {
  *
  * The browser resolves templates like `1fr 2fr 100px` into
  * computed pixel values like `200px 400px 100px`. This function
- * parses those resolved values.
+ * parses those resolved values, accounting for the layout gap between tracks.
  *
  * @param templateValue - The resolved CSS grid template string
  *                         (e.g. "200px 400px 100px").
+ * @param gap           - The layout gap in pixels between tracks.
  * @returns Array of grid tracks with start offsets and sizes.
  */
-export function parseGridTracks(templateValue: string): GridTrack[] {
+export function parseGridTracks(templateValue: string, gap: number = 0): GridTrack[] {
   const tracks: GridTrack[] = [];
 
   // The resolved value is space-separated pixel values like "200px 400px 100px".
@@ -227,13 +228,108 @@ export function parseGridTracks(templateValue: string): GridTrack[] {
     .filter(p => p.length > 0);
 
   let offset = 0;
-  for (const part of parts) {
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]!;
     const size = parseFloat(part) || 0;
+    if (i > 0) {
+      offset += gap;
+    }
     tracks.push({ start: offset, size });
     offset += size;
   }
 
   return tracks;
+}
+
+/**
+ * Maps a padding-box relative coordinate (x, y) to the grid cell indices (1-indexed).
+ *
+ * @param x - X coordinate relative to container padding edge.
+ * @param y - Y coordinate relative to container padding edge.
+ * @param columns - Parsed column tracks.
+ * @param rows - Parsed row tracks.
+ * @param colGap - Column gap.
+ * @param rowGap - Row gap.
+ * @returns { col: number, row: number } (1-indexed, matching CSS grid-column-start/grid-row-start).
+ */
+export function getGridCellAt(
+  x: number,
+  y: number,
+  columns: ReadonlyArray<GridTrack>,
+  rows: ReadonlyArray<GridTrack>,
+  colGap: number,
+  rowGap: number,
+): { col: number; row: number } {
+  // Find column index (1-indexed)
+  let col = 1;
+  for (let i = 0; i < columns.length; i++) {
+    const c = columns[i]!;
+    const colEnd = c.start + c.size + colGap / 2;
+    if (x <= colEnd) {
+      col = i + 1;
+      break;
+    }
+    col = i + 1;
+  }
+
+  // Find row index (1-indexed)
+  let row = 1;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i]!;
+    const rowEnd = r.start + r.size + rowGap / 2;
+    if (y <= rowEnd) {
+      row = i + 1;
+      break;
+    }
+    row = i + 1;
+  }
+
+  return { col, row };
+}
+
+/**
+ * Computes the canvas-space bounding rect of a grid area span.
+ *
+ * @param containerRect - The parent container's canvas-space bounding box.
+ * @param padLeft - Container padding-left.
+ * @param padTop - Container padding-top.
+ * @param colStart - 1-based column start index.
+ * @param rowStart - 1-based row start index.
+ * @param colSpan - Column span.
+ * @param rowSpan - Row span.
+ * @param columns - Parsed column tracks.
+ * @param rows - Parsed row tracks.
+ * @returns The bounding Rect in canvas-space.
+ */
+export function getGridAreaRect(
+  containerRect: Rect,
+  padLeft: number,
+  padTop: number,
+  colStart: number,
+  rowStart: number,
+  colSpan: number,
+  rowSpan: number,
+  columns: ReadonlyArray<GridTrack>,
+  rows: ReadonlyArray<GridTrack>,
+): Rect {
+  const colIdx = Math.max(1, Math.min(colStart, columns.length)) - 1;
+  const rowIdx = Math.max(1, Math.min(rowStart, rows.length)) - 1;
+
+  const startCol = columns[colIdx] ?? { start: 0, size: 0 };
+  const startRow = rows[rowIdx] ?? { start: 0, size: 0 };
+
+  const endColIdx = Math.max(1, Math.min(colStart + colSpan - 1, columns.length)) - 1;
+  const endRowIdx = Math.max(1, Math.min(rowStart + rowSpan - 1, rows.length)) - 1;
+
+  const endCol = columns[endColIdx] ?? startCol;
+  const endRow = rows[endRowIdx] ?? startRow;
+
+  const x = containerRect.x + padLeft + startCol.start;
+  const y = containerRect.y + padTop + startRow.start;
+  const width = (endCol.start + endCol.size) - startCol.start;
+  const height = (endRow.start + endRow.size) - startRow.start;
+
+  return { x, y, width, height };
 }
 
 /**

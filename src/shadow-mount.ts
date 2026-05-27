@@ -329,6 +329,27 @@ export class ShadowMount {
       insertTarget.appendChild(wrapper);
     }
 
+    // Sync initial grid styles from content root to wrapper after DOM insertion
+    const contentRoot = wrapper.firstElementChild as HTMLElement | null;
+    if (contentRoot) {
+      const cs = getComputedStyle(contentRoot);
+      const gridProps = [
+        "grid-column-start",
+        "grid-column-end",
+        "grid-row-start",
+        "grid-row-end",
+        "grid-area",
+        "grid-column",
+        "grid-row",
+      ];
+      for (const prop of gridProps) {
+        const val = cs.getPropertyValue(prop);
+        if (val && val !== "auto" && val !== "normal" && val !== "none") {
+          wrapper.style.setProperty(prop, val);
+        }
+      }
+    }
+
     // Register tracking.
     const mounted: MountedNode = { wrapper, canvasX: 0, canvasY: 0 };
     this.nodes.set(node.id, mounted);
@@ -644,6 +665,19 @@ export class ShadowMount {
         if (!isNaN(val)) this.setNodeSize(id, null, val);
       }
     }
+
+    // Synchronize grid placement styles with the wrapper
+    if (
+      property.startsWith("grid-") ||
+      property === "grid" ||
+      property === "grid-area"
+    ) {
+      if (value === null || value === "") {
+        mounted.wrapper.style.removeProperty(property);
+      } else {
+        mounted.wrapper.style.setProperty(property, value);
+      }
+    }
   }
 
   /**
@@ -678,6 +712,19 @@ export class ShadowMount {
         } else if (value.endsWith("px")) {
           const val = parseFloat(value);
           if (!isNaN(val)) this.setNodeSize(id, null, val);
+        }
+      }
+
+      // Synchronize grid placement styles with the wrapper
+      if (
+        property.startsWith("grid-") ||
+        property === "grid" ||
+        property === "grid-area"
+      ) {
+        if (value === null || value === "") {
+          mounted.wrapper.style.removeProperty(property);
+        } else {
+          mounted.wrapper.style.setProperty(property, value);
         }
       }
     }

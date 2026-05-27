@@ -201,6 +201,14 @@
             <option value="column">column</option>
           </select>
         </div>
+        <div class="metric-row" id="row-grid-columns" style="margin-bottom: 6px; display: none;">
+          <span class="metric-label">Grid Columns</span>
+          <input type="text" id="style-grid-columns" class="btn" style="width: 140px; padding: 2px 6px; font-size: 11px; background: var(--bg-elevated); color: var(--text-primary); text-align: right;" placeholder="e.g. 1fr 1fr">
+        </div>
+        <div class="metric-row" id="row-grid-rows" style="margin-bottom: 6px; display: none;">
+          <span class="metric-label">Grid Rows</span>
+          <input type="text" id="style-grid-rows" class="btn" style="width: 140px; padding: 2px 6px; font-size: 11px; background: var(--bg-elevated); color: var(--text-primary); text-align: right;" placeholder="e.g. auto">
+        </div>
         <div class="metric-row" id="row-gap" style="margin-bottom: 6px;">
           <span class="metric-label">Gap</span>
           <input type="text" id="style-gap" class="btn" style="width: 100px; padding: 2px 6px; font-size: 11px; background: var(--bg-elevated); color: var(--text-primary); text-align: right;" placeholder="e.g. 10px">
@@ -314,10 +322,14 @@
             if (wrapper) {
               const contentRoot = wrapper.firstElementChild;
               if (contentRoot) {
-                document.getElementById('style-display').value = contentRoot.style.display || '';
+                const displayVal = contentRoot.style.display || '';
+                document.getElementById('style-display').value = displayVal;
                 document.getElementById('style-direction').value = contentRoot.style.flexDirection || '';
                 document.getElementById('style-gap').value = contentRoot.style.gap || '';
                 document.getElementById('style-bg').value = contentRoot.style.background || '';
+                document.getElementById('style-grid-columns').value = contentRoot.style.gridTemplateColumns || '';
+                document.getElementById('style-grid-rows').value = contentRoot.style.gridTemplateRows || '';
+                updateStyleRowVisibility(displayVal);
               }
             }
           } else {
@@ -435,6 +447,38 @@
       nodeCounter++;
     }
 
+    // ── Grid Container with Children (Grid capability demo!) ──
+    ws.addNode({
+      id: 'grid-container',
+      rawMarkup: `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;background:#12121a;border:1px solid #2a2a4a;border-radius:12px;padding:16px;font-family:'Inter',sans-serif"></div>`,
+      currentRect: { x: 440, y: 320, width: 300, height: 0 },
+    });
+    nodeCounter++;
+
+    // Grid children
+    const gridSeeds = [
+      {
+        id: 'grid-child-1',
+        rawMarkup: `<div style="background:linear-gradient(135deg,#ec489922,#ec489908);border:1px solid #ec489944;border-radius:8px;padding:14px 16px;color:#f472b6;font-size:12px;font-weight:600">Grid Item 1</div>`,
+      },
+      {
+        id: 'grid-child-2',
+        rawMarkup: `<div style="background:linear-gradient(135deg,#3b82f622,#3b82f608);border:1px solid #3b82f644;border-radius:8px;padding:14px 16px;color:#60a5fa;font-size:12px;font-weight:600">Grid Item 2</div>`,
+      },
+      {
+        id: 'grid-child-3',
+        rawMarkup: `<div style="background:linear-gradient(135deg,#8b5cf622,#8b5cf608);border:1px solid #8b5cf644;border-radius:8px;padding:14px 16px;color:#a78bfa;font-size:12px;font-weight:600;grid-column:span 2">Grid Item 3 (Span 2)</div>`,
+      },
+    ];
+
+    for (const child of gridSeeds) {
+      ws.addNode(
+        { id: child.id, rawMarkup: child.rawMarkup, currentRect: null },
+        'grid-container',
+      );
+      nodeCounter++;
+    }
+
     // ── Grid sync ───────────────────────────────────
 
     function syncGrid(vp) {
@@ -518,6 +562,8 @@
     const styleDirection = document.getElementById('style-direction');
     const styleGap = document.getElementById('style-gap');
     const styleBg = document.getElementById('style-bg');
+    const styleGridColumns = document.getElementById('style-grid-columns');
+    const styleGridRows = document.getElementById('style-grid-rows');
     const btnToggleClass = document.getElementById('btn-toggle-class');
 
     const updateSelectedStyle = (prop, val) => {
@@ -528,10 +574,36 @@
       }
     };
 
-    styleDisplay.addEventListener('change', (e) => updateSelectedStyle('display', e.target.value));
+    function updateStyleRowVisibility(display) {
+      const rowDirection = document.getElementById('row-direction');
+      const rowGridColumns = document.getElementById('row-grid-columns');
+      const rowGridRows = document.getElementById('row-grid-rows');
+      
+      if (display === 'flex' || display === 'inline-flex') {
+        rowDirection.style.display = 'flex';
+        rowGridColumns.style.display = 'none';
+        rowGridRows.style.display = 'none';
+      } else if (display === 'grid' || display === 'inline-grid') {
+        rowDirection.style.display = 'none';
+        rowGridColumns.style.display = 'flex';
+        rowGridRows.style.display = 'flex';
+      } else {
+        rowDirection.style.display = 'none';
+        rowGridColumns.style.display = 'none';
+        rowGridRows.style.display = 'none';
+      }
+    }
+
+    styleDisplay.addEventListener('change', (e) => {
+      const val = e.target.value;
+      updateSelectedStyle('display', val);
+      updateStyleRowVisibility(val);
+    });
     styleDirection.addEventListener('change', (e) => updateSelectedStyle('flex-direction', e.target.value));
     styleGap.addEventListener('input', (e) => updateSelectedStyle('gap', e.target.value));
     styleBg.addEventListener('input', (e) => updateSelectedStyle('background', e.target.value));
+    styleGridColumns.addEventListener('input', (e) => updateSelectedStyle('grid-template-columns', e.target.value));
+    styleGridRows.addEventListener('input', (e) => updateSelectedStyle('grid-template-rows', e.target.value));
     btnToggleClass.addEventListener('click', () => {
       const selected = Array.from(ws.getSelectedIds());
       if (selected.length === 1) {

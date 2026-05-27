@@ -504,27 +504,68 @@ export class OverlayRenderer {
         }
       }
 
-      // 11. Insertion line preview (M8)
-      const ind = target.indicator;
-      ctx.strokeStyle = style.insertionLineStroke;
-      ctx.lineWidth = style.insertionLineWidth;
-      
-      const x1 = ind.x1 * viewport.scale + viewport.offsetX;
-      const y1 = ind.y1 * viewport.scale + viewport.offsetY;
-      const x2 = ind.x2 * viewport.scale + viewport.offsetX;
-      const y2 = ind.y2 * viewport.scale + viewport.offsetY;
-      
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
+      // 11. Insertion preview (M8) - line or grid cell highlights
+      if (target.gridPlacement) {
+        const gp = target.gridPlacement;
+        // Project to screen space
+        const gsx = gp.rect.x * viewport.scale + viewport.offsetX;
+        const gsy = gp.rect.y * viewport.scale + viewport.offsetY;
+        const gsw = gp.rect.width * viewport.scale;
+        const gsh = gp.rect.height * viewport.scale;
 
-      // Premium terminal dots
-      ctx.fillStyle = style.insertionLineStroke;
-      ctx.beginPath();
-      ctx.arc(x1, y1, 4, 0, Math.PI * 2);
-      ctx.arc(x2, y2, 4, 0, Math.PI * 2);
-      ctx.fill();
+        // Draw translucent cell fill
+        ctx.fillStyle = "rgba(99, 102, 241, 0.18)";
+        ctx.fillRect(gsx, gsy, gsw, gsh);
+
+        // Draw solid drop zone outline
+        ctx.strokeStyle = style.dropZoneStroke;
+        ctx.lineWidth = style.dropZoneWidth;
+        ctx.strokeRect(gsx, gsy, gsw, gsh);
+
+        // Draw Premium Grid Badge Tooltip at top-left of the shaded rect
+        const label = `Grid: Row ${gp.rowStart}, Col ${gp.colStart} (Span ${gp.colSpan}x${gp.rowSpan})`;
+        ctx.font = "600 9px 'JetBrains Mono', monospace";
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        const tm = ctx.measureText(label);
+        const tw = tm.width;
+        const th = 14;
+        const pad = 5;
+        const bx = gsx + gsw / 2 - tw / 2 - pad;
+        const by = gsy - th - 5; // Above the cell highlight
+
+        ctx.fillStyle = "rgba(10, 10, 15, 0.95)";
+        ctx.strokeStyle = style.dropZoneStroke;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, tw + pad * 2, th, 3);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(label, gsx + gsw / 2, by + th / 2);
+      } else {
+        const ind = target.indicator;
+        ctx.strokeStyle = style.insertionLineStroke;
+        ctx.lineWidth = style.insertionLineWidth;
+        
+        const x1 = ind.x1 * viewport.scale + viewport.offsetX;
+        const y1 = ind.y1 * viewport.scale + viewport.offsetY;
+        const x2 = ind.x2 * viewport.scale + viewport.offsetX;
+        const y2 = ind.y2 * viewport.scale + viewport.offsetY;
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Premium terminal dots
+        ctx.fillStyle = style.insertionLineStroke;
+        ctx.beginPath();
+        ctx.arc(x1, y1, 4, 0, Math.PI * 2);
+        ctx.arc(x2, y2, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     // 12. Marquee selection (dashed blue outline + translucent fill)
