@@ -1,0 +1,79 @@
+# Design Philosophy & Goals
+
+Canvus is guided by a set of core design principles that inform every architectural decision. These goals reflect the SDK's ambition to be the foundation layer for production-grade visual editing tools.
+
+## Core Principles
+
+### 1. Zero Runtime Dependencies
+
+The SDK must remain written in **pure vanilla TypeScript**, compiling to a lightweight, framework-agnostic ESM bundle. No React, no Vue, no Angular — just clean TypeScript that works everywhere.
+
+import { Callout } from 'nextra/components'
+
+<Callout type="warning">
+  Do not introduce any UI framework dependencies. Write clean, vanilla, highly optimized TypeScript.
+</Callout>
+
+### 2. Browser-Native Performance
+
+Instead of building a custom layout engine in JavaScript, Canvus delegates all CSS layout calculations to the **browser's native C++ rendering engine**. This means:
+
+- Flexbox, Grid, text wrapping, and margins work exactly as they do in production
+- No JavaScript layout approximations or reimplementations
+- Layout performance scales with browser engine optimizations
+
+### 3. Strict Styling Isolation
+
+SDK chrome (wrappers, overlays, interaction markers) must never leak into the user's content or the host application's styles. The Shadow DOM boundary enforces this.
+
+### 4. Granular Synchronization Over Reconciliation
+
+The SDK avoids virtual DOM reconciliation entirely. Structural changes are made exclusively via **explicit mutation APIs** (`addNode`, `removeNode`, `reparentNode`, `updateMarkup`), keeping the SDK lightweight and predictable.
+
+### 5. Host-Delegated Transaction History
+
+Canvus does not maintain its own undo/redo stack. Instead, it emits discrete **Operation** payloads that the host application pushes onto a global transaction queue. This prevents state desynchronization when the host has its own history (e.g., Monaco editor, CMS metadata changes).
+
+### 6. Pristine HTML Export
+
+The Flat String Bridge guarantees that exported HTML is **completely clean** — no SDK wrapper elements, no metadata attributes, no interaction markers. What the user created is exactly what gets saved.
+
+---
+
+## Product Goals
+
+### Current Milestones (v0.1.x)
+
+| Feature | Status |
+|---------|--------|
+| Twin-Layer Architecture (Shadow DOM + Canvas) | ✅ Complete |
+| Figma-style drill-down selection | ✅ Complete |
+| 8-handle resize with live reflow | ✅ Complete |
+| Drag-and-drop reparenting | ✅ Complete |
+| Operation-driven state synchronization | ✅ Complete |
+| Pluggable rich-text editor escape hatch | ✅ Complete |
+| Native CSS class manipulation | ✅ Complete |
+| rAF-throttled canvas rendering | ✅ Complete |
+| Spacing adjusters (margin/padding) | ✅ Complete |
+| HTML/CSS document importing | ✅ Complete |
+
+### Future Roadmap
+
+- **Multiplayer collaboration** — Real-time operation broadcasting via WebSocket/CRDT
+- **Component library system** — Reusable node templates and presets
+- **Responsive preview modes** — Breakpoint simulation within the canvas
+- **Animation timeline** — Keyframe editing for CSS transitions
+- **Plugin architecture** — Extensible toolbar and panel system
+
+---
+
+## Non-Functional Requirements
+
+These invariants must be maintained across all SDK development:
+
+1. **Zero Runtime Dependencies** — Pure vanilla TypeScript, ESM output only
+2. **Strict Styling Isolation** — SDK wrapper styles remain inside the Shadow Root
+3. **Pristine Flat String Bridge** — Exported HTML stripped of all SDK markers
+4. **Throttled Redraws** — Canvas repaints use `requestAnimationFrame` scheduling
+5. **Coordinate Clarity** — Screen space vs. canvas space conversions must be explicit
+6. **Framework Independence** — No React, Vue, Svelte, or other UI framework dependencies

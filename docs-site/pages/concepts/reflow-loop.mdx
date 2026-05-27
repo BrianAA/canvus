@@ -1,0 +1,75 @@
+# The Synchronous Reflow Loop
+
+The **Synchronous Reflow Loop** is Canvus's core rendering cycle. It keeps interactions lag-free by running a same-thread, frame-synchronous reflow loop driven by pointer interactions.
+
+## The Loop in Action
+
+```
+[Pointer drag movement]
+    │
+    ▼
+1. Style Surgery: Mutate target wrapper `.style.width`/`.style.height`
+    │
+    ▼
+2. Browser Reflow: Browser recalculates block alignments, wrapping
+    │
+    ▼
+3. Observer Read: ResizeObserver fires, measuring updated bounds
+    │
+    ▼
+4. Redraw Pass: Bounds cache updates, overlay canvas redraws
+```
+
+## Detailed Breakdown
+
+### Phase 1: Style Surgery
+
+When the user drags spacing adjusters or resizes a node, the Workspace directly mutates the inline CSS styles on the target wrapper element or content node.
+
+```typescript
+// Example: Resizing a node updates its wrapper width
+wrapper.style.width = `${newWidth}px`
+wrapper.style.height = `${newHeight}px`
+```
+
+### Phase 2: Browser Reflow
+
+The browser immediately recalculates sizes, padding reflows, wrapping, and grid layouts. This is the **native C++ layout engine** doing the heavy lifting — no JavaScript layout calculations needed.
+
+### Phase 3: Observer Callback
+
+A single shared `ResizeObserver` monitors the wrapper components. Once the browser finishes the reflow, the observer fires callback events containing the updated bounding client rectangles.
+
+### Phase 4: Tree Cache Update
+
+The workspace translates these screen-space client bounds into **canvas-space** coordinates (using coordinate matrices from `matrix.ts`) and caches them inside the `NodeTree` model.
+
+### Phase 5: rAF-Throttled Redraw
+
+To prevent layout thrashing and maintain 60/120Hz refresh rates, the workspace marks itself as dirty. In the next `requestAnimationFrame` tick, the canvas overlay:
+
+1. Reads cached rectangles
+2. Evaluates snapping guidelines
+3. Draws all outline decorations
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  Multiple mutations within a single tick are batched into a single redraw. This prevents performance bottlenecks on high-refresh-rate screens (120Hz+).
+</Callout>
+
+## Why Synchronous?
+
+The reflow loop is deliberately **synchronous** (same-thread) rather than using event buses or message queues. This ensures:
+
+- **Zero latency** — Style changes are reflected in the same frame
+- **Correct measurements** — `getBoundingClientRect()` returns post-reflow values
+- **Deterministic behavior** — No race conditions between mutation and measurement
+
+The only async boundary is the final `requestAnimationFrame` throttle on the canvas redraw, which batches visual updates to the display refresh rate.
+
+## Performance Considerations
+
+<Callout type="warning">
+  **Avoid calling `getBoundingClientRect()` repeatedly in hot loops.** Use cached values from `currentRect` inside `WebHTMLNode` whenever possible. The ResizeObserver already updates these caches efficiently.
+</Callout>

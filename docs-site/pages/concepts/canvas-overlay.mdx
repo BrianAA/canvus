@@ -1,0 +1,85 @@
+# Viewport Surface Layer (Canvas Overlay)
+
+The **Viewport Surface Layer** is a transparent HTML5 Canvas overlaid on top of the Shadow DOM. It draws all visual interaction affordances — selection outlines, resize handles, spacing adjusters, alignment guides, and layout badges.
+
+## How It Works
+
+Managed by **`OverlayRenderer`** (`src/renderer.ts`), the Canvas overlay:
+
+- Operates in **canvas-space** (world coordinates), not screen-space
+- Uses the 2D Canvas API for high-performance vector drawing
+- Scales and pans in perfect coordination with the Shadow DOM layer
+- Redraws are throttled via `requestAnimationFrame` to prevent layout thrashing
+
+## What Gets Drawn
+
+### Selection & Hover
+
+| Visual | Description |
+|--------|-------------|
+| **Selection outline** | Blue border around selected nodes |
+| **Hover outline** | Light border when hovering over a node |
+| **Multi-selection** | Outlines around all nodes in the selection set |
+| **Marquee selection** | Dashed rectangle when dragging to select multiple nodes |
+
+### Resize Handles
+
+Eight grab handles (NW, N, NE, E, SE, S, SW, W) appear on the selected node. Dragging these handles resizes the node wrapper, triggering a browser reflow.
+
+### Spacing Adjusters
+
+When a single node is selected, hovering near its edges reveals:
+
+- **Padding adjusters** — Inside the content boundary, shown in green
+- **Margin adjusters** — Outside the content boundary, shown in orange
+
+Dragging these adjusters modifies CSS padding/margin in real-time with live numeric tooltips.
+
+### Layout Indicators
+
+- **Layout badges** — Small labels showing the display mode (flex, grid, block) on container nodes
+- **Grid tracks** — Visualized column and row lines for CSS Grid containers
+- **Alignment guides** — Snap lines that appear when dragging nodes near alignment edges
+
+### Drop Zone Indicators
+
+During drag-and-drop operations:
+
+- **Insertion lines** — Horizontal or vertical guides showing where a node will land
+- **Container highlights** — Visual feedback when hovering over a valid drop target
+
+## Coordinate Space
+
+The Canvas operates in **canvas-space** (world coordinates). All drawing uses coordinates transformed through the viewport matrix:
+
+```typescript
+// The viewport matrix tracks zoom and pan
+interface ViewportMatrix {
+  scale: number    // Zoom level (0.1 to 4.0)
+  offsetX: number  // Horizontal pan offset
+  offsetY: number  // Vertical pan offset
+}
+```
+
+All pointer events are converted from screen-space to canvas-space using the `screenToCanvas()` function before being processed by the interaction engine.
+
+## Customizing the Overlay
+
+The visual appearance of the overlay is configurable via `OverlayStyle`:
+
+```typescript
+const ws = new Workspace(container, {
+  overlayStyle: {
+    selectionColor: '#6366f1',    // Selection border color
+    hoverColor: '#94a3b8',        // Hover border color
+    guideColor: '#ef4444',        // Snap guide line color
+    handleColor: '#ffffff',       // Resize handle fill
+    handleSize: 8,                // Handle square size in pixels
+    badgeBg: '#1e293b',           // Layout badge background
+    badgeColor: '#f8fafc',        // Layout badge text color
+    tooltipBg: '#1e293b',        // Tooltip background
+    tooltipColor: '#f8fafc',     // Tooltip text color
+    font: '12px Inter, sans-serif', // Overlay font
+  },
+})
+```

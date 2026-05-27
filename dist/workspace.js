@@ -134,6 +134,7 @@ export class Workspace {
     dragStartStyles = null;
     disposed = false;
     renderRequested = false;
+    previewMode = false;
     // ── Bound Event Handlers (for cleanup) ──────────
     onWheel;
     onPointerDown;
@@ -411,6 +412,76 @@ export class Workspace {
     resetViewport() {
         this.setViewport(createDefaultViewport());
     }
+    // ── Public API: Preview Mode ────────────────────
+    /** Sets whether the workspace is in Preview Mode (disables editing overlays and events). */
+    setPreviewMode(enabled) {
+        if (this.previewMode === enabled)
+            return;
+        this.previewMode = enabled;
+        this.canvas.style.pointerEvents = "none";
+        // Clear selection, hover, and active interactions.
+        if (enabled) {
+            this.selectedIds.clear();
+            this.hoveredId = null;
+            this.activeDropTarget = null;
+            this.activeAdjusterType = null;
+            this.isDragging = false;
+            this.isResizing = false;
+            this.isMarqueeSelecting = false;
+            this.pointerDownReadyToDrag = false;
+            this.callbacks.onSelectionChange?.(this.selectedIds);
+            this.callbacks.onInteractionChange?.(null);
+        }
+        this.render();
+    }
+    /** Returns whether the workspace is currently in Preview Mode. */
+    isPreviewMode() {
+        return this.previewMode;
+    }
+    // ── Public API: State Forcing ───────────────────
+    /** Forces a pseudo-class state (hover, active, focus) on the specified node element. */
+    forceNodeState(nodeId, state, enabled) {
+        const wrapper = this.mount.getWrapper(nodeId);
+        if (!wrapper)
+            return;
+        const contentRoot = wrapper.firstElementChild;
+        const className = `canvus-state-${state}`;
+        if (enabled) {
+            wrapper.classList.add(className);
+            contentRoot?.classList.add(className);
+        }
+        else {
+            wrapper.classList.remove(className);
+            contentRoot?.classList.remove(className);
+        }
+        this.remeasureSubtree(nodeId);
+        this.render();
+    }
+    // ── Public API: Synthetic Interaction ───────────
+    /** Dispatches a synthetic pointer/mouse event (e.g. mouseenter, mouseleave, click) to a node. */
+    dispatchInteractionEvent(nodeId, eventName) {
+        const wrapper = this.mount.getWrapper(nodeId);
+        if (!wrapper)
+            return;
+        const contentRoot = wrapper.firstElementChild;
+        if (!contentRoot)
+            return;
+        let event;
+        if (eventName === "click" || eventName === "dblclick" || eventName.startsWith("mouse") || eventName.startsWith("pointer")) {
+            event = new MouseEvent(eventName, {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+            });
+        }
+        else {
+            event = new CustomEvent(eventName, {
+                bubbles: true,
+                cancelable: true,
+            });
+        }
+        contentRoot.dispatchEvent(event);
+    }
     // ── Public API: State Accessors ─────────────────
     /** Returns a snapshot of all tracked nodes (depth-first order). */
     getNodes() {
@@ -677,6 +748,16 @@ export class Workspace {
     handlePointerDown(e) {
         const rect = this.getContainerRect();
         const canvasPos = screenToCanvas(e.clientX, e.clientY, this.viewport, rect);
+        if (this.previewMode) {
+            if (this.spaceDown) {
+                this.isPanning = true;
+                this.container.classList.add("canvus-panning");
+                this.container.setPointerCapture(e.pointerId);
+                this.callbacks.onInteractionChange?.("pan");
+                return;
+            }
+            return;
+        }
         this.pointerDownInsideSelection = null;
         // ── Space + pointer = Pan ─────────────────────
         if (this.spaceDown) {
@@ -903,6 +984,15 @@ export class Workspace {
     handlePointerMove(e) {
         const rect = this.getContainerRect();
         const canvasPos = screenToCanvas(e.clientX, e.clientY, this.viewport, rect);
+        if (this.previewMode) {
+            if (this.isPanning) {
+                this.viewport = applyPan(e.movementX, e.movementY, this.viewport);
+                this.mount.applyViewportTransform(this.viewport);
+                this.callbacks.onViewportChange?.(this.viewport);
+                this.render();
+            }
+            return;
+        }
         // ── Spacing Adjusters Dragging ────────────────
         if (this.activeAdjusterType && this.dragStartCanvas) {
             const selId = this.selectedIds.values().next().value;
@@ -1256,6 +1346,13 @@ export class Workspace {
      * extracts the clean HTML and fires `onHTMLCommit`.
      */
     handlePointerUp(e) {
+        if (this.previewMode) {
+            if (this.isPanning) {
+                this.isPanning = false;
+                this.container.classList.remove("canvus-panning");
+            }
+            return;
+        }
         // Identify the node that was being manipulated.
         let commitId = null;
         const operations = [];
@@ -1632,6 +1729,8 @@ export class Workspace {
     }
     /** Double-click text editing handler. */
     handleDblClick(e) {
+        if (this.previewMode)
+            return;
         const targetEl = e.composedPath()[0];
         if (!targetEl)
             return;
@@ -1759,6 +1858,24 @@ export class Workspace {
     }
     /** Pushes a complete frame to the overlay renderer immediately. */
     renderSync() {
+        if (this.previewMode) {
+            this.renderer.render({
+                viewport: this.viewport,
+                nodes: [],
+                selectedIds: new Set(),
+                hoveredId: null,
+                activeAnchor: null,
+                guides: [],
+                layoutBadges: undefined,
+                gridOverlays: undefined,
+                activeDropTarget: null,
+                marqueeRect: null,
+                spacingAdjusters: undefined,
+                draggedNodeId: null,
+                resizedNodeId: null,
+            });
+            return;
+        }
         // Compute layout badges for selected containers.
         const layoutBadges = [];
         const gridOverlays = [];

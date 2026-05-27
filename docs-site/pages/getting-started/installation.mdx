@@ -1,0 +1,86 @@
+# Installation & Setup
+
+## Prerequisites
+
+- **Node.js** 18+ (LTS recommended)
+- **npm** 9+ or any compatible package manager
+
+## Clone the Repository
+
+```bash
+git clone https://github.com/balfaro01/canvus.git
+cd canvus
+npm install
+```
+
+## Build the SDK
+
+Compile the TypeScript source files in `src/` to the ESM distribution bundle in `dist/`:
+
+```bash
+npm run build
+```
+
+This generates:
+- `dist/index.js` — ESM entrypoint module
+- `dist/index.d.ts` — TypeScript type declarations
+- `dist/*.js` — Compiled utility modules
+
+## Project Structure
+
+```
+canvus/
+├── demo/         # Dev Workbench (Interactive local testing site)
+├── dist/         # Compiled SDK ESM build and type declarations
+├── docs/         # Raw developer documentation & ADRs
+├── docs-site/    # This documentation site (Next.js + Nextra)
+├── src/          # SDK Core source code (TypeScript)
+│   ├── index.ts        # Public API barrel exports
+│   ├── types.ts        # Canonical data types & models
+│   ├── matrix.ts       # Coordinate transform math
+│   ├── shadow-mount.ts # Shadow DOM projection layer
+│   ├── tree.ts         # In-memory node hierarchy
+│   ├── layout.ts       # CSS introspection & flow detection
+│   ├── renderer.ts     # Canvas overlay painter
+│   ├── drop-zone.ts    # Drag-and-drop slot calculations
+│   ├── importer.ts     # HTML/CSS document importer
+│   └── workspace.ts    # Central interaction orchestrator
+├── skills/       # Custom AI/Agent skills
+└── package.json  # Scripts, build rules, and dependencies
+```
+
+## Launch the Dev Workbench
+
+The demo workspace is an interactive playground for testing the SDK:
+
+```bash
+npm run demo
+```
+
+Open [http://localhost:3000](http://localhost:3000) to interact with:
+- Multi-direction panning and cursor-anchored zooming
+- Node resizing with flow reflow and alignment snapping
+- Display style hot-swapping (Flexbox, CSS Grid, block layouts)
+- Spacing adjusters for margins and paddings
+- The Flat String Bridge output logs
+
+## Using in Your Project
+
+Import the SDK from the compiled `dist/` output:
+
+```typescript
+import { Workspace } from './dist/index.js'
+
+const container = document.getElementById('editor-container')!
+const ws = new Workspace(container, {
+  onHTMLCommit(id, html) {
+    console.log('Clean HTML:', html)
+  },
+})
+```
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  Canvus is a **zero-dependency** SDK. It ships as pure ESM TypeScript with no runtime framework dependencies. You can integrate it into React, Vue, Svelte, or vanilla JavaScript projects.
+</Callout>

@@ -1,0 +1,35 @@
+# Introduction
+
+Welcome to the **Canvus SDK** documentation. Canvus is a headless, framework-agnostic vanilla TypeScript SDK for building interactive visual layout editing workspaces.
+
+## What Can You Build?
+
+Canvus is designed for developers who need to build:
+
+- **CMS Page Builders** — Visual drag-and-drop editors for content management systems
+- **A/B Testing Editors** — Variant editing tools for experimentation platforms
+- **Visual IDE Tools** — Layout design surfaces for developer tooling
+- **Email Template Builders** — WYSIWYG editors for responsive email layouts
+- **Design-to-Code Tools** — Interactive canvases that bridge design and development
+
+## How It Works
+
+Canvus uses a **Twin-Layer Architecture** that separates content rendering from interaction overlays:
+
+1. **Projection Mutation Layer** — An isolated Shadow DOM renders your HTML/CSS using the browser's native layout engine
+2. **Viewport Surface Layer** — An HTML5 Canvas overlay draws selection highlights, resize handles, spacing adjusters, and alignment guides
+
+This approach gives you the performance of native browser layout (Flexbox, CSS Grid, text wrapping) without the isolation headaches of iframes.
+
+## Next Steps
+
+import { Cards } from 'nextra/components'
+
+<Cards>
+  <Cards.Card title="📦 Installation" href="/getting-started/installation">
+    Get the SDK installed and your project set up
+  </Cards.Card>
+  <Cards.Card title="🚀 Quick Start" href="/getting-started/quickstart">
+    Build your first interactive workspace in minutes
+  </Cards.Card>
+</Cards>

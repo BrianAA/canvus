@@ -1,0 +1,20 @@
+# ADR-0002: Pluggable Inline Text Editing
+
+**Status**: Accepted
+
+## Context
+
+Browser-specific `contenteditable` rich-text commands produce inconsistent HTML across different engines, causing formatting inconsistencies and tag pollution that corrupt carefully structured layout code.
+
+## Decision
+
+We decided to restrict the default inline text editor to **plain-text modifications** (`contenteditable="plaintext-only"`). For rich-text editing (e.g., bold, italic, custom fonts), we expose a pluggable `onTextEditRequest` callback so host applications can bypass the default behavior and mount custom editors (e.g., TipTap or Quill) directly into the workspace.
+
+## Consequences
+
+- Default text editing is **safe and predictable** across all browsers
+- Host applications retain **full control** over rich-text editing behavior
+- The SDK doesn't ship with any rich-text editor dependency
+- Custom editor integration requires the host to manage editor lifecycle
+
+See the [Custom Editor Guide](/guides/custom-editor) for implementation details.

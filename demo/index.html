@@ -163,9 +163,12 @@
   </div>
 
   <div id="panel">
-    <div class="panel-header">
-      <div class="dot"></div>
-      <h2>Canvus — M4 Reflow Loop</h2>
+    <div class="panel-header" style="justify-content: space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="dot"></div>
+        <h2>Canvus SDK</h2>
+      </div>
+      <button class="btn" id="btn-preview-mode" style="padding: 4px 10px; font-size: 11px; background: var(--bg-elevated); border-color: var(--accent);">Preview Mode</button>
     </div>
 
     <div class="panel-content">
@@ -221,11 +224,35 @@
           <span class="metric-label">Class Swapping</span>
           <button id="btn-toggle-class" class="btn" style="padding: 2px 8px; font-size: 11px; background: var(--accent); border-color: var(--accent); color: white;">Toggle Outline Class</button>
         </div>
+        <div class="metric-row" style="margin-top: 10px; border-top: 1px solid var(--border-subtle); padding-top: 8px;">
+          <span class="metric-label" style="font-weight:600;">Force States</span>
+          <div style="display:flex;gap:8px;">
+            <label style="font-size:10px;display:flex;align-items:center;gap:2px;"><input type="checkbox" id="force-hover"> Hover</label>
+            <label style="font-size:10px;display:flex;align-items:center;gap:2px;"><input type="checkbox" id="force-active"> Active</label>
+            <label style="font-size:10px;display:flex;align-items:center;gap:2px;"><input type="checkbox" id="force-focus"> Focus</label>
+          </div>
+        </div>
+        <div class="metric-row" style="margin-top: 6px;">
+          <span class="metric-label" style="font-weight:600;">Simulate Event</span>
+          <div style="display:flex;gap:4px;">
+            <button id="btn-sim-hover" class="btn" style="padding: 2px 6px; font-size: 10px;">Hover</button>
+            <button id="btn-sim-click" class="btn" style="padding: 2px 6px; font-size: 10px;">Click</button>
+          </div>
+        </div>
       </div>
 
       <div class="section">
         <div class="section-title">Mounted Nodes</div>
         <div id="node-list"></div>
+      </div>
+
+      <div class="section" style="border-bottom: 1px solid var(--border-subtle);">
+        <div class="section-title">Import HTML Document</div>
+        <textarea id="import-html-text" class="commit-log" style="width: 100%; height: 80px; margin-top: 4px; font-size: 11px; background: var(--bg-primary);" placeholder="Paste raw <html> document or fragment here..."></textarea>
+        <div style="display: flex; gap: 6px; margin-top: 6px;">
+          <input type="text" id="import-base-url" class="btn" style="flex: 1; padding: 4px 8px; font-size: 11px; text-align: left;" placeholder="Base URL (e.g. https://site.com/)">
+          <button id="btn-import-html" class="btn primary" style="padding: 4px 12px; font-size: 11px;">Import</button>
+        </div>
       </div>
 
       <div class="section">
@@ -266,7 +293,7 @@
     // is just callbacks + addNode().
     // ─────────────────────────────────────────────────
 
-    import { Workspace } from '../dist/workspace.js';
+    import { Workspace, importHTMLDocument } from '../dist/index.js';
 
     const grid = document.getElementById('grid-overlay');
     let nodeCounter = 0;
@@ -330,6 +357,11 @@
                 document.getElementById('style-grid-columns').value = contentRoot.style.gridTemplateColumns || '';
                 document.getElementById('style-grid-rows').value = contentRoot.style.gridTemplateRows || '';
                 updateStyleRowVisibility(displayVal);
+                
+                // Sync forced state checkboxes
+                document.getElementById('force-hover').checked = wrapper.classList.contains('canvus-state-hover');
+                document.getElementById('force-active').checked = wrapper.classList.contains('canvus-state-active');
+                document.getElementById('force-focus').checked = wrapper.classList.contains('canvus-state-focus');
               }
             }
           } else {
@@ -437,6 +469,22 @@
         id: 'flex-child-3',
         rawMarkup: `<div style="background:linear-gradient(135deg,#f59e0b22,#f59e0b08);border:1px solid #f59e0b44;border-radius:8px;padding:14px 16px;color:#f59e0b;font-size:12px;font-weight:600">✓ Child Node 3 <span style="opacity:0.6;font-weight:400">— reorderable</span></div>`,
       },
+      {
+        id: 'flex-child-js',
+        rawMarkup: `<div style="background:#1e1e2f;border:1px solid #4f46e5;border-radius:8px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;color:#e8e8f0;font-size:12px;font-weight:600">
+          <span>Active Component (JS):</span>
+          <button id="counter-btn" style="background:#4f46e5;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:600;font-family:'Inter',sans-serif;">Clicks: 0</button>
+          <script>
+            const btn = document.querySelector("#counter-btn");
+            let count = 0;
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              count++;
+              btn.textContent = "Clicks: " + count;
+            });
+          <\/script>
+        </div>`,
+      }
     ];
 
     for (const child of childSeeds) {
@@ -609,6 +657,64 @@
       if (selected.length === 1) {
         ws.toggleClass(selected[0], 'demo-highlight');
         updateNodeList();
+      }
+    });
+
+    // ── Preview Mode Toggle Event ──
+    const btnPreviewMode = document.getElementById('btn-preview-mode');
+    btnPreviewMode.addEventListener('click', () => {
+      const active = !ws.isPreviewMode();
+      ws.setPreviewMode(active);
+      btnPreviewMode.textContent = active ? "Edit Mode" : "Preview Mode";
+      btnPreviewMode.style.background = active ? "var(--accent)" : "var(--bg-elevated)";
+      toast(active ? "Preview Mode Enabled (Interactions active!)" : "Edit Mode Enabled (Visual anchors active)");
+    });
+
+    // ── Forced State Checkbox Events ──
+    document.getElementById('force-hover').addEventListener('change', (e) => {
+      const selected = Array.from(ws.getSelectedIds());
+      if (selected.length === 1) ws.forceNodeState(selected[0], 'hover', e.target.checked);
+    });
+    document.getElementById('force-active').addEventListener('change', (e) => {
+      const selected = Array.from(ws.getSelectedIds());
+      if (selected.length === 1) ws.forceNodeState(selected[0], 'active', e.target.checked);
+    });
+    document.getElementById('force-focus').addEventListener('change', (e) => {
+      const selected = Array.from(ws.getSelectedIds());
+      if (selected.length === 1) ws.forceNodeState(selected[0], 'focus', e.target.checked);
+    });
+
+    // ── Event Simulation Buttons ──
+    document.getElementById('btn-sim-hover').addEventListener('click', () => {
+      const selected = Array.from(ws.getSelectedIds());
+      if (selected.length === 1) {
+        ws.dispatchInteractionEvent(selected[0], 'mouseenter');
+        toast(`Dispatched 'mouseenter' to ${selected[0]}`);
+      }
+    });
+    document.getElementById('btn-sim-click').addEventListener('click', () => {
+      const selected = Array.from(ws.getSelectedIds());
+      if (selected.length === 1) {
+        ws.dispatchInteractionEvent(selected[0], 'click');
+        toast(`Dispatched 'click' to ${selected[0]}`);
+      }
+    });
+
+    // ── HTML Document Importer ──
+    document.getElementById('btn-import-html').addEventListener('click', () => {
+      const text = document.getElementById('import-html-text').value.trim();
+      const baseUrl = document.getElementById('import-base-url').value.trim();
+      if (!text) {
+        toast("Please paste some HTML text first!");
+        return;
+      }
+      try {
+        importHTMLDocument(ws, text, { baseUrl: baseUrl || undefined });
+        updateNodeList();
+        toast("HTML Document Imported successfully!");
+      } catch (err) {
+        console.error(err);
+        toast("Failed to import HTML: " + err.message);
       }
     });
 

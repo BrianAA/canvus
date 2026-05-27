@@ -1,0 +1,116 @@
+# Viewport Math (`matrix.ts`)
+
+Stateless math functions for coordinate transformations, zoom anchoring, hit testing, and viewport interpolation.
+
+## Coordinate Conversion
+
+### `screenToCanvas(pt, vp)`
+
+Converts viewport screen offset pixels to canvas (world) coordinates.
+
+```typescript
+function screenToCanvas(pt: Vec2, vp: ViewportMatrix): Vec2
+```
+
+### `canvasToScreen(pt, vp)`
+
+Converts canvas coordinates to screen offset pixels.
+
+```typescript
+function canvasToScreen(pt: Vec2, vp: ViewportMatrix): Vec2
+```
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  **Coordinate clarity is critical.** Screen space uses `clientX`/`clientY` from DOM events. Canvas space uses scaled/translated world units. Always use these conversion functions — never mix coordinate spaces.
+</Callout>
+
+---
+
+## Zoom & Pan
+
+### `calculateZoomAnchor(pivot, oldScale, newScale, vp)`
+
+Computes translation parameters to scale around a cursor point (preventing cursor drift during zoom).
+
+```typescript
+function calculateZoomAnchor(
+  pivot: Vec2,
+  oldScale: number,
+  newScale: number,
+  vp: ViewportMatrix
+): ViewportMatrix
+```
+
+### `applyWheelZoom(e, vp, bounds)`
+
+Applies zoom modifications from a wheel event.
+
+```typescript
+function applyWheelZoom(e: WheelEvent, vp: ViewportMatrix, bounds: DOMRect): ViewportMatrix
+```
+
+### `applyPan(e, vp, prev)`
+
+Accumulates pan offsets from a pointer event.
+
+```typescript
+function applyPan(e: PointerEvent, vp: ViewportMatrix, prev: Vec2): ViewportMatrix
+```
+
+### `clampScale(scale)`
+
+Restricts zoom factor to bounds (`ZOOM_MIN` to `ZOOM_MAX`).
+
+```typescript
+function clampScale(scale: number): number
+```
+
+---
+
+## Hit Testing
+
+### `isPointInElement(pt, rect)`
+
+Collision test: returns `true` if the point is inside the rectangle.
+
+```typescript
+function isPointInElement(pt: Vec2, rect: Rect): boolean
+```
+
+### `hitTestElements(pt, nodes)`
+
+Returns the ID of the topmost element covering the pointer position, or `null`.
+
+```typescript
+function hitTestElements(pt: Vec2, nodes: ReadonlyArray<ResolvedNode>): string | null
+```
+
+### `getAnchorPositions(rect)`
+
+Gets the coordinate positions for all eight resize handle anchors.
+
+```typescript
+function getAnchorPositions(rect: Rect): Record<ResizeAnchor, Vec2>
+```
+
+---
+
+## Interpolation
+
+### `lerp(start, end, amt)`
+
+Standard linear interpolation helper.
+
+```typescript
+function lerp(start: number, end: number, amt: number): number
+```
+
+### `lerpViewport(start, end, amt)`
+
+Smooth viewport transition interpolator for animated pans/zooms.
+
+```typescript
+function lerpViewport(start: ViewportMatrix, end: ViewportMatrix, amt: number): ViewportMatrix
+```

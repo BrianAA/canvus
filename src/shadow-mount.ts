@@ -244,6 +244,9 @@ export class ShadowMount {
     // ── Mount to Shadow Tree ────────────────────────────
     this.shadow.appendChild(wrapper);
 
+    // Execute scripts inside wrapper
+    this.executeScripts(wrapper, node.id);
+
     // ── Register Tracking ───────────────────────────────
     const mounted: MountedNode = { wrapper, canvasX: cx, canvasY: cy };
     this.nodes.set(node.id, mounted);
@@ -367,6 +370,9 @@ export class ShadowMount {
     mounted.canvasX = rect.x;
     mounted.canvasY = rect.y;
 
+    // Execute scripts inside wrapper
+    this.executeScripts(wrapper, node.id);
+
     return rect;
   }
 
@@ -382,6 +388,12 @@ export class ShadowMount {
   removeNode(id: string): boolean {
     const mounted = this.nodes.get(id);
     if (!mounted) return false;
+
+    // Clean up dynamic scripts appended for this node
+    const scriptElements = this.shadow.querySelectorAll(`script[data-canvus-script-id^="${id}:"]`);
+    for (const el of Array.from(scriptElements)) {
+      el.remove();
+    }
 
     this.resizeObserver.unobserve(mounted.wrapper);
     this.elementToId.delete(mounted.wrapper);
@@ -470,6 +482,10 @@ export class ShadowMount {
     // a redundant callback before we've finished measuring.
     this.suppressObserver = true;
     mounted.wrapper.innerHTML = markup;
+
+    // Execute scripts inside wrapper
+    this.executeScripts(mounted.wrapper, id);
+
     this.suppressObserver = false;
 
     // Sync layout read.
@@ -797,6 +813,13 @@ export class ShadowMount {
     // Clone the content element to avoid modifying the active DOM.
     const clone = contentRoot.cloneNode(true) as HTMLElement;
 
+    // Clean up forced state classes if present
+    clone.classList.remove("canvus-state-hover", "canvus-state-active", "canvus-state-focus");
+    const descendantsWithStates = clone.querySelectorAll(".canvus-state-hover, .canvus-state-active, .canvus-state-focus");
+    for (const el of descendantsWithStates) {
+      el.classList.remove("canvus-state-hover", "canvus-state-active", "canvus-state-focus");
+    }
+
     // Find all child wrappers in the cloned tree.
     const childWrappers = clone.querySelectorAll(".canvus-node-wrapper");
     
@@ -862,7 +885,7 @@ export class ShadowMount {
   injectStylesheet(css: string): HTMLStyleElement {
     this.assertNotDisposed();
     const el = document.createElement("style");
-    el.textContent = css;
+    el.textContent = rewriteCSS(css);
     this.shadow.appendChild(el);
     return el;
   }
@@ -945,6 +968,80 @@ export class ShadowMount {
     }
   }
 
+  /** Extracts and executes scripts inside the mounted node. */
+  private executeScripts(container: HTMLElement, nodeId: string): void {
+    const scripts = container.querySelectorAll("script");
+    const shadowRoot = this.shadow;
+
+    // Create the proxied document and window objects for inline script scoping
+    const documentProxy = new Proxy(document, {
+      get(target, prop, receiver) {
+        if (
+          prop === "querySelector" ||
+          prop === "querySelectorAll" ||
+          prop === "getElementById" ||
+          prop === "getElementsByClassName" ||
+          prop === "getElementsByTagName"
+        ) {
+          const shadowMethod = shadowRoot[prop as keyof ShadowRoot];
+          if (typeof shadowMethod === "function") {
+            return (shadowMethod as Function).bind(shadowRoot);
+          }
+        }
+        if (prop === "body") {
+          return shadowRoot.firstElementChild || shadowRoot;
+        }
+        const val = Reflect.get(target, prop, receiver);
+        if (typeof val === "function") {
+          return val.bind(target);
+        }
+        return val;
+      }
+    });
+
+    const windowProxy = new Proxy(window, {
+      get(target, prop, receiver) {
+        if (prop === "document") {
+          return documentProxy;
+        }
+        const val = Reflect.get(target, prop, receiver);
+        if (typeof val === "function") {
+          return val.bind(target);
+        }
+        return val;
+      }
+    });
+
+    for (const script of Array.from(scripts)) {
+      const src = script.getAttribute("src");
+      if (src) {
+        // External script
+        const scriptKey = `${nodeId}:${src}`;
+        // Prevent loading duplicates of the same script for the same node
+        if (!this.shadow.querySelector(`script[data-canvus-script-id="${scriptKey}"]`)) {
+          const newScript = document.createElement("script");
+          for (const attr of Array.from(script.attributes)) {
+            newScript.setAttribute(attr.name, attr.value);
+          }
+          newScript.setAttribute("data-canvus-script-id", scriptKey);
+          this.shadow.appendChild(newScript);
+        }
+      } else {
+        // Inline script
+        try {
+          const code = script.textContent || "";
+          const fn = new Function("document", "window", code);
+          fn.call(container.firstElementChild || container, documentProxy, windowProxy);
+        } catch (err) {
+          console.error(`[ShadowMount] Error executing inline script in node "${nodeId}":`, err);
+        }
+      }
+
+      // Remove the original script element so it doesn't clutter user HTML
+      script.remove();
+    }
+  }
+
   /** Throws if `dispose()` has been called. */
   private assertNotDisposed(): void {
     if (this.disposed) {
@@ -954,4 +1051,77 @@ export class ShadowMount {
       );
     }
   }
+}
+
+// ── CSS Selector Rewriting for Forced States ───────────────
+
+function rewriteSelectorList(selectorListStr: string): string {
+  const selectors = selectorListStr.split(",");
+  const result: string[] = [];
+  for (let sel of selectors) {
+    sel = sel.trim();
+    if (!sel) continue;
+    result.push(sel);
+
+    let hasPseudo = false;
+    let rewritten = sel;
+
+    if (rewritten.includes(":hover")) {
+      rewritten = rewritten.replace(/:hover/g, ".canvus-state-hover");
+      hasPseudo = true;
+    }
+    if (rewritten.includes(":active")) {
+      rewritten = rewritten.replace(/:active/g, ".canvus-state-active");
+      hasPseudo = true;
+    }
+    if (rewritten.includes(":focus")) {
+      rewritten = rewritten.replace(/:focus/g, ".canvus-state-focus");
+      hasPseudo = true;
+    }
+
+    if (hasPseudo) {
+      result.push(rewritten);
+    }
+  }
+  return result.join(", ");
+}
+
+/**
+ * Rewrites a CSS stylesheet string, duplicating selectors with pseudo-classes
+ * (:hover, :active, :focus) to also match their equivalent utility classes
+ * (.canvus-state-hover, .canvus-state-active, .canvus-state-focus).
+ */
+export function rewriteCSS(css: string): string {
+  let output = "";
+  let buffer = "";
+  const stack: string[] = [];
+
+  for (let i = 0; i < css.length; i++) {
+    const char = css[i];
+    if (char === "{") {
+      const selector = buffer.trim();
+      buffer = "";
+
+      if (selector.startsWith("@media") || selector.startsWith("@support") || selector.startsWith("@container")) {
+        stack.push("query");
+        output += selector + " {";
+      } else if (selector.startsWith("@keyframes")) {
+        stack.push("keyframes");
+        output += selector + " {";
+      } else {
+        stack.push("rule");
+        const isInsideKeyframes = stack.includes("keyframes");
+        const rewritten = isInsideKeyframes ? selector : rewriteSelectorList(selector);
+        output += rewritten + " {";
+      }
+    } else if (char === "}") {
+      output += buffer + "}";
+      buffer = "";
+      stack.pop();
+    } else {
+      buffer += char;
+    }
+  }
+  output += buffer;
+  return output;
 }

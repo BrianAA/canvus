@@ -1,0 +1,78 @@
+# Projection Mutation Layer (Shadow DOM)
+
+The **Projection Mutation Layer** is the isolated Shadow DOM where user HTML is rendered. It leverages the browser's native layout engine for high-performance text wrapping, Flexbox, CSS Grid, and all CSS layout calculations.
+
+## How It Works
+
+Managed by **`ShadowMount`** (`src/shadow-mount.ts`), the Projection Mutation Layer:
+
+1. Creates an **open Shadow Root** (`mode: 'open'`) on the container element
+2. Injects a **reset stylesheet** (`SHADOW_RESET_CSS`) to isolate styles
+3. Wraps each content node in a **light wrapper** (`.canvus-node-wrapper`)
+4. Monitors layout changes via a shared **`ResizeObserver`**
+
+```
+Host Application DOM
+└── #canvas-container
+    ├── #shadow-host
+    │   └── ShadowRoot (open)
+    │       ├── <style> SHADOW_RESET_CSS </style>
+    │       ├── <style> User CSS (Tailwind, custom) </style>
+    │       ├── .canvus-node-wrapper#node-1
+    │       │   └── <div class="card">User content</div>
+    │       └── .canvus-node-wrapper#node-2
+    │           └── <nav>More content</nav>
+    └── <canvas> (Viewport Surface Layer)
+```
+
+## Style Isolation
+
+The Shadow DOM boundary ensures that:
+
+- **Host styles don't leak in** — Your CMS dashboard, admin panel, or editor shell styles won't affect the user's HTML preview
+- **SDK styles don't leak out** — Wrapper classes (`.canvus-node-wrapper`, `.canvus-flow-child`) stay inside the Shadow Root
+- **User styles are scoped** — Custom CSS injected via `injectCSS()` is mounted as scoped `<style>` blocks
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  JavaScript execution inside the Shadow DOM is **disabled by default**. The SDK uses standard `innerHTML` behavior which strips `<script>` tags. See [ADR-0005](/architecture/adr/0005-stylesheets) for the rationale.
+</Callout>
+
+## Scoped Stylesheets
+
+To apply custom styling (e.g., Tailwind CSS, brand fonts) to the content inside the Shadow DOM:
+
+```typescript
+const shadowMount = ws.getShadowMount()
+
+// Inject CSS that's scoped to the Shadow Root
+shadowMount.injectCSS(`
+  .card { padding: 24px; border-radius: 12px; }
+  .btn { background: #6366f1; color: white; }
+`)
+```
+
+These styles are mounted as `<style>` blocks inside the Shadow Root, never polluting the host application.
+
+## Node Wrappers
+
+Each content node is wrapped in a positioning container:
+
+- **Root-level nodes**: Wrapped in `.canvus-node-wrapper` with `position: absolute` for free-form placement
+- **Child nodes**: Wrapped in `.canvus-flow-child` to participate in the parent's CSS layout flow (flex, grid, block)
+
+These wrappers are **invisible to the consumer** — the Flat String Bridge strips them when exporting HTML.
+
+## ResizeObserver Integration
+
+A single shared `ResizeObserver` monitors all wrapper elements. When the browser recalculates layout (e.g., after a style change or resize), the observer fires and the workspace:
+
+1. Reads the new bounding rectangles
+2. Converts them from screen-space to canvas-space
+3. Updates the cached bounds in the `NodeTree`
+4. Schedules a canvas overlay redraw
+
+<Callout type="warning">
+  The `suppressObserver` flag in `ShadowMount` prevents feedback loops during programmatic DOM manipulations. Always use this flag when batch-updating node styles or positions.
+</Callout>

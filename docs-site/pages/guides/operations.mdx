@@ -1,0 +1,168 @@
+# Operations & Undo/Redo
+
+Canvus delegates transaction history (Undo/Redo) to the host application. Instead of managing a private internal history stack (which would desynchronize with host state like page metadata, code views, or other workspace widgets), the SDK emits discrete **Operation** payloads when a visual gesture completes.
+
+Host applications listen for these events, push them onto a global transaction stack, and apply them back to the workspace using the `applyOperation` replay API.
+
+---
+
+## The Operation Contract
+
+Every operation emitted or replayed adheres to the `Operation` interface:
+
+```typescript
+interface Operation {
+  /** The action type class name */
+  type: "update-style" | "update-classes" | "reparent" | "reorder" | "update-text"
+  /** Unique selector ID of the target content node */
+  nodeId: string
+  /** Specific delta payload for applying this change */
+  payload: any
+  /** Reciprocal delta payload to undo this change */
+  undoPayload: any
+}
+```
+
+---
+
+## Operation Schemas
+
+### Style Update (`update-style`)
+
+Emitted when dragging a resize anchor or mutating padding/margin spacing adjusters.
+
+```json
+{
+  "type": "update-style",
+  "nodeId": "card-hero",
+  "payload": {
+    "padding-top": "40px",
+    "padding-bottom": "40px"
+  },
+  "undoPayload": {
+    "padding-top": "28px",
+    "padding-bottom": "28px"
+  }
+}
+```
+
+### Class Swap (`update-classes`)
+
+Emitted when calling `addClass`, `removeClass`, or `toggleClass`.
+
+```json
+{
+  "type": "update-classes",
+  "nodeId": "card-hero",
+  "payload": {
+    "add": ["demo-highlight"],
+    "remove": []
+  },
+  "undoPayload": {
+    "add": [],
+    "remove": ["demo-highlight"]
+  }
+}
+```
+
+### Tree Reparent (`reparent`)
+
+Emitted when a node is dragged into a different parent container.
+
+```json
+{
+  "type": "reparent",
+  "nodeId": "flex-child-1",
+  "payload": {
+    "newParentId": "flex-container",
+    "index": 0
+  },
+  "undoPayload": {
+    "newParentId": null,
+    "index": 2
+  }
+}
+```
+
+### Tree Reorder (`reorder`)
+
+Emitted when dragging changes a node's index among its siblings.
+
+```json
+{
+  "type": "reorder",
+  "nodeId": "flex-child-2",
+  "payload": { "index": 2 },
+  "undoPayload": { "index": 1 }
+}
+```
+
+### Text Update (`update-text`)
+
+Emitted when editing text content inline and blurring.
+
+```json
+{
+  "type": "update-text",
+  "nodeId": "card-hero",
+  "payload": {
+    "path": [0],
+    "html": "Canvus SDK v1.2"
+  },
+  "undoPayload": {
+    "path": [0],
+    "html": "Canvus SDK v1.1"
+  }
+}
+```
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  The `path` array tracks DOM child indices down from the node's content root to identify the exact sub-element edited.
+</Callout>
+
+---
+
+## Host Integration
+
+### 1. Listen for Visual Changes
+
+```typescript
+const historyStack: Operation[][] = []
+
+const ws = new Workspace(container, {
+  onOperationsGenerated(ops) {
+    // Push the batch of operations onto the host undo queue
+    historyStack.push(ops)
+    updateUndoButtonUI()
+  },
+})
+```
+
+### 2. Execute Undo
+
+When the user triggers Undo (e.g., Cmd/Ctrl + Z), pop the operations and apply their `undoPayload`:
+
+```typescript
+function performUndo() {
+  if (historyStack.length === 0) return
+  const ops = historyStack.pop()
+
+  // Replay in reverse sequence to preserve dependencies
+  for (let i = ops.length - 1; i >= 0; i--) {
+    const op = ops[i]
+
+    ws.applyOperation({
+      type: op.type,
+      nodeId: op.nodeId,
+      payload: op.undoPayload,       // Apply the undo payload
+      undoPayload: op.payload,       // Swap the reciprocal payload
+    })
+  }
+}
+```
+
+<Callout type="info">
+  Applying operations triggers a synchronous reflow, geometry measurement updates, and overlay redraws automatically.
+</Callout>

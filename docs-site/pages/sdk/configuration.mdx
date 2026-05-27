@@ -1,0 +1,141 @@
+# Configuration & Callbacks
+
+## WorkspaceConfig
+
+Options passed to the `Workspace` constructor to customize interaction tolerances and visual appearance.
+
+```typescript
+const ws = new Workspace(container, callbacks, {
+  overlayStyle: { ... },
+  snapThreshold: 5,
+  minResizeSize: 40,
+  enableSnapGuides: true,
+})
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `overlayStyle` | `Partial<OverlayStyle>` | See below | Overrides default canvas overlay colors, border widths, and fonts |
+| `snapThreshold` | `number` | `5` | Alignment guidelines snapping distance in canvas-space pixels |
+| `minResizeSize` | `number` | `40` | Minimum width or height allowed when resizing a node wrapper |
+| `enableSnapGuides` | `boolean` | `true` | Enables drawing snapping alignment lines during drag gestures |
+
+### OverlayStyle
+
+```typescript
+interface OverlayStyle {
+  selectionColor: string    // Selection border color (default: '#3b82f6')
+  hoverColor: string        // Hover border color (default: '#94a3b8')
+  guideColor: string        // Snap guide line color (default: '#ef4444')
+  handleColor: string       // Resize handle fill (default: '#ffffff')
+  handleSize: number        // Handle square size in pixels (default: 8)
+  badgeBg: string           // Layout badge background (default: '#1e293b')
+  badgeColor: string        // Layout badge text color (default: '#f8fafc')
+  tooltipBg: string         // Tooltip background (default: '#1e293b')
+  tooltipColor: string      // Tooltip text color (default: '#f8fafc')
+  font: string              // Overlay font (default: '12px Inter, sans-serif')
+}
+```
+
+---
+
+## WorkspaceCallbacks
+
+Hook callbacks triggered on workspace events. All callbacks are optional.
+
+```typescript
+const ws = new Workspace(container, {
+  onHTMLCommit(id, html) { /* ... */ },
+  onNodeRectChange(id, rect) { /* ... */ },
+  onViewportChange(vp) { /* ... */ },
+  onSelectionChange(selectedIds) { /* ... */ },
+  onBreadcrumbChange(path) { /* ... */ },
+  onInteractionChange(mode) { /* ... */ },
+  onOperationsGenerated(ops) { /* ... */ },
+  onTextEditRequest(nodeId, element, commit) { /* ... */ },
+})
+```
+
+### Callback Reference
+
+#### `onHTMLCommit`
+
+```typescript
+onHTMLCommit?: (id: string, html: string) => void
+```
+
+**Flat String Bridge**. Emits clean HTML string fragments (with wrappers stripped) after visual adjustments complete.
+
+---
+
+#### `onNodeRectChange`
+
+```typescript
+onNodeRectChange?: (id: string, rect: Rect) => void
+```
+
+Fired when a node's bounding rect changes due to reflow or drag.
+
+---
+
+#### `onViewportChange`
+
+```typescript
+onViewportChange?: (vp: Readonly<ViewportMatrix>) => void
+```
+
+Fired when the workspace zoom level or pan offset shifts.
+
+---
+
+#### `onSelectionChange`
+
+```typescript
+onSelectionChange?: (selectedIds: ReadonlySet<string>) => void
+```
+
+Fired when the active selection is updated.
+
+---
+
+#### `onBreadcrumbChange`
+
+```typescript
+onBreadcrumbChange?: (path: string[]) => void
+```
+
+Fired when selection depth breadcrumbs are updated (drill-down navigation).
+
+---
+
+#### `onInteractionChange`
+
+```typescript
+onInteractionChange?: (mode: string | null) => void
+```
+
+Fired when the active drag state switches (e.g., `"pan"`, `"drag-node"`, `"resize-node"`, `null`).
+
+---
+
+#### `onOperationsGenerated`
+
+```typescript
+onOperationsGenerated?: (operations: Operation[]) => void
+```
+
+Fired when a visual modification generates undoable history steps. See the [Operations Guide](/guides/operations) for integration patterns.
+
+---
+
+#### `onTextEditRequest`
+
+```typescript
+onTextEditRequest?: (
+  nodeId: string,
+  element: HTMLElement,
+  commit: (newHTML: string) => void
+) => void
+```
+
+Double-click escape hatch callback to mount custom rich text editor overlays. See the [Custom Editor Guide](/guides/custom-editor) for implementation examples.

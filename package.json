@@ -9,7 +9,9 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "demo": "npx -y serve . -l 3000 --no-clipboard",
-    "docs:validate": "node scripts/validate-docs.js"
+    "docs:validate": "node scripts/validate-docs.js",
+    "docs:dev": "npm run dev --prefix docs-site",
+    "docs:build": "npm run build --prefix docs-site"
   },
   "license": "MIT",
   "devDependencies": {

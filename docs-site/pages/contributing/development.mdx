@@ -1,0 +1,82 @@
+# Development Setup
+
+This guide covers setting up a local development environment for contributing to the Canvus SDK.
+
+## Prerequisites
+
+- **Node.js** 18+ (LTS recommended)
+- **npm** 9+
+- **Git**
+
+## Getting Started
+
+```bash
+# Clone the repository
+git clone https://github.com/balfaro01/canvus.git
+cd canvus
+
+# Install dependencies
+npm install
+
+# Build the SDK
+npm run build
+
+# Launch the dev workbench
+npm run demo
+```
+
+The demo is available at [http://localhost:3000](http://localhost:3000).
+
+## Development Workflow
+
+### Making SDK Changes
+
+1. Edit TypeScript source files in `src/`
+2. Run `npm run build` to compile
+3. Refresh the demo page in your browser to see changes
+4. Run `npm run typecheck` to verify type correctness without building
+
+### Running the Documentation Site
+
+```bash
+# Install docs dependencies
+cd docs-site
+npm install
+
+# Start the docs dev server
+npm run dev
+```
+
+The docs site is available at [http://localhost:3001](http://localhost:3001).
+
+### Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run build` | Compile TypeScript to `dist/` |
+| `npm run typecheck` | Type-check without emitting output |
+| `npm run demo` | Launch the interactive workbench on port 3000 |
+| `npm run docs:validate` | Run documentation validation checks |
+
+## Project Conventions
+
+### Code Style
+
+- Pure vanilla TypeScript — no framework dependencies
+- Strict TypeScript compiler settings
+- ESM modules (no CommonJS)
+- Explicit type annotations on public APIs
+
+### Commit Messages
+
+Use clear, descriptive commit messages that explain **what** and **why**.
+
+### Testing Changes
+
+The demo workbench at `http://localhost:3000` is the primary testing surface. Use it to verify:
+
+- Selection, resize, and drag interactions
+- Layout detection (flex, grid, block)
+- Spacing adjusters (margin/padding)
+- Operation generation (check the browser console)
+- Flat String Bridge exports (check the console logs)

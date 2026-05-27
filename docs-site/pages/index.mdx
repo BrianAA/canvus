@@ -1,0 +1,65 @@
+# Canvus SDK
+
+**A headless, framework-agnostic TypeScript SDK for building visual layout editing workspaces.**
+
+Canvus lets you build CMS page-builders, A/B testing editors, and high-performance visual IDE tools using web-native browser capabilities — no iframes, no virtual DOM, no framework lock-in.
+
+---
+
+## Why Canvus?
+
+import { Cards } from 'nextra/components'
+
+<Cards>
+  <Cards.Card title="🏗️ Twin-Layer Architecture" href="/overview/architecture">
+    Shadow DOM for content isolation + Canvas overlay for interaction affordances
+  </Cards.Card>
+  <Cards.Card title="⚡ Zero Dependencies" href="/overview/goals">
+    Pure TypeScript, compiling to a lightweight ESM bundle with no runtime frameworks
+  </Cards.Card>
+  <Cards.Card title="🔄 Operation-Driven State" href="/guides/operations">
+    Discrete mutation payloads for host-managed undo/redo and multiplayer collaboration
+  </Cards.Card>
+  <Cards.Card title="✏️ Pluggable Text Editing" href="/guides/custom-editor">
+    Built-in plain-text editor with escape hatch for TipTap, Quill, or any custom editor
+  </Cards.Card>
+</Cards>
+
+---
+
+## Quick Example
+
+```typescript
+import { Workspace } from 'canvus'
+
+// Mount the workspace onto a container element
+const ws = new Workspace(document.getElementById('editor')!, {
+  onHTMLCommit(id, html) {
+    console.log(`Node ${id} updated:`, html)
+  },
+  onOperationsGenerated(ops) {
+    // Push to your undo/redo stack
+    historyStack.push(ops)
+  },
+})
+
+// Add a content node
+ws.addNode({
+  id: 'hero-card',
+  rawMarkup: '<div class="p-6 bg-white rounded-lg shadow">Hello, Canvus!</div>',
+  currentRect: null,
+})
+```
+
+---
+
+## Explore the Docs
+
+| Section | Description |
+|---------|-------------|
+| [**Getting Started**](/getting-started) | Installation, setup, and your first workspace |
+| [**Overview**](/overview) | Architecture, design philosophy, and project goals |
+| [**Core Concepts**](/concepts/workspace) | Workspace, Shadow DOM, Canvas overlay, and more |
+| [**SDK Reference**](/sdk/workspace-api) | Complete API documentation for all modules |
+| [**Guides**](/guides/operations) | Operations, custom editors, layout system, and importing |
+| [**Architecture**](/architecture/modules) | Module roles, developer guidelines, and ADRs |

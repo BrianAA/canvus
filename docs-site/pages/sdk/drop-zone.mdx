@@ -1,0 +1,75 @@
+# Drop Zone & Drag-and-Drop (`drop-zone.ts`)
+
+Functions for calculating placement zones during drag-and-drop operations, supporting flow reordering and reparenting.
+
+## `findDropTarget(pt, draggedId, nodes, ws)`
+
+The primary entry point for drag-and-drop placement. Calculates the target drop parent, insertion index, and visual insertion indicator based on the current pointer position.
+
+```typescript
+function findDropTarget(
+  pt: Vec2,
+  draggedId: string,
+  nodes: ReadonlyArray<ResolvedNode>,
+  ws: Workspace
+): DropTarget | null
+```
+
+**Returns** `null` if no valid drop target exists under the pointer.
+
+### How It Works
+
+1. **Container Hit Testing** — Identifies which container node bounds cover the current pointer position
+2. **Layout-Aware Slot Calculations**:
+   - **Flex Containers**: Projects the pointer onto the active flex axis (row or column). Slices boundaries between existing children to identify index slots
+   - **Grid Containers**: Projects coordinates onto grid tracks (columns/rows) to resolve slot cells
+   - **Block Flow**: Measures vertical centerlines of siblings to find preceding or succeeding insertion slots
+3. **Insertion Indicators** — Returns coordinates for drawing horizontal or vertical guide lines showing where the node will land
+
+---
+
+## Type Definitions
+
+### `DropTarget`
+
+The calculated drop target information.
+
+```typescript
+interface DropTarget {
+  parentId: string | null     // Target parent container (null = root)
+  index: number                // Insertion index among siblings
+  indicator: InsertionIndicator  // Visual guide line coordinates
+}
+```
+
+### `InsertionIndicator`
+
+A horizontal or vertical line to draw on the canvas overlay as a drop zone guide.
+
+```typescript
+interface InsertionIndicator {
+  type: "h" | "v"     // Horizontal or vertical
+  coord: number        // The coordinate value of the line
+  start: number        // Start extent of the line
+  end: number          // End extent of the line
+}
+```
+
+---
+
+## Integration
+
+The workspace automatically calls `findDropTarget()` during drag operations and draws the insertion indicator on the canvas overlay. You don't need to call this function directly unless building custom drag logic.
+
+```typescript
+// The workspace handles this internally during drag gestures:
+const target = findDropTarget(canvasPoint, draggedNodeId, allNodes, workspace)
+
+if (target) {
+  // Draw insertion indicator on the canvas
+  renderer.drawInsertionGuide(target.indicator)
+  
+  // On drop: reparent the node
+  ws.reparentNode(draggedNodeId, target.parentId, target.index)
+}
+```

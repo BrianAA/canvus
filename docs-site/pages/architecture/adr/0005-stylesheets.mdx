@@ -1,0 +1,29 @@
+# ADR-0005: Stylesheet Injection and Script Execution
+
+**Status**: Accepted
+
+## Context
+
+User-supplied HTML may contain `<style>` blocks and `<script>` tags. The SDK needs policies for handling both to maintain visual integrity, prevent global state pollution, and ensure editor stability.
+
+## Decision
+
+### Stylesheets
+
+The SDK handles stylesheets by encouraging the host to pass style contents as raw CSS strings via `injectCSS()`, which mounts them as **scoped `<style>` blocks** in the Shadow DOM. This isolates custom page styles inside the Shadow Root without polluting the host application's global styles.
+
+### JavaScript
+
+JavaScript execution inside the Shadow DOM is **disabled by default**, matching native browser `innerHTML` behavior (which strips `<script>` tags). This maintains visual integrity and prevents scripts from breaking the visual editor.
+
+If script execution is required for dynamic widgets in the future, the host must explicitly invoke a script evaluator wrapper that safely scopes actions to the shadow tree boundary.
+
+## Consequences
+
+- Custom CSS (Tailwind, Bootstrap, brand styles) is **fully supported** via `injectCSS()`
+- Styles are **scoped** to the Shadow Root — no global pollution
+- JavaScript is **blocked by default** — the editor remains stable and predictable
+- Dynamic widget support requires explicit opt-in from the host application
+- This matches the security expectations of a visual editing tool
+
+See the [Shadow DOM concepts](/concepts/shadow-dom) for implementation details.

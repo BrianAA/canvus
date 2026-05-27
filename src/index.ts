@@ -95,6 +95,11 @@ export type {
 
 export { Workspace } from "./workspace.js";
 
+// ── HTML/CSS Document Importer ──────────────────────────────
+
+export type { ImportHTMLOptions } from "./importer.js";
+export { importHTMLDocument } from "./importer.js";
+
 // ── Drop Zone & Flow Drag-and-Drop ──────────────────────────
 
 export type {
@@ -103,3 +108,4 @@ export type {
 } from "./drop-zone.js";
 
 export { findDropTarget } from "./drop-zone.js";
+

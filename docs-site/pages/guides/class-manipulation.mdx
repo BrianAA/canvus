@@ -1,0 +1,84 @@
+# Class Manipulation (Tailwind / Bootstrap)
+
+Canvus supports native CSS class manipulation to work seamlessly with utility-class CSS frameworks like Tailwind CSS, Bootstrap, and design token systems.
+
+## Why Class Manipulation?
+
+In utility-class CSS frameworks, styles are applied via class names rather than inline styles:
+
+```html
+<!-- Tailwind CSS approach -->
+<div class="p-6 bg-white rounded-lg shadow-lg">Content</div>
+
+<!-- Inline style approach (less clean) -->
+<div style="padding: 24px; background: white; border-radius: 12px; box-shadow: ...">Content</div>
+```
+
+Canvus's class manipulation APIs let you modify these utility classes without polluting the HTML with inline styles.
+
+## API
+
+### Adding Classes
+
+```typescript
+ws.addClass('card-1', 'shadow-lg')
+ws.addClass('card-1', 'hover:bg-gray-100')
+```
+
+### Removing Classes
+
+```typescript
+ws.removeClass('card-1', 'shadow-lg')
+```
+
+### Toggling Classes
+
+```typescript
+ws.toggleClass('card-1', 'hidden')
+ws.toggleClass('card-1', 'dark:bg-gray-900')
+```
+
+## Operation Integration
+
+Class modifications generate `update-classes` operations for undo/redo:
+
+```json
+{
+  "type": "update-classes",
+  "nodeId": "card-1",
+  "payload": {
+    "add": ["shadow-lg", "rounded-xl"],
+    "remove": ["shadow-md", "rounded-lg"]
+  },
+  "undoPayload": {
+    "add": ["shadow-md", "rounded-lg"],
+    "remove": ["shadow-lg", "rounded-xl"]
+  }
+}
+```
+
+## Loading Framework CSS
+
+To use utility-class frameworks, inject the CSS into the Shadow DOM:
+
+```typescript
+const shadowMount = ws.getShadowMount()
+
+// Inject Tailwind CSS from a CDN or local file
+shadowMount.injectCSS(tailwindCSSString)
+
+// Or inject Bootstrap
+shadowMount.injectCSS(bootstrapCSSString)
+```
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  Injected styles are scoped to the Shadow Root. They won't affect your host application's styling, and your host's styles won't interfere with the preview.
+</Callout>
+
+## Best Practices
+
+1. **Prefer classes over inline styles** when working with utility frameworks — it keeps the exported HTML clean and framework-idiomatic
+2. **Use `setNodeStyle()` for one-off adjustments** like drag-resize dimensions that don't map to utility classes
+3. **Batch related class changes** — if swapping from one variant to another, use `addClass` and `removeClass` together

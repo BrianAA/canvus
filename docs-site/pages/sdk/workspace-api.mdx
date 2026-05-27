@@ -1,0 +1,283 @@
+# Workspace API
+
+The `Workspace` class is the core engine orchestrating events, DOM mounting, and overlay drawing. It is the primary public entry point for consumer integrations.
+
+## Constructor
+
+```typescript
+import { Workspace } from 'canvus'
+
+const ws = new Workspace(container: HTMLElement, callbacks?: WorkspaceCallbacks, config?: WorkspaceConfig)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `container` | `HTMLElement` | The host DOM element to mount the workspace into |
+| `callbacks` | `WorkspaceCallbacks` | Optional event callbacks (see [Configuration](/sdk/configuration)) |
+| `config` | `WorkspaceConfig` | Optional configuration overrides (see [Configuration](/sdk/configuration)) |
+
+---
+
+## Node Management
+
+### `addNode(node, parentId?, index?)`
+
+Mounts a node into the Shadow DOM, updates the tree hierarchy model, measures bounds, and triggers a layout repaint.
+
+```typescript
+addNode(node: Readonly<WebHTMLNode>, parentId?: string | null, index?: number): Rect
+```
+
+**Returns**: Measured canvas-space bounds of the mounted node.
+
+```typescript
+const rect = ws.addNode({
+  id: 'card-1',
+  rawMarkup: '<div class="card">Content</div>',
+  currentRect: { x: 100, y: 100, width: 300, height: 200 },
+}, null, 0)  // root level, first position
+```
+
+### `removeNode(id)`
+
+Removes a node and all of its descendants from the DOM mount and the internal tree tracker.
+
+```typescript
+removeNode(id: string): boolean
+```
+
+### `updateMarkup(id, markup)`
+
+Updates a node's inner HTML, recalculates layout, and triggers a repaint.
+
+```typescript
+updateMarkup(id: string, markup: string): Rect | null
+```
+
+---
+
+## Style Manipulation
+
+### `setNodeStyle(id, property, value)`
+
+Mutates a CSS property on the node content element inside the Shadow DOM, triggers layout measurements, and commits changes.
+
+```typescript
+setNodeStyle(id: string, property: string, value: string | null): void
+```
+
+### `setNodeStyles(id, styles)`
+
+Batches style changes to limit reflow costs.
+
+```typescript
+setNodeStyles(id: string, styles: Record<string, string | null>): void
+```
+
+```typescript
+ws.setNodeStyles('card-1', {
+  'padding': '24px',
+  'background-color': '#f0f0f0',
+  'border-radius': '12px',
+})
+```
+
+---
+
+## Class Manipulation
+
+### `addClass(id, className)`
+
+Appends a CSS class name, triggers reflow checks, and generates an `update-classes` operation.
+
+```typescript
+addClass(id: string, className: string): void
+```
+
+### `removeClass(id, className)`
+
+Removes a class name, triggers reflow, and emits an `update-classes` operation.
+
+```typescript
+removeClass(id: string, className: string): void
+```
+
+### `toggleClass(id, className)`
+
+Toggles a CSS class name.
+
+```typescript
+toggleClass(id: string, className: string): void
+```
+
+---
+
+## Tree Operations
+
+### `reparentNode(nodeId, newParentId, index?)`
+
+Moves a node wrapper to a new parent in both the Shadow DOM tree and the tree model.
+
+```typescript
+reparentNode(nodeId: string, newParentId: string | null, index?: number): void
+```
+
+### `reorderChild(nodeId, newIndex)`
+
+Reorders a node inside its parent, updating sibling arrangements.
+
+```typescript
+reorderChild(nodeId: string, newIndex: number): void
+```
+
+### `getNodeTree()`
+
+Returns the active structural tree database container.
+
+```typescript
+getNodeTree(): NodeTree
+```
+
+---
+
+## Operations
+
+### `applyOperation(op)`
+
+Replays a serialized action payload back onto the workspace. Used to trigger Undo/Redo state actions.
+
+```typescript
+applyOperation(op: Operation): void
+```
+
+See the [Operations Guide](/guides/operations) for details on the operation schema and undo/redo patterns.
+
+---
+
+## Selection
+
+### `selectNode(id)`
+
+Sets selection to a single node.
+
+```typescript
+selectNode(id: string): void
+```
+
+### `deselectAll()`
+
+Clears active selection sets.
+
+```typescript
+deselectAll(): void
+```
+
+### `getSelectedIds()`
+
+Returns active node selections.
+
+```typescript
+getSelectedIds(): ReadonlySet<string>
+```
+
+---
+
+## Viewport
+
+### `getViewport()`
+
+Gets the current zoom scale and translation panning offsets.
+
+```typescript
+getViewport(): Readonly<ViewportMatrix>
+```
+
+### `setViewport(vp)`
+
+Forces a viewport update.
+
+```typescript
+setViewport(vp: ViewportMatrix): void
+```
+
+### `resetViewport()`
+
+Resets the workspace scale to 1:1 and offsets to 0,0.
+
+```typescript
+resetViewport(): void
+```
+
+---
+
+## Query Methods
+
+### `getNodes()`
+
+Returns a flat array of all registered nodes in topological order.
+
+```typescript
+getNodes(): ReadonlyArray<Readonly<ResolvedNode>>
+```
+
+### `getWrapper(id)`
+
+Returns the wrapper element of the specified node.
+
+```typescript
+getWrapper(id: string): HTMLElement | null
+```
+
+### `extractHTML(id)`
+
+**Flat String Bridge**. Exports clean, unpolluted HTML strings of target subtrees (stripping wrapper elements).
+
+```typescript
+extractHTML(id: string): string | null
+```
+
+### `measureAll()`
+
+Forces a synchronous layout read of all elements.
+
+```typescript
+measureAll(): Map<string, Rect>
+```
+
+---
+
+## Subsystem Access
+
+### `getShadowMount()`
+
+Exposes the inner open Shadow Root mounting subsystem.
+
+```typescript
+getShadowMount(): ShadowMount
+```
+
+### `getOverlayRenderer()`
+
+Exposes the inner 2D canvas overlay painter.
+
+```typescript
+getOverlayRenderer(): OverlayRenderer
+```
+
+---
+
+## Lifecycle
+
+### `dispose()`
+
+Cleans up window resize, wheel, and mouse gesture event listeners.
+
+```typescript
+dispose(): void
+```
+
+import { Callout } from 'nextra/components'
+
+<Callout type="warning">
+  Always call `dispose()` when unmounting the workspace to prevent memory leaks from orphaned event listeners.
+</Callout>

@@ -1,0 +1,55 @@
+# Twin-Layer Architecture
+
+Canvus is engineered around a **Twin-Layer Architecture** designed to solve style leakage, script pollution, and layout synchronization without the performance overhead or communication barriers of nesting `<iframe>` documents.
+
+## The Two Layers
+
+Instead of isolating third-party code in an iframe, the workspace overlays two specialized visual layers inside a relative container:
+
+```
++--------------------------------------------------------+
+|              Viewport Surface Layer (Canvas)            |
+|  - Selection highlights, grab anchors, guidelines       |
+|  - Spacing adjuster overlays, drag indicators           |
++--------------------------------------------------------+
+                             |
+                             v  (Layered transparently over Shadow DOM)
++--------------------------------------------------------+
+|           Projection Mutation Layer (Shadow DOM)        |
+|  - Raw HTML content mounted inside open Shadow Root     |
+|  - Isolated Stylesheets (Tailwind, custom CSS)          |
+|  - Browser native layout reflow calculations            |
++--------------------------------------------------------+
+```
+
+## Projection Mutation Layer (Shadow DOM)
+
+Managed by **`ShadowMount`** (`src/shadow-mount.ts`). It injects the user's raw HTML/CSS inside an isolated browser `ShadowRoot` in `"open"` mode.
+
+- **Style Isolation**: A reset stylesheet (`SHADOW_RESET_CSS`) isolates the inner DOM tree, preventing host CMS or editor dashboard styles from bleeding into the preview
+- **Native Reflows**: Rather than using a custom JavaScript-based CSS layout engine, the browser's native C++ layout engine handles Flexbox wrapping, grid track auto-sizing, margins, and text wraps
+- **Node Wrappers**: Each registered content node is surrounded by a light wrapper (`.canvus-node-wrapper`) that handles absolute or flow positioning
+
+## Viewport Surface Layer (HTML5 Canvas)
+
+Managed by **`OverlayRenderer`** (`src/renderer.ts`). A transparent HTML5 Canvas is placed on top of the Shadow DOM, scaling and panning in perfect coordination with it.
+
+- **Visual Indicators**: Draws selections, resize anchors, spacing adjuster handles (margin/padding spacers), snap guidelines, and hover borders
+- **Coordinate Space**: Operates in **canvas-space** (world coordinates). It draws geometries derived from coordinate transformations (zoom/pan matrix)
+
+## Why Not Iframes?
+
+| Concern | Iframe Approach | Canvus Approach |
+|---------|----------------|-----------------|
+| **Style Isolation** | ✅ Full isolation | ✅ Shadow DOM isolation |
+| **Performance** | ❌ Separate document, costly cross-origin messaging | ✅ Same-thread, synchronous reflow loop |
+| **Scroll Sync** | ❌ Complex scroll coordination | ✅ Single viewport with canvas overlay |
+| **Layout Engine** | ✅ Native browser | ✅ Native browser |
+| **Communication** | ❌ postMessage serialization overhead | ✅ Direct DOM access via ShadowRoot |
+| **Security** | ✅ Sandboxed | ⚠️ Same-origin (by design for editing) |
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  Canvus intentionally trades iframe security sandboxing for direct DOM access. Since the SDK is designed for **editing** user content (not untrusted third-party code), same-origin access is a feature, not a limitation.
+</Callout>

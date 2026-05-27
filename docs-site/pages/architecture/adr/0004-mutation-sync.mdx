@@ -1,0 +1,21 @@
+# ADR-0004: Granular Mutation Sync Boundary
+
+**Status**: Accepted
+
+## Context
+
+The SDK needs a clear synchronization boundary between the host application (which manages the document AST, code view, or data model) and the visual canvas editor. Building a DOM diffing and reconciliation engine inside the SDK would add significant performance overhead and architectural complexity.
+
+## Decision
+
+We decided to define the synchronization boundary around **granular mutation APIs**. The host application is responsible for computing structure changes and calling specific SDK methods (`addNode`, `removeNode`, `reparentNode`, `updateMarkup`) to update the workspace.
+
+## Consequences
+
+- **No virtual DOM** — The SDK doesn't diff or reconcile full HTML pages
+- **Explicit control** — The host decides exactly what changes to apply
+- **Lightweight** — No reconciliation engine means smaller bundle and faster execution
+- **Predictable** — Each API call produces exactly one mutation, no hidden side effects
+- The host must compute structural changes itself rather than passing full HTML documents
+
+See the [Workspace API](/sdk/workspace-api) for the complete list of mutation methods.

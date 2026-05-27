@@ -1,0 +1,92 @@
+# Module Roles Blueprint
+
+The `src/` codebase divides responsibilities among specialized modules. Each module owns a clear, single responsibility.
+
+## Module Map
+
+```
+src/
+├── types.ts        → Canonical Types & Primitives
+├── matrix.ts       → Stateless Coordinate Math
+├── shadow-mount.ts → Shadow DOM Director
+├── tree.ts         → Hierarchical Tree Model
+├── layout.ts       → CSS Introspective Analyzer
+├── renderer.ts     → 2D Canvas Painter
+├── drop-zone.ts    → DnD Slot Detector
+├── importer.ts     → HTML/CSS Document Importer
+├── workspace.ts    → Central Orchestrator
+└── index.ts        → Public API Barrel Exports
+```
+
+---
+
+## Module Details
+
+### `types.ts` — Canonical Types & Primitives
+
+Contains structural definitions for vectors (`Vec2`), rectangles (`Rect`), transform matrices (`ViewportMatrix`), operation payloads (`Operation`), and drag state machine states. This is the **single source of truth** for all shared data models.
+
+### `matrix.ts` — Stateless Coordinate Math
+
+Translates vectors and rects between **Screen space** (DOM client pixels) and **Canvas space** (scale-and-translate coordinates). Handles hit testing, pan accumulation, and zoom anchoring to prevent cursor drift. All functions are **pure and stateless**.
+
+### `shadow-mount.ts` — Shadow DOM Director
+
+Injects and destroys wrapper elements, mounts styles, suppresses resize observer feedback loops, and isolates CSS. Houses the **Flat String Bridge** (`extractHTML`) to export clean, SDK-free HTML fragments. The largest module, managing the entire DOM lifecycle.
+
+### `tree.ts` — Hierarchical Tree Model
+
+Manages the logical `NodeTree` structure (`parentId`, `childIds`, `depth`). Coordinates sibling sequences and performs ancestor-walk cycle detection to prevent circular references during reparenting.
+
+### `layout.ts` — CSS Introspective Analyzer
+
+Evaluates `getComputedStyle()` values of content elements. Determines container display modes (flex, grid, block), parses direction axes (row vs. column), checks wrapping bounds, grid configurations, and gaps.
+
+### `renderer.ts` — 2D Canvas Painter
+
+Draws selection frames, resize anchors, spacing adjusters, alignment snap guidelines, grid tracks, layout status badges, and marquee drag borders on the HTML5 Canvas overlay.
+
+### `drop-zone.ts` — DnD Slot Detector
+
+Calculates placement indices inside Flex/Grid layout tracks and Block flows based on current pointer locations, returning insertion coordinates for drag-and-drop operations.
+
+### `importer.ts` — HTML/CSS Document Importer
+
+Parses complete HTML documents and converts them into `WebHTMLNode` objects for mounting in the workspace. Handles stylesheet extraction and node ID generation.
+
+### `workspace.ts` — Central Orchestrator
+
+Integrates all subsystems, binds event handlers (pointer, key, wheel, window), runs the main state machine, and triggers throttled repaints. This is the **public entry point** for consumer integrations.
+
+### `index.ts` — Public API Barrel Exports
+
+Re-exports all public types, classes, and functions from the other modules. Consumers import from this single entry point.
+
+---
+
+## Dependency Flow
+
+```
+workspace.ts (orchestrator)
+├── shadow-mount.ts (DOM layer)
+│   └── types.ts
+├── renderer.ts (canvas layer)
+│   └── types.ts
+├── tree.ts (data model)
+│   └── types.ts
+├── layout.ts (CSS introspection)
+│   └── types.ts
+├── drop-zone.ts (DnD logic)
+│   ├── layout.ts
+│   └── types.ts
+├── matrix.ts (coordinate math)
+│   └── types.ts
+└── importer.ts (HTML parsing)
+    └── types.ts
+```
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  All modules depend on `types.ts` for shared data structures. No module directly depends on `workspace.ts` — the orchestrator imports and coordinates everything else.
+</Callout>

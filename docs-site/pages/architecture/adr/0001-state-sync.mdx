@@ -1,0 +1,20 @@
+# ADR-0001: Operation-Driven State Synchronization
+
+**Status**: Accepted
+
+## Context
+
+To prevent state desynchronization in complex host environments (like a custom CMS or code editors like Monaco with their own undo stacks), we needed to decide how to handle transaction history (Undo/Redo) within the SDK.
+
+## Decision
+
+We decided to expose discrete **Operation** delta payloads from visual gestures instead of managing a private, internal undo/redo history stack. This allows host applications to integrate visual layout modifications directly into a single, unified global transaction lifecycle, while providing a public `applyOperation` replay API to execute undo/redo actions programmatically.
+
+## Consequences
+
+- Host applications have **full control** over the transaction history
+- The SDK remains **stateless** with respect to undo/redo
+- Operations are **serializable** and can be used for multiplayer collaboration
+- The host must implement its own history stack management
+
+See the [Operations Guide](/guides/operations) for integration details.

@@ -1,0 +1,59 @@
+# What is Canvus?
+
+Canvus is a **headless, framework-agnostic vanilla TypeScript SDK** for building visual layout editing workspaces. It runs out-of-the-box in standard web browsers without Electron flags or iframe isolation.
+
+## The Problem
+
+Building visual layout editors on the web is notoriously difficult:
+
+- **Iframes** create communication barriers, scroll-sync nightmares, and security sandbox limitations
+- **Virtual DOM** engines add reconciliation overhead and framework lock-in
+- **Custom layout engines** can't match the browser's native CSS capabilities (Flexbox, Grid, text wrapping)
+- **contenteditable** is unpredictable across browsers for rich content editing
+
+## The Canvus Approach
+
+Canvus solves these problems with a **Twin-Layer Architecture** that splits the workspace into two synchronized visual layers:
+
+| Layer | Technology | Responsibility |
+|-------|-----------|---------------|
+| **Projection Mutation Layer** | Shadow DOM (`ShadowRoot`) | Renders user HTML/CSS with full browser-native layout |
+| **Viewport Surface Layer** | HTML5 Canvas 2D | Draws selections, handles, guides, and interaction overlays |
+
+This gives you:
+- **Native CSS layout** — The browser handles Flexbox, Grid, text wrapping, and responsive design
+- **Style isolation** — Shadow DOM prevents editor styles from bleeding into user content
+- **High-performance overlays** — Canvas 2D draws affordances without DOM overhead
+- **Zero framework lock-in** — Pure TypeScript, works with React, Vue, Svelte, or vanilla JS
+
+## Key Capabilities
+
+### Visual Interaction
+- Figma-style drill-down selection (click, double-click, Cmd+click)
+- 8-handle resize with live browser reflow
+- Drag-and-drop reparenting with layout-aware drop zones
+- Cursor-anchored zoom and infinite canvas panning
+- Multi-select with marquee selection
+
+### Layout Intelligence
+- Automatic Flexbox and CSS Grid detection
+- Flow-aware drag-and-drop insertion indicators
+- Spacing adjusters for real-time margin/padding editing
+- Grid track visualization and alignment snap guides
+
+### Developer Integration
+- Operation-driven state sync for host-managed undo/redo
+- Pluggable rich-text editor escape hatch (TipTap, Quill, etc.)
+- Native CSS class manipulation (Tailwind, Bootstrap support)
+- Clean HTML export via the Flat String Bridge
+- Granular mutation APIs — no virtual DOM diffing
+
+## Who Is Canvus For?
+
+Canvus is designed for **developers building visual editing tools**, not for end users directly. It provides the low-level engine that powers:
+
+- **Visual CMS platforms** — Page builders with drag-and-drop layout editing
+- **A/B testing tools** — Variant editors for experimentation platforms  
+- **Design tools** — Figma-like canvas interfaces for web content
+- **Email builders** — WYSIWYG editors with real CSS rendering
+- **Low-code platforms** — Visual development environments

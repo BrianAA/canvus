@@ -1,0 +1,103 @@
+# Layout Introspection (`layout.ts`)
+
+Functions for CSS display detection, flex/grid axis analysis, and child slot measurement.
+
+## Display Detection
+
+### `detectLayout(el)`
+
+Inspects a container element's computed styles to determine its layout mode, flex direction, gap, and grid configuration.
+
+```typescript
+function detectLayout(el: HTMLElement): LayoutInfo
+```
+
+Returns:
+```typescript
+interface LayoutInfo {
+  display: LayoutMode
+  flexDirection: string
+  gap: string
+  gridTemplateColumns: string
+  gridTemplateRows: string
+}
+```
+
+---
+
+## Flow Axis Analysis
+
+### `getFlowAxis(mode, dir)`
+
+Determines the primary layout flow axis based on display mode and flex direction.
+
+```typescript
+function getFlowAxis(mode: LayoutMode, dir: string | null): "x" | "y"
+```
+
+### `getFlowSign(dir)`
+
+Returns the flow order direction indicator.
+
+```typescript
+function getFlowSign(dir: string | null): 1 | -1
+```
+
+### `getLayoutLabel(mode, direction?)`
+
+Formats a human-readable display label (e.g., "Flex Row", "Grid", "Block").
+
+```typescript
+function getLayoutLabel(mode: LayoutMode, direction?: string | null): string
+```
+
+---
+
+## Child Slot Measurement
+
+### `detectChildSlots(container)`
+
+Measures the bounding rectangles of all direct children to calculate target placement indices for drag-and-drop.
+
+```typescript
+function detectChildSlots(container: HTMLElement): ChildSlot[]
+```
+
+```typescript
+interface ChildSlot {
+  index: number
+  rect: Rect
+}
+```
+
+---
+
+## Grid Track Parsing
+
+### `parseGridTracks(el)`
+
+Evaluates the resolved CSS Grid column and row tracks of a container element.
+
+```typescript
+function parseGridTracks(el: HTMLElement): {
+  columns: GridTrack[]
+  rows: GridTrack[]
+}
+```
+
+```typescript
+interface GridTrack {
+  start: number   // Track start position (px)
+  end: number     // Track end position (px)
+  size: number    // Track size (px)
+}
+```
+
+---
+
+## Type Definitions
+
+```typescript
+type FlexDirection = "row" | "row-reverse" | "column" | "column-reverse"
+type FlexWrap = "nowrap" | "wrap" | "wrap-reverse"
+```

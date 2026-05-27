@@ -1,0 +1,79 @@
+# The Flat String Bridge
+
+The **Flat String Bridge** is Canvus's serialization mechanism that cleans and extracts the user's raw HTML, completely stripped of any SDK wrapper elements.
+
+## The Problem
+
+Internally, Canvus wraps every content node in positioning containers (`.canvus-node-wrapper`, `.canvus-flow-child`). These wrappers are essential for the editor's interaction system, but they must **never** appear in the exported HTML.
+
+## How It Works
+
+When a drag or resize gesture completes (`pointerup`):
+
+1. The SDK calls `ShadowMount.extractHTML(id)`
+2. It clone-copies the content node
+3. It recursively searches for nested child wrappers (`.canvus-node-wrapper`)
+4. It strips away all SDK wrapper chrome, restoring the original DOM element tag structure
+5. The cleaned, unpolluted HTML string fragment is returned
+
+```typescript
+// The workspace fires onHTMLCommit with clean HTML
+const ws = new Workspace(container, {
+  onHTMLCommit(id, html) {
+    // `html` is completely clean — no SDK wrappers or metadata
+    console.log(html)
+    // Output: <div class="card"><h1>Hello</h1><p>World</p></div>
+    
+    // Save to your CMS, AST, or database
+    saveToBackend(id, html)
+  },
+})
+```
+
+## Programmatic Access
+
+You can also extract clean HTML programmatically at any time:
+
+```typescript
+// Extract clean HTML for a specific node
+const html = ws.extractHTML('card-1')
+// Returns: '<div class="card">...</div>'
+```
+
+## What Gets Stripped
+
+| SDK Element | Purpose | Stripped? |
+|------------|---------|----------|
+| `.canvus-node-wrapper` | Positioning container for root nodes | ✅ Yes |
+| `.canvus-flow-child` | Flow participation wrapper for children | ✅ Yes |
+| `data-canvus-*` attributes | Internal tracking metadata | ✅ Yes |
+| SDK inline styles on wrappers | Position, transform, dimensions | ✅ Yes |
+| User inline styles on content | Applied by the user or SDK APIs | ❌ Preserved |
+| User CSS classes | Applied via `addClass()` etc. | ❌ Preserved |
+
+import { Callout } from 'nextra/components'
+
+<Callout type="warning">
+  **Invariant**: Any new wrapper classes, metadata attributes, or alignment markers added during development must be properly cleaned and excluded from `extractHTML()`. The consumer must always receive completely clean user markup.
+</Callout>
+
+## Integration Pattern
+
+A typical integration saves the clean HTML whenever a visual gesture completes:
+
+```typescript
+const ws = new Workspace(container, {
+  onHTMLCommit(id, html) {
+    // Update the host CMS's data model
+    pageStore.updateComponent(id, html)
+    
+    // Or update a code editor's AST
+    astParser.replaceNode(id, html)
+  },
+  
+  onOperationsGenerated(ops) {
+    // Also capture operations for undo/redo
+    historyManager.push(ops)
+  },
+})
+```

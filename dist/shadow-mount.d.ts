@@ -297,7 +297,15 @@ export declare class ShadowMount {
      * external `onRectChange` callback.
      */
     private handleResizeEntries;
+    /** Extracts and executes scripts inside the mounted node. */
+    private executeScripts;
     /** Throws if `dispose()` has been called. */
     private assertNotDisposed;
 }
+/**
+ * Rewrites a CSS stylesheet string, duplicating selectors with pseudo-classes
+ * (:hover, :active, :focus) to also match their equivalent utility classes
+ * (.canvus-state-hover, .canvus-state-active, .canvus-state-focus).
+ */
+export declare function rewriteCSS(css: string): string;
 //# sourceMappingURL=shadow-mount.d.ts.map

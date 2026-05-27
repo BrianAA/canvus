@@ -1,0 +1,149 @@
+# Quick Start Tutorial
+
+Build a working interactive workspace in under 5 minutes.
+
+## 1. Set Up the Container
+
+Create an HTML file with a container element for the workspace:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canvus Quick Start</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+      background: #1a1a2e;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
+```
+
+## 2. Initialize the Workspace
+
+Create `app.js` and import the Canvus SDK:
+
+```typescript
+import { Workspace } from './dist/index.js'
+
+// 1. Grab the container element
+const container = document.getElementById('canvas-container')
+
+// 2. Create the workspace with event callbacks
+const ws = new Workspace(container, {
+  // Called when a node's HTML is committed after editing
+  onHTMLCommit(id, html) {
+    console.log(`[Commit] Node "${id}":`, html)
+  },
+
+  // Called when visual gestures generate undo-able operations
+  onOperationsGenerated(ops) {
+    console.log('[Operations]', ops)
+  },
+
+  // Called when the selection changes
+  onSelectionChange(selectedIds) {
+    console.log('[Selection]', [...selectedIds])
+  },
+})
+```
+
+## 3. Add Content Nodes
+
+Mount HTML content nodes into the workspace:
+
+```typescript
+// Add a hero card
+ws.addNode({
+  id: 'hero-card',
+  rawMarkup: `
+    <div style="padding: 32px; background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.1);">
+      <h1 style="font-size: 24px; margin-bottom: 8px;">Welcome to Canvus</h1>
+      <p style="color: #666;">A visual layout editor SDK</p>
+    </div>
+  `,
+  currentRect: { x: 100, y: 100, width: 400, height: 200 },
+})
+
+// Add a sidebar
+ws.addNode({
+  id: 'sidebar',
+  rawMarkup: `
+    <nav style="padding: 16px; background: #f8f9fa; border-radius: 8px;">
+      <ul style="list-style: none; padding: 0;">
+        <li style="padding: 8px 12px;">Dashboard</li>
+        <li style="padding: 8px 12px;">Settings</li>
+        <li style="padding: 8px 12px;">Profile</li>
+      </ul>
+    </nav>
+  `,
+  currentRect: { x: 550, y: 100, width: 200, height: 180 },
+})
+```
+
+## 4. Try It Out
+
+Now you can:
+
+- **Click** a node to select it — see the blue selection outline and resize handles
+- **Drag** a node to move it around the canvas
+- **Resize** a node by dragging its corner or edge anchors
+- **Scroll wheel** to zoom in and out (cursor-anchored)
+- **Middle-click drag** or **Space + drag** to pan the viewport
+- **Double-click** a text element to edit it inline
+- **Hover** over padding areas to see spacing adjusters
+
+## 5. Listen for Changes
+
+The workspace emits operations you can use for undo/redo:
+
+```typescript
+const historyStack = []
+
+const ws = new Workspace(container, {
+  onOperationsGenerated(ops) {
+    historyStack.push(ops)
+    console.log('History depth:', historyStack.length)
+  },
+})
+
+// Undo the last action
+function undo() {
+  if (historyStack.length === 0) return
+  const ops = historyStack.pop()
+
+  for (let i = ops.length - 1; i >= 0; i--) {
+    const op = ops[i]
+    ws.applyOperation({
+      type: op.type,
+      nodeId: op.nodeId,
+      payload: op.undoPayload,
+      undoPayload: op.payload,
+    })
+  }
+}
+```
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  Check out the full [API Reference](/sdk/workspace-api) for all available methods, and the [Operations Guide](/guides/operations) for details on the undo/redo system.
+</Callout>
+
+## Next Steps
+
+- [Core Concepts](/concepts/workspace) — Understand the Workspace, Shadow DOM, and Canvas layers
+- [SDK Reference](/sdk/workspace-api) — Explore the complete API surface
+- [Custom Editor Integration](/guides/custom-editor) — Mount TipTap or Quill for rich text editing

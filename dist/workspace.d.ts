@@ -112,6 +112,7 @@ export declare class Workspace {
     private dragStartStyles;
     private disposed;
     private renderRequested;
+    private previewMode;
     private readonly onWheel;
     private readonly onPointerDown;
     private readonly onPointerMove;
@@ -175,6 +176,14 @@ export declare class Workspace {
     setViewport(vp: ViewportMatrix): void;
     /** Resets viewport to 1:1 scale, zero offset. */
     resetViewport(): void;
+    /** Sets whether the workspace is in Preview Mode (disables editing overlays and events). */
+    setPreviewMode(enabled: boolean): void;
+    /** Returns whether the workspace is currently in Preview Mode. */
+    isPreviewMode(): boolean;
+    /** Forces a pseudo-class state (hover, active, focus) on the specified node element. */
+    forceNodeState(nodeId: string, state: "hover" | "active" | "focus", enabled: boolean): void;
+    /** Dispatches a synthetic pointer/mouse event (e.g. mouseenter, mouseleave, click) to a node. */
+    dispatchInteractionEvent(nodeId: string, eventName: string): void;
     /** Returns a snapshot of all tracked nodes (depth-first order). */
     getNodes(): ReadonlyArray<Readonly<ResolvedNode>>;
     /** Returns the underlying ShadowMount for advanced access. */

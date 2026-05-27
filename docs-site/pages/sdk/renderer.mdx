@@ -1,0 +1,112 @@
+# Overlay Renderer (`renderer.ts`)
+
+The `OverlayRenderer` class directly paints vectors onto the 2D Canvas overlay, providing all visual interaction affordances.
+
+## OverlayRenderer
+
+### Constructor
+
+```typescript
+const renderer = new OverlayRenderer(canvas: HTMLCanvasElement, style?: Partial<OverlayStyle>)
+```
+
+The renderer operates on the HTML5 Canvas 2D Context. It draws:
+
+- Primary/secondary element borders
+- Grab handles (8-directional resize anchors)
+- Margin/padding spacer handles with coordinate value tooltips
+- Layout mode badges (flex, grid, block)
+- Grid track visualization
+- Alignment snap guides
+- Marquee selection boundaries
+
+---
+
+## Helper Functions
+
+### `anchorCursor(anchor)`
+
+Returns the appropriate CSS cursor indicator for a resize handle direction.
+
+```typescript
+function anchorCursor(anchor: ResizeAnchor): string
+// e.g., anchorCursor('nw') → 'nwse-resize'
+```
+
+### `computeAlignmentGuides(draggedId, currentRect, nodes, snapThreshold)`
+
+Generates alignment snap guidelines by comparing the dragged element's edges against all other nodes.
+
+```typescript
+function computeAlignmentGuides(
+  draggedId: string,
+  currentRect: Rect,
+  nodes: ReadonlyArray<ResolvedNode>,
+  snapThreshold: number
+): {
+  guides: Guide[]
+  snapped: Vec2
+}
+```
+
+### `computeSnappedPosition(currentRect, guides)`
+
+Computes the final snapped position based on active alignment guides.
+
+```typescript
+function computeSnappedPosition(currentRect: Rect, guides: Guide[]): Vec2
+```
+
+---
+
+## Type Definitions
+
+### `Guide`
+
+A horizontal or vertical alignment snap line.
+
+```typescript
+interface Guide {
+  type: "h" | "v"     // Horizontal or vertical
+  coord: number        // The coordinate value of the line
+  start: number        // Start extent of the line
+  end: number          // End extent of the line
+}
+```
+
+### `OverlayFrame`
+
+The complete render state for a single canvas frame.
+
+```typescript
+interface OverlayFrame {
+  selection: Set<string>
+  hover: string | null
+  guides: Guide[]
+  marginAdjusters: Record<string, Rect>
+  paddingAdjusters: Record<string, Rect>
+}
+```
+
+### `LayoutBadgeInfo`
+
+Badge label and position for a layout container.
+
+```typescript
+interface LayoutBadgeInfo {
+  text: string
+  rect: Rect
+}
+```
+
+### `GridOverlayInfo`
+
+Grid track overlay data for CSS Grid containers.
+
+```typescript
+interface GridOverlayInfo {
+  columns: GridTrack[]
+  rows: GridTrack[]
+  rect: Rect
+}
+```

@@ -1,0 +1,108 @@
+# Workspace & Content Nodes
+
+The **Workspace** is the top-level orchestrating engine in Canvus. It binds interaction handlers, manages node hierarchies, and renders overlays. A **Content Node** is a single user-provided HTML element represented in the workspace.
+
+## The Workspace
+
+The `Workspace` class is the central orchestrator and the public entry point for consumer integrations. It:
+
+- Hooks up mouse/pointer event bindings
+- Handles wheel/keyboard shortcuts
+- Maintains active workspace states (panning, resizing, dragging, reparenting, spacing adjustment, marquee selection)
+- Manages the **Synchronous Reflow Loop**
+- Coordinates between the Shadow DOM layer and the Canvas overlay
+
+```typescript
+import { Workspace } from 'canvus'
+
+const ws = new Workspace(containerElement, {
+  onHTMLCommit(id, html) {
+    // Receive clean HTML when a node is modified
+  },
+  onOperationsGenerated(ops) {
+    // Receive operation payloads for undo/redo
+  },
+})
+```
+
+## Content Nodes
+
+A Content Node represents a single piece of user-provided HTML in the workspace. Nodes are defined using the `WebHTMLNode` interface:
+
+```typescript
+interface WebHTMLNode {
+  id: string                          // Unique identifier
+  rawMarkup: string                   // The user's raw HTML string
+  currentRect: Rect | null            // Initial position and size (canvas-space)
+  parentId?: string | null            // Parent node ID (null for root-level)
+  childIds?: readonly string[]        // Child node IDs
+  layoutMode?: LayoutMode | null      // Display mode hint (flex, grid, block)
+  depth?: number                      // Tree depth (0 for root)
+}
+```
+
+### Adding Nodes
+
+```typescript
+// Add a root-level node
+ws.addNode({
+  id: 'card-1',
+  rawMarkup: '<div class="card">Hello World</div>',
+  currentRect: { x: 100, y: 100, width: 300, height: 200 },
+})
+
+// Add a child node inside a parent container
+ws.addNode({
+  id: 'child-1',
+  rawMarkup: '<p>Child content</p>',
+  currentRect: null,
+}, 'card-1')  // parentId
+```
+
+### Manipulating Nodes
+
+```typescript
+// Update a node's HTML content
+ws.updateMarkup('card-1', '<div class="card">Updated!</div>')
+
+// Change a CSS property
+ws.setNodeStyle('card-1', 'background-color', '#f0f0f0')
+
+// Batch style changes
+ws.setNodeStyles('card-1', {
+  'padding': '24px',
+  'border-radius': '12px',
+})
+
+// Manipulate CSS classes (Tailwind/Bootstrap)
+ws.addClass('card-1', 'shadow-lg')
+ws.removeClass('card-1', 'border')
+ws.toggleClass('card-1', 'hidden')
+
+// Remove a node
+ws.removeNode('card-1')
+```
+
+## The Node Tree
+
+Under the hood, Canvus maintains an in-memory `NodeTree` that tracks parent-child relationships, depth indices, and sibling ordering. This tree is always kept in sync with the Shadow DOM.
+
+import { Callout } from 'nextra/components'
+
+<Callout type="warning">
+  Never mutate `parentId` or `childIds` directly. Always use the Workspace mutation APIs (`addNode`, `removeNode`, `reparentNode`, `reorderChild`) to maintain structural invariants and prevent circular references.
+</Callout>
+
+```typescript
+// Access the tree
+const tree = ws.getNodeTree()
+
+// Get all nodes in topological order
+const nodes = ws.getNodes()
+
+// Reparent a node
+ws.reparentNode('child-1', 'new-parent-id')
+
+// Reorder a child within its parent
+ws.reorderChild('child-1', 0)  // Move to first position
+```

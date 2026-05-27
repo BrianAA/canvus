@@ -1,0 +1,20 @@
+# ADR-0003: Native Class Manipulation Support
+
+**Status**: Accepted
+
+## Context
+
+Modern utility-class CSS frameworks (such as Tailwind CSS or Bootstrap) and design token systems apply styles through class names rather than inline CSS properties. Without class manipulation support, visual gestures would pollute class-driven HTML with inline style attributes.
+
+## Decision
+
+We decided to support **native element class name manipulation** in addition to inline styling. The SDK exposes class manipulation APIs (`addClass`, `removeClass`, `toggleClass`) and generates a dedicated `update-classes` operation. This prevents layout styling operations from polluting class-driven HTML with inline style attributes.
+
+## Consequences
+
+- Tailwind CSS and Bootstrap class names are **preserved in exports**
+- Visual gestures can modify utility classes without inline style pollution
+- Operations are generated for undo/redo integration
+- The SDK supports both inline styles and class-based styling workflows
+
+See the [Class Manipulation Guide](/guides/class-manipulation) for usage details.
