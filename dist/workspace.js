@@ -175,6 +175,20 @@ export class Workspace {
             }
         });
         this.mount.applyViewportTransform(this.viewport);
+        // Intercept and prevent click and submit events inside Shadow DOM when in Edit Mode
+        const shadowRoot = this.mount.getShadowRoot();
+        shadowRoot.addEventListener("click", (e) => {
+            if (!this.previewMode) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }, { capture: true });
+        shadowRoot.addEventListener("submit", (e) => {
+            if (!this.previewMode) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }, { capture: true });
         // ── Bind Events ───────────────────────────────
         this.onWheel = this.handleWheel.bind(this);
         this.onPointerDown = this.handlePointerDown.bind(this);
