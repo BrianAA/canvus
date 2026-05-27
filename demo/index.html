@@ -168,7 +168,7 @@
         <div class="dot"></div>
         <h2>Canvus SDK</h2>
       </div>
-      <button class="btn" id="btn-preview-mode" style="padding: 4px 10px; font-size: 11px; background: var(--bg-elevated); border-color: var(--accent);">Preview Mode</button>
+      <button class="btn" id="btn-preview-mode" style="padding: 4px 10px; font-size: 11px; background: var(--bg-elevated); border-color: var(--accent);">Edit Mode</button>
     </div>
 
     <div class="panel-content">
@@ -249,6 +249,9 @@
       <div class="section" style="border-bottom: 1px solid var(--border-subtle);">
         <div class="section-title">Import HTML Document</div>
         <textarea id="import-html-text" class="commit-log" style="width: 100%; height: 80px; margin-top: 4px; font-size: 11px; background: var(--bg-primary);" placeholder="Paste raw <html> document or fragment here..."></textarea>
+        <div style="margin-top: 6px;">
+          <input type="file" id="import-html-file" accept=".html,.htm" class="btn" style="width: 100%; font-size: 11px; padding: 4px 8px; text-align: left;">
+        </div>
         <div style="display: flex; gap: 6px; margin-top: 6px;">
           <input type="text" id="import-base-url" class="btn" style="flex: 1; padding: 4px 8px; font-size: 11px; text-align: left;" placeholder="Base URL (e.g. https://site.com/)">
           <button id="btn-import-html" class="btn primary" style="padding: 4px 12px; font-size: 11px;">Import</button>
@@ -665,7 +668,7 @@
     btnPreviewMode.addEventListener('click', () => {
       const active = !ws.isPreviewMode();
       ws.setPreviewMode(active);
-      btnPreviewMode.textContent = active ? "Edit Mode" : "Preview Mode";
+      btnPreviewMode.textContent = active ? "Preview Mode" : "Edit Mode";
       btnPreviewMode.style.background = active ? "var(--accent)" : "var(--bg-elevated)";
       toast(active ? "Preview Mode Enabled (Interactions active!)" : "Edit Mode Enabled (Visual anchors active)");
     });
@@ -701,6 +704,19 @@
     });
 
     // ── HTML Document Importer ──
+    document.getElementById('import-html-file').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const text = evt.target.result;
+        document.getElementById('import-html-text').value = text;
+        toast(`Loaded "${file.name}" - click Import to mount!`);
+      };
+      reader.readAsText(file);
+    });
+
     document.getElementById('btn-import-html').addEventListener('click', () => {
       const text = document.getElementById('import-html-text').value.trim();
       const baseUrl = document.getElementById('import-base-url').value.trim();

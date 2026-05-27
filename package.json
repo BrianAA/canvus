@@ -11,7 +11,8 @@
     "demo": "npx -y serve . -l 3000 --no-clipboard",
     "docs:validate": "node scripts/validate-docs.js",
     "docs:dev": "npm run dev --prefix docs-site",
-    "docs:build": "npm run build --prefix docs-site"
+    "docs:build": "npm run build --prefix docs-site",
+    "ai:context": "node scripts/generate-ai-context.cjs"
   },
   "license": "MIT",
   "devDependencies": {

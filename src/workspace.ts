@@ -229,6 +229,7 @@ export class Workspace {
   private adjusterStartValue = 0;
   private adjusterStartValueStr: string | null = null;
   private dragStartCanvas: Vec2 | null = null;
+  private lastCanvasPos: Vec2 | null = null;
   private dragStartNodePos: Vec2 | null = null;
   private dragStartParentId: string | null = null;
   private dragStartIndex = -1;
@@ -979,7 +980,10 @@ export class Workspace {
     );
 
     if (this.previewMode) {
-      if (this.spaceDown) {
+      if (this.spaceDown || e.button === 1) {
+        if (e.button === 1) {
+          e.preventDefault();
+        }
         this.isPanning = true;
         this.container.classList.add("canvus-panning");
         this.container.setPointerCapture(e.pointerId);
@@ -992,7 +996,10 @@ export class Workspace {
     this.pointerDownInsideSelection = null;
 
     // ── Space + pointer = Pan ─────────────────────
-    if (this.spaceDown) {
+    if (this.spaceDown || e.button === 1) {
+      if (e.button === 1) {
+        e.preventDefault();
+      }
       this.isPanning = true;
       this.container.classList.add("canvus-panning");
       this.container.setPointerCapture(e.pointerId);
@@ -1000,8 +1007,16 @@ export class Workspace {
       return;
     }
 
+    // Calculate isDoubleClick early to prevent handles/adjusters from intercepting double-clicks on small/nested nodes
+    const nodeList = this.getOrderedNodeList();
+    const hitId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
+    const now = Date.now();
+    const isDoubleClick = (now - this.lastPointerDownTime < 350) && (hitId !== null && hitId === this.lastPointerDownId);
+    this.lastPointerDownTime = now;
+    this.lastPointerDownId = hitId;
+
     // ── Handle hit-test (resize) ──────────────────
-    if (this.selectedIds.size === 1) {
+    if (!isDoubleClick && this.selectedIds.size === 1) {
       const selId = this.selectedIds.values().next().value as string;
       const selNode = this.tree.get(selId);
       if (selNode?.currentRect) {
@@ -1032,10 +1047,6 @@ export class Workspace {
             };
           }
 
-          this.container.setPointerCapture(e.pointerId);
-          this.container.style.cursor = anchorCursor(anchor);
-          this.canvas.style.pointerEvents = "auto";
-          this.callbacks.onInteractionChange?.("resize-node");
           this.render();
           return;
         }
@@ -1043,7 +1054,7 @@ export class Workspace {
     }
 
     // ── Spacing Adjusters hit-test ────────────────
-    if (this.selectedIds.size === 1) {
+    if (!isDoubleClick && this.selectedIds.size === 1) {
       const selId = this.selectedIds.values().next().value as string;
       const adjusters = this.computeSpacingAdjusters(selId);
       const hitAdjuster = adjusters.find(adj =>
@@ -1060,26 +1071,12 @@ export class Workspace {
         const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
         this.adjusterStartValueStr = contentRoot ? (contentRoot.style.getPropertyValue(hitAdjuster.type) || null) : null;
         this.dragStartCanvas = canvasPos;
-        this.container.setPointerCapture(e.pointerId);
-        this.callbacks.onInteractionChange?.("adjust-spacing");
-
-        const isVertical = hitAdjuster.type.includes("top") || hitAdjuster.type.includes("bottom");
-        this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
-        this.canvas.style.pointerEvents = "auto";
-
         this.render();
         return;
       }
     }
 
     // ── Node hit-test (select + drag) ─────────────
-    const nodeList = this.getOrderedNodeList();
-    const hitId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
-
-    const now = Date.now();
-    const isDoubleClick = (now - this.lastPointerDownTime < 350) && (hitId !== null && hitId === this.lastPointerDownId);
-    this.lastPointerDownTime = now;
-    this.lastPointerDownId = hitId;
 
     let targetSelectId: string | null = null;
     let clickInsideSelection = false;
@@ -1123,11 +1120,15 @@ export class Workspace {
             const nextSelect = path[foundSelectedIdx + 1]!;
             this.enteredContainerId = nextParent.id;
             targetSelectId = nextSelect.id;
+          } else if (foundSelectedIdx === path.length - 1) {
+            // Leaf is already selected: keep selection on leaf to trigger text editing
+            targetSelectId = path[path.length - 1]!.id;
+            this.enteredContainerId = path[path.length - 2]?.id ?? null;
           } else {
-            // If the leaf is selected, or nothing in the path is selected
+            // Nothing in the path is selected
             if (path.length > 0) {
-              this.enteredContainerId = path[0]!.id;
-              targetSelectId = path[1]?.id ?? path[0]!.id;
+              targetSelectId = path[0]!.id;
+              this.enteredContainerId = null;
             } else {
               targetSelectId = hitId;
             }
@@ -1234,6 +1235,7 @@ export class Workspace {
     const canvasPos = screenToCanvas(
       e.clientX, e.clientY, this.viewport, rect,
     );
+    this.lastCanvasPos = canvasPos;
 
     if (this.previewMode) {
       if (this.isPanning) {
@@ -1252,6 +1254,10 @@ export class Workspace {
       const selId = this.selectedIds.values().next().value as string;
       const node = this.tree.get(selId);
       if (!node) return;
+
+      this.container.setPointerCapture(e.pointerId);
+      this.canvas.style.pointerEvents = "auto";
+      this.callbacks.onInteractionChange?.("adjust-spacing");
 
       const isVertical = this.activeAdjusterType.includes("top") || this.activeAdjusterType.includes("bottom");
       this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
@@ -1361,8 +1367,7 @@ export class Workspace {
 
     // ── Hover tracking ────────────────────────────
     if (!this.isPanning && !this.isDragging && !this.isResizing) {
-      const nodeList = this.getOrderedNodeList();
-      this.hoveredId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
+      this.updateHover(e.metaKey || e.ctrlKey);
 
       // Handle hover cursor.
       if (this.selectedIds.size === 1) {
@@ -1377,7 +1382,6 @@ export class Workspace {
           if (anchor) {
             this.container.style.cursor = anchorCursor(anchor);
             this.hoveredAdjusterType = null;
-            this.canvas.style.pointerEvents = "auto";
           } else {
             // Spacing adjusters check
             const adjusters = this.computeSpacingAdjusters(selId);
@@ -1392,22 +1396,18 @@ export class Workspace {
               this.hoveredAdjusterType = hoveredAdj.type;
               const isVertical = hoveredAdj.type.includes("top") || hoveredAdj.type.includes("bottom");
               this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
-              this.canvas.style.pointerEvents = "auto";
             } else {
               this.hoveredAdjusterType = null;
               this.container.style.cursor = "default";
-              this.canvas.style.pointerEvents = "none";
             }
           }
         } else {
           this.hoveredAdjusterType = null;
           this.container.style.cursor = "default";
-          this.canvas.style.pointerEvents = "none";
         }
       } else {
         this.hoveredAdjusterType = null;
         this.container.style.cursor = "default";
-        this.canvas.style.pointerEvents = "none";
       }
 
       this.render();
@@ -1430,6 +1430,11 @@ export class Workspace {
       const selId = this.selectedIds.values().next().value as string;
       const node = this.tree.get(selId);
       if (!node) return;
+
+      this.container.setPointerCapture(e.pointerId);
+      this.container.style.cursor = anchorCursor(this.activeAnchor);
+      this.canvas.style.pointerEvents = "auto";
+      this.callbacks.onInteractionChange?.("resize-node");
 
       const dx = canvasPos.x - this.dragStartCanvas.x;
       const dy = canvasPos.y - this.dragStartCanvas.y;
@@ -2049,6 +2054,8 @@ export class Workspace {
       this.container.classList.add("canvus-panning");
     } else if (e.code === "Escape") {
       this.handleEscapeKey();
+    } else if (e.key === "Meta" || e.key === "Control") {
+      this.updateHover(true);
     }
   }
 
@@ -2061,6 +2068,8 @@ export class Workspace {
       if (!this.isPanning) {
         this.container.classList.remove("canvus-panning");
       }
+    } else if (e.key === "Meta" || e.key === "Control") {
+      this.updateHover(e.metaKey || e.ctrlKey);
     }
   }
 
@@ -2078,7 +2087,7 @@ export class Workspace {
     if (this.previewMode) return;
     const targetEl = e.composedPath()[0] as HTMLElement | null;
     if (!targetEl) return;
-
+ 
     // Find the enclosing node wrapper
     let curr: HTMLElement | null = targetEl;
     let nodeId: string | null = null;
@@ -2089,41 +2098,41 @@ export class Workspace {
       }
       curr = curr.parentElement;
     }
-
+ 
     if (!nodeId) return;
     if (!this.editAllowedOnDblClick || !this.selectedIds.has(nodeId)) {
       this.editAllowedOnDblClick = false;
       return;
     }
     this.editAllowedOnDblClick = false;
-
+ 
     const node = this.tree.get(nodeId);
     if (!node) return;
-
+ 
     const wrapper = this.mount.getWrapper(nodeId);
     const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
     if (!wrapper || !contentRoot) return;
-
+ 
     const path = getDOMPath(contentRoot, targetEl);
     const originalHTML = targetEl.innerHTML;
-
+ 
     // Option B: Custom Editor Mount Escape Hatch
     if (this.callbacks.onTextEditRequest) {
       this.callbacks.onTextEditRequest(nodeId, targetEl, (newHTML: string) => {
         targetEl.innerHTML = newHTML;
-
+ 
         this.remeasureSubtree(nodeId!);
         if (node.parentId) {
           this.remeasureSubtree(node.parentId);
         }
         this.render();
-
+ 
         const commitTarget = node.parentId ?? nodeId!;
         const htmlStr = this.mount.extractHTML(commitTarget);
         if (htmlStr) {
           this.callbacks.onHTMLCommit?.(commitTarget, htmlStr);
         }
-
+ 
         this.callbacks.onOperationsGenerated?.([{
           type: "update-text",
           nodeId: nodeId!,
@@ -2133,13 +2142,13 @@ export class Workspace {
       });
       return;
     }
-
+ 
     // Option A: Plain-Text Inline Editor
     // Restrict to plaintext only to prevent formatting tag injection
     wrapper.classList.add("canvus-editing");
     targetEl.setAttribute("contenteditable", "plaintext-only");
     targetEl.focus();
-
+ 
     // Select all text natively for easier editing
     const selection = window.getSelection();
     if (selection) {
@@ -2148,8 +2157,16 @@ export class Workspace {
       selection.removeAllRanges();
       selection.addRange(range);
     }
-
+ 
     const handleKey = (ev: KeyboardEvent) => {
+      // Space -> Insert space for BUTTON element (bypass browser default click trigger)
+      if ((ev.key === " " || ev.code === "Space") && targetEl.tagName === "BUTTON") {
+        ev.preventDefault();
+        ev.stopPropagation();
+        document.execCommand("insertText", false, " ");
+        return;
+      }
+
       // Escape -> Cancel
       if (ev.key === "Escape") {
         ev.preventDefault();
@@ -2157,7 +2174,7 @@ export class Workspace {
         targetEl.blur();
         return;
       }
-
+ 
       // Enter -> Save for single line tags
       const isSingleLine = /^(H[1-6]|BUTTON|A|SPAN|LABEL)$/i.test(targetEl.tagName);
       if (isSingleLine && ev.key === "Enter") {
@@ -2165,14 +2182,14 @@ export class Workspace {
         targetEl.blur();
         return;
       }
-
+ 
       // Block rich text hotkeys (Cmd+B, Cmd+I, etc.)
       const isCmdOrCtrl = ev.metaKey || ev.ctrlKey;
       if (isCmdOrCtrl && (ev.key.toLowerCase() === "b" || ev.key.toLowerCase() === "i" || ev.key.toLowerCase() === "u")) {
         ev.preventDefault();
       }
     };
-
+ 
     const handleBlur = () => {
       wrapper.classList.remove("canvus-editing");
       targetEl.removeAttribute("contenteditable");
@@ -2254,6 +2271,16 @@ export class Workspace {
       // Inspect the first child element (the user's content root).
       const contentRoot = wrapper.firstElementChild as HTMLElement | null;
       if (!contentRoot) continue;
+
+      // JS Badge (⚡️ JS)
+      const hasJS = contentRoot.hasAttribute("data-canvus-has-js") || contentRoot.querySelector("[data-canvus-has-js]") !== null;
+      if (hasJS) {
+        layoutBadges.push({
+          rect: node.currentRect,
+          label: "⚡️ JS",
+          isJS: true,
+        });
+      }
 
       const info = detectLayout(contentRoot);
       node.layoutMode = info.mode;
@@ -2420,6 +2447,26 @@ export class Workspace {
       }
       return null;
     }
+  }
+
+  /** Updates the hovered node ID based on current pointer position and Cmd/Ctrl modifier. */
+  private updateHover(isCmdPressed: boolean): void {
+    if (!this.lastCanvasPos || this.isPanning || this.isDragging || this.isResizing) {
+      this.hoveredId = null;
+      return;
+    }
+    const nodeList = this.getOrderedNodeList();
+    const hitId = hitTestElements(this.lastCanvasPos.x, this.lastCanvasPos.y, nodeList);
+    if (hitId) {
+      if (isCmdPressed) {
+        this.hoveredId = hitId;
+      } else {
+        this.hoveredId = this.findSelectableNode(hitId, this.enteredContainerId);
+      }
+    } else {
+      this.hoveredId = null;
+    }
+    this.render();
   }
 
   /** Updates the active breadcrumbs and calls external callback. */
@@ -2615,13 +2662,17 @@ function getDOMElementByPath(root: HTMLElement, path: number[]): HTMLElement | n
  * Checks if the target element of an event is editable (input, textarea, select, or contenteditable).
  */
 function isEditableTarget(target: EventTarget | null): boolean {
-  if (!target || !(target instanceof HTMLElement)) return false;
-  const tagName = target.tagName.toUpperCase();
+  if (!target) return false;
+  const el = target as any;
+  const tagName = typeof el.tagName === "string" ? el.tagName.toUpperCase() : "";
+  const isContentEditable = el.isContentEditable === true || 
+                            (typeof el.hasAttribute === "function" && el.hasAttribute("contenteditable")) ||
+                            (typeof el.getAttribute === "function" && el.getAttribute("contenteditable") !== null);
   return (
     tagName === "INPUT" ||
     tagName === "TEXTAREA" ||
     tagName === "SELECT" ||
-    target.isContentEditable
+    isContentEditable
   );
 }
 

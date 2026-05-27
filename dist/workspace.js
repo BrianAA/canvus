@@ -127,6 +127,7 @@ export class Workspace {
     adjusterStartValue = 0;
     adjusterStartValueStr = null;
     dragStartCanvas = null;
+    lastCanvasPos = null;
     dragStartNodePos = null;
     dragStartParentId = null;
     dragStartIndex = -1;
@@ -763,7 +764,10 @@ export class Workspace {
         const rect = this.getContainerRect();
         const canvasPos = screenToCanvas(e.clientX, e.clientY, this.viewport, rect);
         if (this.previewMode) {
-            if (this.spaceDown) {
+            if (this.spaceDown || e.button === 1) {
+                if (e.button === 1) {
+                    e.preventDefault();
+                }
                 this.isPanning = true;
                 this.container.classList.add("canvus-panning");
                 this.container.setPointerCapture(e.pointerId);
@@ -774,15 +778,25 @@ export class Workspace {
         }
         this.pointerDownInsideSelection = null;
         // ── Space + pointer = Pan ─────────────────────
-        if (this.spaceDown) {
+        if (this.spaceDown || e.button === 1) {
+            if (e.button === 1) {
+                e.preventDefault();
+            }
             this.isPanning = true;
             this.container.classList.add("canvus-panning");
             this.container.setPointerCapture(e.pointerId);
             this.callbacks.onInteractionChange?.("pan");
             return;
         }
+        // Calculate isDoubleClick early to prevent handles/adjusters from intercepting double-clicks on small/nested nodes
+        const nodeList = this.getOrderedNodeList();
+        const hitId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
+        const now = Date.now();
+        const isDoubleClick = (now - this.lastPointerDownTime < 350) && (hitId !== null && hitId === this.lastPointerDownId);
+        this.lastPointerDownTime = now;
+        this.lastPointerDownId = hitId;
         // ── Handle hit-test (resize) ──────────────────
-        if (this.selectedIds.size === 1) {
+        if (!isDoubleClick && this.selectedIds.size === 1) {
             const selId = this.selectedIds.values().next().value;
             const selNode = this.tree.get(selId);
             if (selNode?.currentRect) {
@@ -809,17 +823,13 @@ export class Workspace {
                             "height": contentRoot.style.height || null,
                         };
                     }
-                    this.container.setPointerCapture(e.pointerId);
-                    this.container.style.cursor = anchorCursor(anchor);
-                    this.canvas.style.pointerEvents = "auto";
-                    this.callbacks.onInteractionChange?.("resize-node");
                     this.render();
                     return;
                 }
             }
         }
         // ── Spacing Adjusters hit-test ────────────────
-        if (this.selectedIds.size === 1) {
+        if (!isDoubleClick && this.selectedIds.size === 1) {
             const selId = this.selectedIds.values().next().value;
             const adjusters = this.computeSpacingAdjusters(selId);
             const hitAdjuster = adjusters.find(adj => canvasPos.x >= adj.rect.x &&
@@ -833,22 +843,11 @@ export class Workspace {
                 const contentRoot = wrapper?.firstElementChild;
                 this.adjusterStartValueStr = contentRoot ? (contentRoot.style.getPropertyValue(hitAdjuster.type) || null) : null;
                 this.dragStartCanvas = canvasPos;
-                this.container.setPointerCapture(e.pointerId);
-                this.callbacks.onInteractionChange?.("adjust-spacing");
-                const isVertical = hitAdjuster.type.includes("top") || hitAdjuster.type.includes("bottom");
-                this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
-                this.canvas.style.pointerEvents = "auto";
                 this.render();
                 return;
             }
         }
         // ── Node hit-test (select + drag) ─────────────
-        const nodeList = this.getOrderedNodeList();
-        const hitId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
-        const now = Date.now();
-        const isDoubleClick = (now - this.lastPointerDownTime < 350) && (hitId !== null && hitId === this.lastPointerDownId);
-        this.lastPointerDownTime = now;
-        this.lastPointerDownId = hitId;
         let targetSelectId = null;
         let clickInsideSelection = false;
         const hasModifier = e.shiftKey || e.metaKey || e.ctrlKey;
@@ -889,11 +888,16 @@ export class Workspace {
                         this.enteredContainerId = nextParent.id;
                         targetSelectId = nextSelect.id;
                     }
+                    else if (foundSelectedIdx === path.length - 1) {
+                        // Leaf is already selected: keep selection on leaf to trigger text editing
+                        targetSelectId = path[path.length - 1].id;
+                        this.enteredContainerId = path[path.length - 2]?.id ?? null;
+                    }
                     else {
-                        // If the leaf is selected, or nothing in the path is selected
+                        // Nothing in the path is selected
                         if (path.length > 0) {
-                            this.enteredContainerId = path[0].id;
-                            targetSelectId = path[1]?.id ?? path[0].id;
+                            targetSelectId = path[0].id;
+                            this.enteredContainerId = null;
                         }
                         else {
                             targetSelectId = hitId;
@@ -998,6 +1002,7 @@ export class Workspace {
     handlePointerMove(e) {
         const rect = this.getContainerRect();
         const canvasPos = screenToCanvas(e.clientX, e.clientY, this.viewport, rect);
+        this.lastCanvasPos = canvasPos;
         if (this.previewMode) {
             if (this.isPanning) {
                 this.viewport = applyPan(e.movementX, e.movementY, this.viewport);
@@ -1013,6 +1018,9 @@ export class Workspace {
             const node = this.tree.get(selId);
             if (!node)
                 return;
+            this.container.setPointerCapture(e.pointerId);
+            this.canvas.style.pointerEvents = "auto";
+            this.callbacks.onInteractionChange?.("adjust-spacing");
             const isVertical = this.activeAdjusterType.includes("top") || this.activeAdjusterType.includes("bottom");
             this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
             this.canvas.style.pointerEvents = "auto";
@@ -1110,8 +1118,7 @@ export class Workspace {
         }
         // ── Hover tracking ────────────────────────────
         if (!this.isPanning && !this.isDragging && !this.isResizing) {
-            const nodeList = this.getOrderedNodeList();
-            this.hoveredId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
+            this.updateHover(e.metaKey || e.ctrlKey);
             // Handle hover cursor.
             if (this.selectedIds.size === 1) {
                 const selId = this.selectedIds.values().next().value;
@@ -1123,7 +1130,6 @@ export class Workspace {
                     if (anchor) {
                         this.container.style.cursor = anchorCursor(anchor);
                         this.hoveredAdjusterType = null;
-                        this.canvas.style.pointerEvents = "auto";
                     }
                     else {
                         // Spacing adjusters check
@@ -1136,25 +1142,21 @@ export class Workspace {
                             this.hoveredAdjusterType = hoveredAdj.type;
                             const isVertical = hoveredAdj.type.includes("top") || hoveredAdj.type.includes("bottom");
                             this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
-                            this.canvas.style.pointerEvents = "auto";
                         }
                         else {
                             this.hoveredAdjusterType = null;
                             this.container.style.cursor = "default";
-                            this.canvas.style.pointerEvents = "none";
                         }
                     }
                 }
                 else {
                     this.hoveredAdjusterType = null;
                     this.container.style.cursor = "default";
-                    this.canvas.style.pointerEvents = "none";
                 }
             }
             else {
                 this.hoveredAdjusterType = null;
                 this.container.style.cursor = "default";
-                this.canvas.style.pointerEvents = "none";
             }
             this.render();
             return;
@@ -1173,6 +1175,10 @@ export class Workspace {
             const node = this.tree.get(selId);
             if (!node)
                 return;
+            this.container.setPointerCapture(e.pointerId);
+            this.container.style.cursor = anchorCursor(this.activeAnchor);
+            this.canvas.style.pointerEvents = "auto";
+            this.callbacks.onInteractionChange?.("resize-node");
             const dx = canvasPos.x - this.dragStartCanvas.x;
             const dy = canvasPos.y - this.dragStartCanvas.y;
             const wrapper = this.mount.getWrapper(selId);
@@ -1724,6 +1730,9 @@ export class Workspace {
         else if (e.code === "Escape") {
             this.handleEscapeKey();
         }
+        else if (e.key === "Meta" || e.key === "Control") {
+            this.updateHover(true);
+        }
     }
     handleKeyUp(e) {
         const target = e.composedPath()[0] || null;
@@ -1734,6 +1743,9 @@ export class Workspace {
             if (!this.isPanning) {
                 this.container.classList.remove("canvus-panning");
             }
+        }
+        else if (e.key === "Meta" || e.key === "Control") {
+            this.updateHover(e.metaKey || e.ctrlKey);
         }
     }
     /** Resize canvas to match container dimensions. */
@@ -1811,6 +1823,13 @@ export class Workspace {
             selection.addRange(range);
         }
         const handleKey = (ev) => {
+            // Space -> Insert space for BUTTON element (bypass browser default click trigger)
+            if ((ev.key === " " || ev.code === "Space") && targetEl.tagName === "BUTTON") {
+                ev.preventDefault();
+                ev.stopPropagation();
+                document.execCommand("insertText", false, " ");
+                return;
+            }
             // Escape -> Cancel
             if (ev.key === "Escape") {
                 ev.preventDefault();
@@ -1905,6 +1924,15 @@ export class Workspace {
             const contentRoot = wrapper.firstElementChild;
             if (!contentRoot)
                 continue;
+            // JS Badge (⚡️ JS)
+            const hasJS = contentRoot.hasAttribute("data-canvus-has-js") || contentRoot.querySelector("[data-canvus-has-js]") !== null;
+            if (hasJS) {
+                layoutBadges.push({
+                    rect: node.currentRect,
+                    label: "⚡️ JS",
+                    isJS: true,
+                });
+            }
             const info = detectLayout(contentRoot);
             node.layoutMode = info.mode;
             // Only show badges for containers with children.
@@ -2063,6 +2091,27 @@ export class Workspace {
             }
             return null;
         }
+    }
+    /** Updates the hovered node ID based on current pointer position and Cmd/Ctrl modifier. */
+    updateHover(isCmdPressed) {
+        if (!this.lastCanvasPos || this.isPanning || this.isDragging || this.isResizing) {
+            this.hoveredId = null;
+            return;
+        }
+        const nodeList = this.getOrderedNodeList();
+        const hitId = hitTestElements(this.lastCanvasPos.x, this.lastCanvasPos.y, nodeList);
+        if (hitId) {
+            if (isCmdPressed) {
+                this.hoveredId = hitId;
+            }
+            else {
+                this.hoveredId = this.findSelectableNode(hitId, this.enteredContainerId);
+            }
+        }
+        else {
+            this.hoveredId = null;
+        }
+        this.render();
     }
     /** Updates the active breadcrumbs and calls external callback. */
     updateBreadcrumb() {
@@ -2237,13 +2286,17 @@ function getDOMElementByPath(root, path) {
  * Checks if the target element of an event is editable (input, textarea, select, or contenteditable).
  */
 function isEditableTarget(target) {
-    if (!target || !(target instanceof HTMLElement))
+    if (!target)
         return false;
-    const tagName = target.tagName.toUpperCase();
+    const el = target;
+    const tagName = typeof el.tagName === "string" ? el.tagName.toUpperCase() : "";
+    const isContentEditable = el.isContentEditable === true ||
+        (typeof el.hasAttribute === "function" && el.hasAttribute("contenteditable")) ||
+        (typeof el.getAttribute === "function" && el.getAttribute("contenteditable") !== null);
     return (tagName === "INPUT" ||
         tagName === "TEXTAREA" ||
         tagName === "SELECT" ||
-        target.isContentEditable);
+        isContentEditable);
 }
 // ── Layout Grid Helpers ─────────────────────────────────────
 function getGridStart(element, dimension) {

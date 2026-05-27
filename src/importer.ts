@@ -21,6 +21,9 @@ export interface ImportHTMLOptions {
 
   /** Whether to clear selection and remove existing nodes from the workspace before importing. @default true */
   clearWorkspace?: boolean;
+
+  /** The default width (in pixels) applied to imported root-level nodes. @default 1200 */
+  defaultPageWidth?: number;
 }
 
 const DEFAULT_NODE_SELECTOR =
@@ -59,7 +62,47 @@ function resolveCSSUrls(cssText: string, baseUrl?: string): string {
 }
 
 /**
- * Rewrites relative attributes (src, href, style background url) to absolute URLs on a cloned element.
+ * Resolves relative paths inside CSS @import declarations.
+ */
+function resolveCSSImports(cssText: string, baseUrl?: string): string {
+  if (!baseUrl) return cssText;
+  return cssText.replace(/@import\s+['"]([^'"]+)['"]/g, (match, importPath) => {
+    // Skip absolute or data URLs
+    if (
+      importPath.startsWith("data:") ||
+      importPath.startsWith("http:") ||
+      importPath.startsWith("https:") ||
+      importPath.startsWith("//")
+    ) {
+      return match;
+    }
+    const resolved = resolveUrl(importPath, baseUrl);
+    return `@import "${resolved}"`;
+  });
+}
+
+/**
+ * Resolves relative paths inside srcset attributes.
+ */
+function resolveSrcSet(srcset: string, baseUrl?: string): string {
+  if (!baseUrl) return srcset;
+  return srcset
+    .split(",")
+    .map((part) => {
+      const trimmed = part.trim();
+      const spaceIndex = trimmed.indexOf(" ");
+      if (spaceIndex === -1) {
+        return resolveUrl(trimmed, baseUrl);
+      }
+      const url = trimmed.slice(0, spaceIndex);
+      const descriptor = trimmed.slice(spaceIndex);
+      return `${resolveUrl(url, baseUrl)}${descriptor}`;
+    })
+    .join(", ");
+}
+
+/**
+ * Rewrites relative attributes (src, srcset, href, style background url) to absolute URLs on a cloned element.
  */
 function resolveRelativeAttributes(element: HTMLElement, baseUrl?: string): void {
   if (!baseUrl) return;
@@ -73,6 +116,17 @@ function resolveRelativeAttributes(element: HTMLElement, baseUrl?: string): void
   for (const el of Array.from(elementsWithSrc)) {
     const src = el.getAttribute("src") || "";
     el.setAttribute("src", resolveUrl(src, baseUrl));
+  }
+
+  // Resolve srcset attribute
+  if (element.hasAttribute("srcset")) {
+    const srcset = element.getAttribute("srcset") || "";
+    element.setAttribute("srcset", resolveSrcSet(srcset, baseUrl));
+  }
+  const elementsWithSrcset = element.querySelectorAll("[srcset]");
+  for (const el of Array.from(elementsWithSrcset)) {
+    const srcset = el.getAttribute("srcset") || "";
+    el.setAttribute("srcset", resolveSrcSet(srcset, baseUrl));
   }
 
   // Resolve href attribute (skipping hashes/anchors or protocol links)
@@ -93,12 +147,12 @@ function resolveRelativeAttributes(element: HTMLElement, baseUrl?: string): void
   // Resolve inline styles containing urls
   if (element.hasAttribute("style")) {
     const style = element.getAttribute("style") || "";
-    element.setAttribute("style", resolveCSSUrls(style, baseUrl));
+    element.setAttribute("style", resolveCSSImports(resolveCSSUrls(style, baseUrl), baseUrl));
   }
   const elementsWithStyle = element.querySelectorAll("[style]");
   for (const el of Array.from(elementsWithStyle)) {
     const style = el.getAttribute("style") || "";
-    el.setAttribute("style", resolveCSSUrls(style, baseUrl));
+    el.setAttribute("style", resolveCSSImports(resolveCSSUrls(style, baseUrl), baseUrl));
   }
 }
 
@@ -136,7 +190,7 @@ export function importHTMLDocument(
   const styleTags = parsedDoc.querySelectorAll("style");
   for (const style of Array.from(styleTags)) {
     const rawCSS = style.textContent || "";
-    const resolvedCSS = resolveCSSUrls(rawCSS, baseUrl);
+    const resolvedCSS = resolveCSSImports(resolveCSSUrls(rawCSS, baseUrl), baseUrl);
     workspace.injectCSS(resolvedCSS);
   }
 
@@ -147,12 +201,10 @@ export function importHTMLDocument(
     workspace.injectCSSLink(resolvedHref);
   }
 
-  // 4. Extract Global Script Tags (and load them into the shadow DOM)
-  const scriptTags = parsedDoc.querySelectorAll("script");
+  // 4. Extract and inject head-level scripts (scripts inside <head>)
+  const headScripts = parsedDoc.head ? parsedDoc.head.querySelectorAll("script") : [];
   const shadowRoot = workspace.getShadowMount().getShadowRoot();
-  for (const script of Array.from(scriptTags)) {
-    // If the script is nested inside body, we will handle it when parsing body (or skip it as a workspace node)
-    // Only inject head scripts or document-level scripts here
+  for (const script of Array.from(headScripts)) {
     const src = script.getAttribute("src");
     if (src) {
       const resolvedSrc = resolveUrl(src, baseUrl);
@@ -169,75 +221,174 @@ export function importHTMLDocument(
     }
   }
 
-  // 5. Traverse Body & Build Node Hierarchies
+  // 5. Traverse Body & Build Node Hierarchies in-place
   const body = parsedDoc.body;
   if (!body) return;
 
-  interface NodeMetadata {
-    id: string;
-    element: HTMLElement;
-    parentId: string | null;
+  // Helper to check if an element has a workspace ancestor in the original tree
+  function hasWorkspaceAncestor(el: Element): boolean {
+    let parent = el.parentElement;
+    while (parent && parent !== body) {
+      if (parent.matches(nodeSelector)) {
+        return true;
+      }
+      parent = parent.parentElement;
+    }
+    return false;
   }
 
-  const registeredNodes: NodeMetadata[] = [];
   const elementToId = new Map<Element, string>();
   let nodeCounter = 0;
+  function getNextId(): string {
+    return `imported-node-${++nodeCounter}`;
+  }
 
-  // Pass 1: Identify all workspace nodes and tag them with unique IDs
-  function identifyNodes(el: Element, activeParentId: string | null): void {
-    // Skip script elements inside body (they are evaluated/removed)
-    if (el.tagName.toLowerCase() === "script") return;
+  // Recursive in-place wrapping bottom-up
+  function wrapNodesInPlace(el: Element): void {
+    const children = Array.from(el.children);
+    for (const child of children) {
+      wrapNodesInPlace(child);
+    }
 
-    const isWorkspaceNode = el.matches(nodeSelector);
-    let currentId = activeParentId;
-
-    if (isWorkspaceNode) {
+    if (
+      el.matches(nodeSelector) &&
+      el.tagName.toLowerCase() !== "script" &&
+      el.tagName.toLowerCase() !== "style"
+    ) {
       const htmlEl = el as HTMLElement;
-      let id = htmlEl.getAttribute("id") || `imported-node-${++nodeCounter}`;
+      const id = htmlEl.getAttribute("id") || getNextId();
       htmlEl.setAttribute("id", id);
-      currentId = id;
       elementToId.set(el, id);
+
+      const doc = el.ownerDocument;
+      const wrapper = doc.createElement("div");
+      wrapper.className = "canvus-node-wrapper";
+      wrapper.setAttribute("data-canvus-id", id);
+
+      const isFlowChild = hasWorkspaceAncestor(el);
+      if (isFlowChild) {
+        wrapper.classList.add("canvus-flow-child");
+      }
+
+      if (el.parentNode) {
+        el.parentNode.replaceChild(wrapper, el);
+        wrapper.appendChild(el);
+      }
+    }
+  }
+
+  // Identify body script elements. Differentiate global scripts from node-nested scripts.
+  const bodyScripts = body.querySelectorAll("script");
+  const globalBodyScripts: HTMLScriptElement[] = [];
+
+  for (const script of Array.from(bodyScripts)) {
+    // If the script does not have a workspace ancestor, it's a global body script
+    if (!hasWorkspaceAncestor(script)) {
+      globalBodyScripts.push(script as HTMLScriptElement);
+      // Remove it from the parsed body to prevent duplicate/unscoped execution
+      script.remove();
+    }
+  }
+
+  // Wrap workspace nodes bottom-up in the body
+  const bodyChildren = Array.from(body.children);
+  for (const child of bodyChildren) {
+    wrapNodesInPlace(child);
+  }
+
+  // Collect registered workspace nodes top-down (parents before children)
+  interface NodeMetadata {
+    id: string;
+    parentId: string | null;
+    element: HTMLElement;
+  }
+  const registeredNodes: NodeMetadata[] = [];
+
+  function collectRegisteredNodes(el: Element, activeParentId: string | null): void {
+    const canvusId = el.getAttribute("data-canvus-id");
+    let currentParentId = activeParentId;
+
+    if (canvusId && el.classList.contains("canvus-node-wrapper")) {
+      const contentRoot = el.firstElementChild as HTMLElement;
       registeredNodes.push({
-        id,
-        element: htmlEl,
+        id: canvusId,
         parentId: activeParentId,
+        element: contentRoot,
       });
+      currentParentId = canvusId;
     }
 
     for (const child of Array.from(el.children)) {
-      identifyNodes(child, currentId);
+      collectRegisteredNodes(child, currentParentId);
     }
   }
 
-  identifyNodes(body, null);
+  for (const child of Array.from(body.children)) {
+    collectRegisteredNodes(child, null);
+  }
 
-  // Pass 2: Mount each node in topological order (parents before children)
+  // Append all children of the parsed body directly into the active Shadow DOM
+  while (body.firstChild) {
+    const child = body.firstChild;
+    shadowRoot.appendChild(child);
+  }
+
+  let currentY = 0;
+  const defaultPageWidth = options.defaultPageWidth ?? 1200;
+
+  // Register each node in topological order
   for (const metadata of registeredNodes) {
     const el = metadata.element;
 
-    // Clone element to construct rawMarkup without mutating the parsed DOM
+    // Clone element to construct rawMarkup without mutating the active DOM
     const clone = el.cloneNode(true) as HTMLElement;
 
     // Resolve relative URL paths inside the cloned element
     resolveRelativeAttributes(clone, baseUrl);
 
-    // Remove any descendant elements in the clone that are registered as separate workspace nodes
-    // to prevent duplicate rendering of children wrappers
-    const childrenNodesInClone = clone.querySelectorAll(nodeSelector);
+    // Remove any descendant wrappers inside the clone to have a clean rawMarkup
+    const childrenNodesInClone = clone.querySelectorAll(".canvus-node-wrapper");
     for (const childNode of Array.from(childrenNodesInClone)) {
       childNode.remove();
     }
 
     const rawMarkup = clone.outerHTML;
 
-    // Mount to the workspace
-    workspace.addNode(
+    let currentRect = null;
+    if (metadata.parentId === null) {
+      currentRect = { x: 0, y: currentY, width: defaultPageWidth, height: 0 };
+    }
+
+    // Mount to the workspace (which will find the pre-mounted wrapper in the Shadow DOM and register it)
+    const measuredRect = workspace.addNode(
       {
         id: metadata.id,
         rawMarkup,
-        currentRect: null,
+        currentRect,
       },
       metadata.parentId,
     );
+
+    // If this is a root node, stack the next root node below it
+    if (metadata.parentId === null && measuredRect) {
+      currentY += measuredRect.height;
+    }
+  }
+
+  // Run global body scripts scoped to the shadow DOM
+  for (const script of globalBodyScripts) {
+    const src = script.getAttribute("src");
+    if (src) {
+      const resolvedSrc = resolveUrl(src, baseUrl);
+      const newScript = document.createElement("script");
+      for (const attr of Array.from(script.attributes)) {
+        newScript.setAttribute(attr.name, attr.value);
+      }
+      newScript.setAttribute("src", resolvedSrc);
+      shadowRoot.appendChild(newScript);
+    } else {
+      const code = script.textContent || "";
+      workspace.getShadowMount().executeScopedScript(code);
+    }
   }
 }

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Canvus Test Document</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #09090b;
+      color: #fafafa;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .header {
+      border-bottom: 1px solid #27272a;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      color: #6366f1;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: #242427;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      padding: 16px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .card:hover {
+      border-color: #6366f1;
+      transform: translateY(-2px);
+    }
+    .card h3 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+    }
+    .card p {
+      margin: 0;
+      font-size: 14px;
+      color: #a1a1aa;
+      line-height: 1.5;
+    }
+    .alert-box {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px dashed #6366f1;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .alert-box button {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .alert-box button:hover {
+      background: #4f46e5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="main-container">
+    <div class="header" id="page-header">
+      <h1>Dynamic Dashboard</h1>
+      <p style="margin: 4px 0 0 0; color: #71717a; font-size: 14px;">Interactive document import test</p>
+    </div>
+
+    <div class="grid" id="layout-grid">
+      <div class="card" id="card-1">
+        <h3>Feature Analysis</h3>
+        <p>This layout uses CSS grid template tracks and is fully responsive to resizing handles inside the editor.</p>
+      </div>
+      <div class="card" id="card-2">
+        <h3>Aesthetics Review</h3>
+        <p>Styles are cleanly extracted, rewritten, and injected scoped to the shadow DOM container layer.</p>
+      </div>
+    </div>
+
+    <div class="alert-box" id="banner">
+      <div>
+        <strong style="color: #6366f1;">Interactive widget:</strong>
+        <span id="click-status" style="margin-left: 6px; color: #a1a1aa;">Click count: 0</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button id="action-btn">Increment</button>
+        <button id="toggle-preview-btn" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: inherit;">Switch to Preview Mode</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const btn = document.querySelector("#action-btn");
+    const status = document.querySelector("#click-status");
+    let clicks = 0;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      clicks++;
+      status.textContent = "Click count: " + clicks;
+      status.style.color = "#6366f1";
+    });
+
+    const toggleBtn = document.querySelector("#toggle-preview-btn");
+    function updateToggleBtn() {
+      if (toggleBtn.hasAttribute("contenteditable") || toggleBtn.isContentEditable) return;
+      if (window.ws) {
+        const isPreview = window.ws.isPreviewMode();
+        const nextText = isPreview ? "Switch to Edit Mode" : "Switch to Preview Mode";
+        const nextBg = isPreview ? "#ef4444" : "#10b981";
+        if (toggleBtn.textContent !== nextText) {
+          toggleBtn.textContent = nextText;
+        }
+        if (toggleBtn.style.background !== nextBg) {
+          toggleBtn.style.background = nextBg;
+        }
+      }
+    }
+
+    updateToggleBtn();
+    setInterval(updateToggleBtn, 300);
+
+    toggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (window.ws) {
+        const nextState = !window.ws.isPreviewMode();
+        window.ws.setPreviewMode(nextState);
+        
+        // Sync the host UI toggle button style/text
+        const hostBtn = window.parent.document.getElementById('btn-preview-mode');
+        if (hostBtn) {
+          hostBtn.textContent = nextState ? "Preview Mode" : "Edit Mode";
+          hostBtn.style.background = nextState ? "var(--accent)" : "var(--bg-elevated)";
+        }
+        
+        updateToggleBtn();
+      }
+    });
+  </script>
+</body>
+</html>

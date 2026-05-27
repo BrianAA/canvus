@@ -232,6 +232,8 @@ export interface LayoutBadgeInfo {
   rect: Rect;
   /** Short label like "FLEX →", "GRID", "BLOCK". */
   label: string;
+  /** True if this is a script/JS badge. */
+  isJS?: boolean;
 }
 
 /** Data for rendering grid track lines on a container. */
@@ -479,8 +481,12 @@ export class OverlayRenderer {
 
     // 8. Layout badges (M6)
     if (frame.layoutBadges) {
+      const offsets = new Map<string, number>();
       for (const badge of frame.layoutBadges) {
-        this.drawLayoutBadge(badge.rect, badge.label, viewport);
+        const key = `${badge.rect.x},${badge.rect.y}`;
+        const currentOffset = offsets.get(key) || 0;
+        const widthUsed = this.drawLayoutBadge(badge.rect, badge.label, viewport, currentOffset, badge.isJS);
+        offsets.set(key, currentOffset + widthUsed + 4);
       }
     }
 
@@ -872,7 +878,9 @@ export class OverlayRenderer {
     canvasRect: Readonly<Rect>,
     label: string,
     viewport: Readonly<ViewportMatrix>,
-  ): void {
+    xOffset: number,
+    isJS?: boolean,
+  ): number {
     const { ctx, style } = this;
     const { scale, offsetX, offsetY } = viewport;
 
@@ -887,20 +895,30 @@ export class OverlayRenderer {
     const padH = 6;
     const badgeW = textW + padH * 2;
     const badgeH = 14;
-    const badgeX = sx - 1;
+    const badgeX = sx - 1 + xOffset;
     const badgeY = sy - badgeH - 4; // Above the selection outline.
 
     // Draw badge background.
-    ctx.fillStyle = style.layoutBadgeBg;
+    if (isJS) {
+      ctx.fillStyle = "#d97706"; // Premium Amber for JS/Script badge
+    } else {
+      ctx.fillStyle = style.layoutBadgeBg;
+    }
     ctx.beginPath();
     ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
     ctx.fill();
 
     // Draw text.
-    ctx.fillStyle = style.layoutBadgeText;
+    if (isJS) {
+      ctx.fillStyle = "#ffffff";
+    } else {
+      ctx.fillStyle = style.layoutBadgeText;
+    }
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
     ctx.fillText(label, badgeX + padH, badgeY + badgeH / 2 + 0.5);
+
+    return badgeW;
   }
 
   /**

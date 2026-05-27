@@ -134,6 +134,8 @@ export interface LayoutBadgeInfo {
     rect: Rect;
     /** Short label like "FLEX →", "GRID", "BLOCK". */
     label: string;
+    /** True if this is a script/JS badge. */
+    isJS?: boolean;
 }
 /** Data for rendering grid track lines on a container. */
 export interface GridOverlayInfo {

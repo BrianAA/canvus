@@ -206,6 +206,9 @@ export interface Operation {
 ### Drag and Drop Placement (`src/drop-zone.ts`)
 *   **`findDropTarget(pt: Vec2, draggedId: string, nodes: ReadonlyArray<ResolvedNode>, ws: Workspace): DropTarget | null`**: Calculates target drop indices and placement guides.
 
+### HTML/CSS Document Importer (`src/importer.ts`)
+*   **`importHTMLDocument(workspace: Workspace, htmlString: string, options?: ImportHTMLOptions): void`**: Parses a complete HTML document or fragment, resolves relative URLs, wraps workspace nodes in-place, extracts and mounts styles, and populates them into the workspace shadow root.
+
 ---
 
 ## 5. Type and Callback Definitions
@@ -218,8 +221,9 @@ export interface Operation {
 *   `GridTrack` = `{ start: number; end: number; size: number; }`
 *   `OverlayStyle` = `{ selectionColor: string; hoverColor: string; guideColor: string; handleColor: string; handleSize: number; badgeBg: string; badgeColor: string; tooltipBg: string; tooltipColor: string; font: string; }`
 *   `OverlayFrame` = `{ selection: Set<string>; hover: string \| null; guides: Guide[]; marginAdjusters: Record<string, Rect>; paddingAdjusters: Record<string, Rect>; }`
-*   `LayoutBadgeInfo` = `{ text: string; rect: Rect; }`
+*   `LayoutBadgeInfo` = `{ label: string; rect: Rect; isJS?: boolean; }`
 *   `GridOverlayInfo` = `{ columns: GridTrack[]; rows: GridTrack[]; rect: Rect; }`
 *   `Guide` = `{ type: "h" \| "v"; coord: number; start: number; end: number; }`
 *   `DropTarget` = `{ parentId: string \| null; index: number; indicator: InsertionIndicator; }`
 *   `InsertionIndicator` = `{ type: "h" \| "v"; coord: number; start: number; end: number; }`
+*   `ImportHTMLOptions` = `{ baseUrl?: string; nodeSelector?: string; clearWorkspace?: boolean; defaultPageWidth?: number; }`

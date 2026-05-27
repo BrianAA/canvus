@@ -90,12 +90,13 @@ interface OverlayFrame {
 
 ### `LayoutBadgeInfo`
 
-Badge label and position for a layout container.
+Badge label and position for a layout container or a guest javascript interactive element.
 
 ```typescript
 interface LayoutBadgeInfo {
-  text: string
+  label: string
   rect: Rect
+  isJS?: boolean
 }
 ```
 

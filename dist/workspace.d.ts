@@ -105,6 +105,7 @@ export declare class Workspace {
     private adjusterStartValue;
     private adjusterStartValueStr;
     private dragStartCanvas;
+    private lastCanvasPos;
     private dragStartNodePos;
     private dragStartParentId;
     private dragStartIndex;
@@ -268,6 +269,8 @@ export declare class Workspace {
     private handleEscapeKey;
     /** Resolves which node is selectable based on click position and scope depth. */
     private findSelectableNode;
+    /** Updates the hovered node ID based on current pointer position and Cmd/Ctrl modifier. */
+    private updateHover;
     /** Updates the active breadcrumbs and calls external callback. */
     private updateBreadcrumb;
     private getMarqueeRect;

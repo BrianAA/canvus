@@ -12,6 +12,30 @@
 
 import type { Rect, ViewportMatrix, WebHTMLNode } from "./types.js";
 
+// Globally hook addEventListener to detect elements inside any shadow root that get listeners attached.
+if (typeof EventTarget !== "undefined" && !(EventTarget.prototype as any).__canvus_hooked) {
+  (EventTarget.prototype as any).__canvus_hooked = true;
+  const originalAdd = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function() {
+    if (this instanceof HTMLElement) {
+      // Traverse up to see if we are in a canvus-node-wrapper
+      let curr: HTMLElement | null = this;
+      let isCanvus = false;
+      while (curr) {
+        if (curr.classList && curr.classList.contains("canvus-node-wrapper")) {
+          isCanvus = true;
+          break;
+        }
+        curr = curr.parentElement || (curr.getRootNode && (curr.getRootNode() as any).host);
+      }
+      if (isCanvus) {
+        this.setAttribute("data-canvus-has-js", "true");
+      }
+    }
+    return originalAdd.apply(this, arguments as any);
+  };
+}
+
 // ── Callback Contracts ──────────────────────────────────────
 
 /**
@@ -65,7 +89,7 @@ const SHADOW_RESET_CSS = `
   position: absolute;
   pointer-events: auto;
   transform-origin: 0 0;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   user-select: none;
@@ -214,35 +238,64 @@ export class ShadowMount {
       );
     }
 
-    // ── Create Wrapper ──────────────────────────────────
-    const wrapper = document.createElement("div");
-    wrapper.className = "canvus-node-wrapper";
-    wrapper.setAttribute("data-canvus-id", node.id);
+    // Check if the wrapper is already present in the shadow tree (e.g. from document importer)
+    let wrapper = this.shadow.querySelector(`.canvus-node-wrapper[data-canvus-id="${node.id}"]`) as HTMLDivElement | null;
+    const isPreMounted = !!wrapper;
 
-    // Inject user HTML.
-    wrapper.innerHTML = node.rawMarkup;
+    if (!wrapper) {
+      // ── Create Wrapper ──────────────────────────────────
+      wrapper = document.createElement("div");
+      wrapper.className = "canvus-node-wrapper";
+      wrapper.setAttribute("data-canvus-id", node.id);
 
-    // ── Position in Canvas-Space ────────────────────────
-    const cx = node.currentRect?.x ?? 0;
-    const cy = node.currentRect?.y ?? 0;
+      // Inject user HTML.
+      wrapper.innerHTML = node.rawMarkup;
 
-    wrapper.style.left = `${cx}px`;
-    wrapper.style.top = `${cy}px`;
+      // ── Position in Canvas-Space ────────────────────────
+      const cx = node.currentRect?.x ?? 0;
+      const cy = node.currentRect?.y ?? 0;
 
-    // If an explicit width is provided, constrain it so that
-    // the browser can compute the natural content height
-    // (text wrapping, flexbox, etc.).
+      wrapper.style.left = `${cx}px`;
+      wrapper.style.top = `${cy}px`;
+
+      // ── Mount to Shadow Tree ────────────────────────────
+      this.shadow.appendChild(wrapper);
+    }
+
+    // Apply explicit width and height if provided (applies to both pre-mounted and new nodes)
     if (node.currentRect) {
-      wrapper.style.width = `${node.currentRect.width}px`;
-      // Height is intentionally left auto unless explicitly set,
-      // allowing content to determine its own block size.
+      if (node.currentRect.width > 0) {
+        wrapper.style.width = `${node.currentRect.width}px`;
+      }
       if (node.currentRect.height > 0) {
         wrapper.style.height = `${node.currentRect.height}px`;
       }
     }
 
-    // ── Mount to Shadow Tree ────────────────────────────
-    this.shadow.appendChild(wrapper);
+    // ── Position in Canvas-Space ────────────────────────
+    const cx = node.currentRect?.x ?? (isPreMounted ? wrapper.offsetLeft : 0);
+    const cy = node.currentRect?.y ?? (isPreMounted ? wrapper.offsetTop : 0);
+
+    // ── Sync Grid Styles ────────────────────────────────
+    const contentRoot = wrapper.firstElementChild as HTMLElement | null;
+    if (contentRoot) {
+      const cs = getComputedStyle(contentRoot);
+      const gridProps = [
+        "grid-column-start",
+        "grid-column-end",
+        "grid-row-start",
+        "grid-row-end",
+        "grid-area",
+        "grid-column",
+        "grid-row",
+      ];
+      for (const prop of gridProps) {
+        const val = cs.getPropertyValue(prop);
+        if (val && val !== "auto" && val !== "normal" && val !== "none") {
+          wrapper.style.setProperty(prop, val);
+        }
+      }
+    }
 
     // Execute scripts inside wrapper
     this.executeScripts(wrapper, node.id);
@@ -304,13 +357,30 @@ export class ShadowMount {
       );
     }
 
-    // Create flow-child wrapper.
-    const wrapper = document.createElement("div");
-    wrapper.className = "canvus-node-wrapper canvus-flow-child";
-    wrapper.setAttribute("data-canvus-id", node.id);
-    wrapper.innerHTML = node.rawMarkup;
+    // Check if the wrapper is already present in the shadow tree (e.g. from document importer)
+    let wrapper = this.shadow.querySelector(`.canvus-node-wrapper[data-canvus-id="${node.id}"]`) as HTMLDivElement | null;
 
-    // Apply explicit width if provided.
+    if (!wrapper) {
+      // Create flow-child wrapper.
+      wrapper = document.createElement("div");
+      wrapper.className = "canvus-node-wrapper canvus-flow-child";
+      wrapper.setAttribute("data-canvus-id", node.id);
+      wrapper.innerHTML = node.rawMarkup;
+
+      // Insert into parent's CONTENT ROOT (user's markup root) so children
+      // participate in the parent's CSS layout context (flex, grid, block).
+      const insertTarget = parent.wrapper.firstElementChild as HTMLElement | null ?? parent.wrapper;
+      const parentChildren = insertTarget.querySelectorAll(
+        ":scope > .canvus-node-wrapper",
+      );
+      if (index !== undefined && index >= 0 && index < parentChildren.length) {
+        insertTarget.insertBefore(wrapper, parentChildren[index] ?? null);
+      } else {
+        insertTarget.appendChild(wrapper);
+      }
+    }
+
+    // Apply explicit width and height if provided (applies to both pre-mounted and new nodes)
     if (node.currentRect) {
       if (node.currentRect.width > 0) {
         wrapper.style.width = `${node.currentRect.width}px`;
@@ -318,18 +388,6 @@ export class ShadowMount {
       if (node.currentRect.height > 0) {
         wrapper.style.height = `${node.currentRect.height}px`;
       }
-    }
-
-    // Insert into parent's CONTENT ROOT (user's markup root) so children
-    // participate in the parent's CSS layout context (flex, grid, block).
-    const insertTarget = parent.wrapper.firstElementChild as HTMLElement | null ?? parent.wrapper;
-    const parentChildren = insertTarget.querySelectorAll(
-      ":scope > .canvus-node-wrapper",
-    );
-    if (index !== undefined && index >= 0 && index < parentChildren.length) {
-      insertTarget.insertBefore(wrapper, parentChildren[index] ?? null);
-    } else {
-      insertTarget.appendChild(wrapper);
     }
 
     // Sync initial grid styles from content root to wrapper after DOM insertion
@@ -914,6 +972,79 @@ export class ShadowMount {
     return promise;
   }
 
+  /**
+   * Evaluates a script string inside a scoped closure where 'document' and 'window'
+   * are proxied to target the ShadowRoot.
+   */
+  executeScopedScript(code: string, context?: HTMLElement | ShadowRoot): void {
+    this.assertNotDisposed();
+    const shadowRoot = this.shadow;
+    const callContext = context ?? shadowRoot.firstElementChild ?? shadowRoot;
+    const markElement = (el: any) => {
+      if (el && typeof el.setAttribute === "function") {
+        el.setAttribute("data-canvus-has-js", "true");
+      }
+    };
+
+    const wrapQueryResult = (result: any) => {
+      if (!result) return result;
+      if (result instanceof NodeList || result instanceof HTMLCollection || Array.isArray(result)) {
+        Array.from(result).forEach(el => markElement(el));
+      } else {
+        markElement(result);
+      }
+      return result;
+    };
+
+    const documentProxy = new Proxy(document, {
+      get(target, prop, receiver) {
+        if (
+          prop === "querySelector" ||
+          prop === "querySelectorAll" ||
+          prop === "getElementById" ||
+          prop === "getElementsByClassName" ||
+          prop === "getElementsByTagName"
+        ) {
+          const shadowMethod = shadowRoot[prop as keyof ShadowRoot];
+          if (typeof shadowMethod === "function") {
+            return (...args: any[]) => {
+              const res = (shadowMethod as Function).apply(shadowRoot, args);
+              return wrapQueryResult(res);
+            };
+          }
+        }
+        if (prop === "body") {
+          return shadowRoot.firstElementChild || shadowRoot;
+        }
+        const val = Reflect.get(target, prop, receiver);
+        if (typeof val === "function") {
+          return val.bind(target);
+        }
+        return val;
+      }
+    });
+
+    const windowProxy = new Proxy(window, {
+      get(target, prop, receiver) {
+        if (prop === "document") {
+          return documentProxy;
+        }
+        const val = Reflect.get(target, prop, receiver);
+        if (typeof val === "function") {
+          return val.bind(target);
+        }
+        return val;
+      }
+    });
+
+    try {
+      const fn = new Function("document", "window", code);
+      fn.call(callContext, documentProxy, windowProxy);
+    } catch (err) {
+      console.error(`[ShadowMount] Error executing scoped script:`, err);
+    }
+  }
+
   // ── Disposal ────────────────────────────────────────────
 
   /**
@@ -971,46 +1102,6 @@ export class ShadowMount {
   /** Extracts and executes scripts inside the mounted node. */
   private executeScripts(container: HTMLElement, nodeId: string): void {
     const scripts = container.querySelectorAll("script");
-    const shadowRoot = this.shadow;
-
-    // Create the proxied document and window objects for inline script scoping
-    const documentProxy = new Proxy(document, {
-      get(target, prop, receiver) {
-        if (
-          prop === "querySelector" ||
-          prop === "querySelectorAll" ||
-          prop === "getElementById" ||
-          prop === "getElementsByClassName" ||
-          prop === "getElementsByTagName"
-        ) {
-          const shadowMethod = shadowRoot[prop as keyof ShadowRoot];
-          if (typeof shadowMethod === "function") {
-            return (shadowMethod as Function).bind(shadowRoot);
-          }
-        }
-        if (prop === "body") {
-          return shadowRoot.firstElementChild || shadowRoot;
-        }
-        const val = Reflect.get(target, prop, receiver);
-        if (typeof val === "function") {
-          return val.bind(target);
-        }
-        return val;
-      }
-    });
-
-    const windowProxy = new Proxy(window, {
-      get(target, prop, receiver) {
-        if (prop === "document") {
-          return documentProxy;
-        }
-        const val = Reflect.get(target, prop, receiver);
-        if (typeof val === "function") {
-          return val.bind(target);
-        }
-        return val;
-      }
-    });
 
     for (const script of Array.from(scripts)) {
       const src = script.getAttribute("src");
@@ -1030,8 +1121,8 @@ export class ShadowMount {
         // Inline script
         try {
           const code = script.textContent || "";
-          const fn = new Function("document", "window", code);
-          fn.call(container.firstElementChild || container, documentProxy, windowProxy);
+          const callContext = container.firstElementChild as HTMLElement | null ?? container;
+          this.executeScopedScript(code, callContext);
         } catch (err) {
           console.error(`[ShadowMount] Error executing inline script in node "${nodeId}":`, err);
         }
@@ -1061,10 +1152,16 @@ function rewriteSelectorList(selectorListStr: string): string {
   for (let sel of selectors) {
     sel = sel.trim();
     if (!sel) continue;
-    result.push(sel);
+
+    // Map body and html to :host for scoped styling inheritance in Shadow DOM
+    let mapped = sel
+      .replace(/\bbody\b/g, ":host")
+      .replace(/\bhtml\b/g, ":host");
+
+    result.push(mapped);
 
     let hasPseudo = false;
-    let rewritten = sel;
+    let rewritten = mapped;
 
     if (rewritten.includes(":hover")) {
       rewritten = rewritten.replace(/:hover/g, ".canvus-state-hover");

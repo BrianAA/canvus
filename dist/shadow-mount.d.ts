@@ -278,6 +278,11 @@ export declare class ShadowMount {
      */
     injectStylesheetLink(href: string): Promise<HTMLLinkElement>;
     /**
+     * Evaluates a script string inside a scoped closure where 'document' and 'window'
+     * are proxied to target the ShadowRoot.
+     */
+    executeScopedScript(code: string, context?: HTMLElement | ShadowRoot): void;
+    /**
      * Tears down the entire shadow mount.
      *
      * Disconnects the ResizeObserver, removes all wrappers,
