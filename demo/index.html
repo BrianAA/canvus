@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvus — Milestone 4 Demo</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-surface: #12121a;
+      --bg-elevated: #1a1a26;
+      --bg-hover: #22222e;
+      --border-subtle: #2a2a3a;
+      --border-accent: #6366f1;
+      --text-primary: #e8e8f0;
+      --text-secondary: #8888a0;
+      --text-muted: #555566;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --snap: #f43f5e;
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Workspace ─────────────────────────────────── */
+
+    #workspace {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(99,102,241,0.03) 0%, transparent 70%),
+        var(--bg-primary);
+    }
+
+    /* Panning cursor — class added/removed by Workspace */
+    #workspace.canvus-panning { cursor: grab !important; }
+    #workspace.canvus-panning:active { cursor: grabbing !important; }
+
+    /* Grid dots */
+    #grid-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.3;
+      background-image: radial-gradient(circle, var(--text-muted) 0.8px, transparent 0.8px);
+      background-size: 24px 24px;
+    }
+
+    /* ── Debug Panel ───────────────────────────────── */
+
+    #panel {
+      width: 360px;
+      min-width: 360px;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-header h2 {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    .panel-header .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 0;
+    }
+
+    .panel-content::-webkit-scrollbar { width: 4px; }
+    .panel-content::-webkit-scrollbar-track { background: transparent; }
+    .panel-content::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 2px; }
+
+    .section { padding: 8px 20px 16px; border-bottom: 1px solid var(--border-subtle); }
+    .section:last-child { border-bottom: none; }
+    .section-title { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+    .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+    .metric-label { font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); }
+    .metric-value { font-size: 12px; font-family: var(--font-mono); color: var(--accent); font-weight: 500; }
+    .metric-value.ok { color: var(--success); }
+    .metric-value.warn { color: var(--warning); }
+    .metric-value.snap { color: var(--snap); }
+
+    .node-card { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; transition: border-color 0.15s; cursor: pointer; }
+    .node-card:hover { border-color: var(--border-accent); }
+    .node-card.selected { border-color: var(--border-accent); box-shadow: 0 0 8px var(--accent-glow); }
+    .node-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .node-id { font-size: 11px; font-family: var(--font-mono); font-weight: 600; color: var(--accent); }
+    .node-badge { font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: rgba(34, 197, 94, 0.15); color: var(--success); }
+    .node-rect { font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary); line-height: 1.5; }
+
+    /* HTML commit log */
+    .commit-log { background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px 12px; margin-top: 4px; font-size: 10px; font-family: var(--font-mono); color: var(--text-secondary); white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; line-height: 1.5; }
+    .commit-entry { border-bottom: 1px solid var(--border-subtle); padding: 6px 0; }
+    .commit-entry:last-child { border-bottom: none; }
+    .commit-id { color: var(--accent); font-weight: 600; }
+    .commit-time { color: var(--text-muted); font-size: 9px; }
+    .commit-html { color: var(--text-secondary); margin-top: 4px; max-height: 60px; overflow: hidden; }
+
+    .actions { padding: 12px 20px; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 6px; }
+    .btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-elevated); color: var(--text-primary); font-family: var(--font-sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .btn:hover { background: var(--bg-hover); border-color: var(--border-accent); box-shadow: 0 0 12px var(--accent-glow); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.primary:hover { background: #818cf8; border-color: #818cf8; }
+    .btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+    #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+    .toast { padding: 10px 20px; border-radius: 8px; font-size: 12px; font-family: var(--font-mono); font-weight: 500; background: var(--bg-elevated); border: 1px solid var(--border-accent); color: var(--text-primary); box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px var(--accent-glow); animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2s forwards; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+
+    .hints { padding: 12px 20px; border-top: 1px solid var(--border-subtle); }
+    .hint { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+    .hint kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 5px; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--bg-elevated); font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); }
+    .hint span { font-size: 11px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <div id="workspace">
+    <div id="grid-overlay"></div>
+    <!-- Canvas overlay is auto-created by Workspace -->
+  </div>
+
+  <div id="panel">
+    <div class="panel-header">
+      <div class="dot"></div>
+      <h2>Canvus — M4 Reflow Loop</h2>
+    </div>
+
+    <div class="panel-content">
+      <div class="section">
+        <div class="section-title">Viewport</div>
+        <div class="metric-row"><span class="metric-label">scale</span><span class="metric-value" id="v-scale">1.000</span></div>
+        <div class="metric-row"><span class="metric-label">offsetX</span><span class="metric-value" id="v-offsetX">0.0</span></div>
+        <div class="metric-row"><span class="metric-label">offsetY</span><span class="metric-value" id="v-offsetY">0.0</span></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Interaction</div>
+        <div class="metric-row"><span class="metric-label">mode</span><span class="metric-value warn" id="i-mode">idle</span></div>
+        <div class="metric-row"><span class="metric-label">selected</span><span class="metric-value" id="i-selected">—</span></div>
+      </div>
+
+      <div class="section" id="style-section" style="display: none; border-bottom: 1px solid var(--border-subtle);">
+        <div class="section-title">Selected Node Style</div>
+        <div class="metric-row" style="margin-bottom: 6px;">
+          <span class="metric-label">Display</span>
+          <select id="style-display" class="btn" style="padding: 2px 6px; font-size: 11px; background: var(--bg-elevated); color: var(--text-primary);">
+            <option value="">default</option>
+            <option value="block">block</option>
+            <option value="flex">flex</option>
+            <option value="grid">grid</option>
+          </select>
+        </div>
+        <div class="metric-row" id="row-direction" style="margin-bottom: 6px;">
+          <span class="metric-label">Direction</span>
+          <select id="style-direction" class="btn" style="padding: 2px 6px; font-size: 11px; background: var(--bg-elevated); color: var(--text-primary);">
+            <option value="">default</option>
+            <option value="row">row</option>
+            <option value="column">column</option>
+          </select>
+        </div>
+        <div class="metric-row" id="row-gap" style="margin-bottom: 6px;">
+          <span class="metric-label">Gap</span>
+          <input type="text" id="style-gap" class="btn" style="width: 100px; padding: 2px 6px; font-size: 11px; background: var(--bg-elevated); color: var(--text-primary); text-align: right;" placeholder="e.g. 10px">
+        </div>
+        <div class="metric-row" id="row-bg" style="margin-bottom: 6px;">
+          <span class="metric-label">Background</span>
+          <input type="text" id="style-bg" class="btn" style="width: 140px; padding: 2px 6px; font-size: 11px; background: var(--bg-elevated); color: var(--text-primary); text-align: right;" placeholder="color/gradient">
+        </div>
+        <div class="metric-row" id="row-class" style="margin-top: 8px;">
+          <span class="metric-label">Class Swapping</span>
+          <button id="btn-toggle-class" class="btn" style="padding: 2px 8px; font-size: 11px; background: var(--accent); border-color: var(--accent); color: white;">Toggle Outline Class</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Mounted Nodes</div>
+        <div id="node-list"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">HTML Commit Log (Flat String Bridge)</div>
+        <div class="commit-log" id="commit-log">
+          <span style="color: var(--text-muted)">Drag or resize a node, then release — the clean HTML will appear here.</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 20px 4px;font-size:11px;color:var(--text-secondary);border-top: 1px solid var(--border-subtle);">
+      <input type="checkbox" id="chk-custom-editor" style="cursor:pointer;">
+      <label for="chk-custom-editor" style="cursor:pointer;user-select:none;">Use Rich-Text Mock (onTextEditRequest)</label>
+    </div>
+
+    <div class="actions" style="border-top:none;padding-top:4px;">
+      <button class="btn primary" id="btn-add">＋ Add Node</button>
+      <button class="btn" id="btn-undo" disabled>↶ Undo</button>
+      <button class="btn" id="btn-measure">📐 Measure All</button>
+      <button class="btn danger" id="btn-reset">↺ Reset Viewport</button>
+    </div>
+
+    <div class="hints">
+      <div class="hint"><kbd>Space</kbd><span>Hold to pan</span></div>
+      <div class="hint"><kbd>Scroll</kbd><span>Zoom at cursor</span></div>
+      <div class="hint"><kbd>Click</kbd><span>Select node</span></div>
+      <div class="hint"><kbd>Drag</kbd><span>Move with snap guides</span></div>
+      <div class="hint"><kbd>Handle</kbd><span>Resize + reflow</span></div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script type="module">
+    // ─────────────────────────────────────────────────
+    // M4 Demo: The entire interaction system is now
+    // handled by the Workspace class. Consumer code
+    // is just callbacks + addNode().
+    // ─────────────────────────────────────────────────
+
+    import { Workspace } from '../dist/workspace.js';
+
+    const grid = document.getElementById('grid-overlay');
+    let nodeCounter = 0;
+    let commitCount = 0;
+
+    // ── Create Workspace (one line!) ────────────────
+
+    const ws = new Workspace(
+      document.getElementById('workspace'),
+      {
+        // ── Flat String Bridge output ──
+        onHTMLCommit(id, html) {
+          commitCount++;
+          const log = document.getElementById('commit-log');
+          const entry = document.createElement('div');
+          entry.className = 'commit-entry';
+          const time = new Date().toLocaleTimeString();
+          entry.innerHTML = `
+            <span class="commit-id">#${commitCount} ${id}</span>
+            <span class="commit-time">${time}</span>
+            <div class="commit-html">${escapeHtml(html.trim().slice(0, 200))}${html.length > 200 ? '…' : ''}</div>
+          `;
+          // Clear placeholder on first commit.
+          if (commitCount === 1) log.innerHTML = '';
+          log.prepend(entry);
+          toast(`Committed "${id}" → ${html.length} chars`);
+        },
+
+        // ── Live viewport readout ──
+        onViewportChange(vp) {
+          document.getElementById('v-scale').textContent = vp.scale.toFixed(3);
+          document.getElementById('v-offsetX').textContent = vp.offsetX.toFixed(1);
+          document.getElementById('v-offsetY').textContent = vp.offsetY.toFixed(1);
+          syncGrid(vp);
+        },
+
+        // ── Live node rect readout ──
+        onNodeRectChange() {
+          updateNodeList();
+        },
+
+        // ── Selection readout ──
+        onSelectionChange(ids) {
+          const arr = [...ids];
+          document.getElementById('i-selected').textContent =
+            arr.length > 0 ? arr.join(', ') : '—';
+          
+          const styleSection = document.getElementById('style-section');
+          if (arr.length === 1) {
+            styleSection.style.display = 'block';
+            const selectedId = arr[0];
+            const wrapper = ws.getWrapper(selectedId);
+            if (wrapper) {
+              const contentRoot = wrapper.firstElementChild;
+              if (contentRoot) {
+                document.getElementById('style-display').value = contentRoot.style.display || '';
+                document.getElementById('style-direction').value = contentRoot.style.flexDirection || '';
+                document.getElementById('style-gap').value = contentRoot.style.gap || '';
+                document.getElementById('style-bg').value = contentRoot.style.background || '';
+              }
+            }
+          } else {
+            styleSection.style.display = 'none';
+          }
+          updateNodeList();
+        },
+
+        // ── Interaction mode readout ──
+        onInteractionChange(mode) {
+          document.getElementById('i-mode').textContent = mode ?? 'idle';
+        },
+
+        // ── Operations generated (Milestone 6) ──
+        onOperationsGenerated(ops) {
+          console.log('⚡ Generated Operations:', ops);
+          historyStack.push(ops);
+          document.getElementById('btn-undo').disabled = false;
+        },
+      },
+    );
+    window.ws = ws;
+
+    // Inject styles for testing native class manipulation (Issue #4)
+    ws.injectCSS(`
+      .demo-highlight {
+        outline: 3px dashed #f43f5e !important;
+        outline-offset: -3px;
+      }
+    `);
+
+    // ── Operation History (Undo Stack) ──
+    const historyStack = [];
+    const btnUndo = document.getElementById('btn-undo');
+    btnUndo.addEventListener('click', () => {
+      if (historyStack.length === 0) return;
+      const ops = historyStack.pop();
+      // Apply undo payload for each operation in reverse order
+      for (let i = ops.length - 1; i >= 0; i--) {
+        const op = ops[i];
+        ws.applyOperation({
+          type: op.type,
+          nodeId: op.nodeId,
+          payload: op.undoPayload,
+          undoPayload: op.payload
+        });
+      }
+      if (historyStack.length === 0) {
+        btnUndo.disabled = true;
+      }
+      toast(`Undid ${ops.length} operation(s)`);
+    });
+
+    // ── Custom Editor Toggle Handler ──
+    const chkCustomEditor = document.getElementById('chk-custom-editor');
+    chkCustomEditor.addEventListener('change', () => {
+      if (chkCustomEditor.checked) {
+        ws.callbacks.onTextEditRequest = (nodeId, element, commit) => {
+          const val = prompt('Edit Element HTML (Rich-Text Mock):', element.innerHTML);
+          if (val !== null) commit(val);
+        };
+        toast('Rich-Text Mock Enabled (Double-click text to test)');
+      } else {
+        delete ws.callbacks.onTextEditRequest;
+        toast('Plain-Text Editor Enabled');
+      }
+    });
+
+    // ── Seed Nodes ──────────────────────────────────
+
+    // Root-level nodes (same as v1.0).
+    ws.addNode({
+      id: 'card-hero',
+      rawMarkup: `<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:12px;padding:28px 32px;color:#fff;font-family:'Inter',sans-serif;box-shadow:0 8px 32px rgba(102,126,234,0.35)"><h2 style="margin:0 0 8px;font-size:20px;font-weight:700">Canvus SDK v1.1</h2><p style="margin:0;font-size:13px;opacity:0.85;line-height:1.5">Nested Layouts &amp; Tree Model<br>Flow-Aware Drag &amp; Drop</p></div>`,
+      currentRect: { x: 80, y: 60, width: 280, height: 0 },
+    });
+    nodeCounter++;
+
+    ws.addNode({
+      id: 'card-code',
+      rawMarkup: `<div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#c9d1d9;line-height:1.7"><span style="color:#ff7b72">const</span> <span style="color:#79c0ff">ws</span> = <span style="color:#ff7b72">new</span> <span style="color:#ffa657">Workspace</span>(el);<br><br><span style="color:#8b949e">// Mount nested children</span><br>ws.<span style="color:#d2a8ff">addNode</span>(child, <span style="color:#a5d6ff">'parent-id'</span>);</div>`,
+      currentRect: { x: 80, y: 280, width: 280, height: 0 },
+    });
+    nodeCounter++;
+
+    // ── Flex Container with Children (v1.1 feature!) ──
+    ws.addNode({
+      id: 'flex-container',
+      rawMarkup: `<div style="display:flex;flex-direction:column;gap:10px;background:#12121a;border:1px solid #2a2a4a;border-radius:12px;padding:16px;font-family:'Inter',sans-serif"></div>`,
+      currentRect: { x: 440, y: 60, width: 300, height: 0 },
+    });
+    nodeCounter++;
+
+    // Children — mounted inside the flex container.
+    const childSeeds = [
+      {
+        id: 'flex-child-1',
+        rawMarkup: `<div style="background:linear-gradient(135deg,#22c55e22,#22c55e08);border:1px solid #22c55e44;border-radius:8px;padding:14px 16px;color:#22c55e;font-size:12px;font-weight:600">✓ Child Node 1 <span style="opacity:0.6;font-weight:400">— flow-positioned</span></div>`,
+      },
+      {
+        id: 'flex-child-2',
+        rawMarkup: `<div style="background:linear-gradient(135deg,#6366f122,#6366f108);border:1px solid #6366f144;border-radius:8px;padding:14px 16px;color:#818cf8;font-size:12px;font-weight:600">✓ Child Node 2 <span style="opacity:0.6;font-weight:400">— inherits flex layout</span></div>`,
+      },
+      {
+        id: 'flex-child-3',
+        rawMarkup: `<div style="background:linear-gradient(135deg,#f59e0b22,#f59e0b08);border:1px solid #f59e0b44;border-radius:8px;padding:14px 16px;color:#f59e0b;font-size:12px;font-weight:600">✓ Child Node 3 <span style="opacity:0.6;font-weight:400">— reorderable</span></div>`,
+      },
+    ];
+
+    for (const child of childSeeds) {
+      ws.addNode(
+        { id: child.id, rawMarkup: child.rawMarkup, currentRect: null },
+        'flex-container', // Parent ID — mounts inside the flex container.
+      );
+      nodeCounter++;
+    }
+
+    // ── Grid sync ───────────────────────────────────
+
+    function syncGrid(vp) {
+      const size = 24 * vp.scale;
+      grid.style.backgroundSize = `${size}px ${size}px`;
+      grid.style.backgroundPosition = `${vp.offsetX}px ${vp.offsetY}px`;
+      grid.style.opacity = Math.min(0.3, vp.scale * 0.2);
+    }
+
+    // ── Node list ───────────────────────────────────
+
+    function updateNodeList() {
+      const container = document.getElementById('node-list');
+      container.innerHTML = '';
+      const selected = ws.getSelectedIds();
+
+      for (const node of ws.getNodes()) {
+        const card = document.createElement('div');
+        card.className = 'node-card' + (selected.has(node.id) ? ' selected' : '');
+
+        const r = node.currentRect;
+        const rectStr = r
+          ? `x:${r.x.toFixed(0)} y:${r.y.toFixed(0)} w:${r.width.toFixed(0)} h:${r.height.toFixed(0)}`
+          : 'unmeasured';
+
+        const indent = '  '.repeat(node.depth ?? 0);
+        const depthLabel = (node.depth ?? 0) > 0
+          ? `<span style="color:var(--text-muted);font-size:9px;margin-left:4px">depth:${node.depth}</span>`
+          : '';
+        const parentLabel = node.parentId
+          ? `<span style="color:var(--warning);font-size:9px;margin-left:4px">↳ ${node.parentId}</span>`
+          : '';
+
+        card.innerHTML = `
+          <div class="node-card-header">
+            <span class="node-id">${indent}${node.id}</span>
+            <span class="node-badge">${node.parentId ? 'child' : 'root'}</span>
+          </div>
+          <div class="node-rect">${rectStr}${depthLabel}${parentLabel}</div>
+        `;
+
+        card.addEventListener('click', () => ws.selectNode(node.id));
+        container.appendChild(card);
+      }
+    }
+
+    updateNodeList();
+
+    // ── Buttons ─────────────────────────────────────
+
+    document.getElementById('btn-add').addEventListener('click', () => {
+      nodeCounter++;
+      const hue = (nodeCounter * 47) % 360;
+      const id = `node-${nodeCounter}`;
+
+      const rect = ws.addNode({
+        id,
+        rawMarkup: `<div style="background:hsl(${hue},60%,18%);border:1px solid hsl(${hue},60%,30%);border-radius:8px;padding:16px 20px;font-family:'Inter',sans-serif;color:hsl(${hue},60%,85%)"><div style="font-size:12px;font-weight:600;margin-bottom:4px">Node #${nodeCounter}</div><div style="font-size:11px;opacity:0.7">Added via ws.addNode()</div></div>`,
+        currentRect: { x: 60 + Math.random() * 300, y: 60 + Math.random() * 200, width: 220, height: 0 },
+      });
+
+      ws.selectNode(id);
+      updateNodeList();
+      toast(`Mounted "${id}" (${rect.width}×${rect.height})`);
+    });
+
+    document.getElementById('btn-measure').addEventListener('click', () => {
+      const rects = ws.measureAll();
+      updateNodeList();
+      toast(`Measured ${rects.size} nodes`);
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      ws.resetViewport();
+      syncGrid(ws.getViewport());
+      toast('Viewport reset to 1:1');
+    });
+
+    // ── Style Panel Listeners ───────────────────────
+    const styleDisplay = document.getElementById('style-display');
+    const styleDirection = document.getElementById('style-direction');
+    const styleGap = document.getElementById('style-gap');
+    const styleBg = document.getElementById('style-bg');
+    const btnToggleClass = document.getElementById('btn-toggle-class');
+
+    const updateSelectedStyle = (prop, val) => {
+      const selected = Array.from(ws.getSelectedIds());
+      if (selected.length === 1) {
+        ws.setNodeStyle(selected[0], prop, val || null);
+        updateNodeList();
+      }
+    };
+
+    styleDisplay.addEventListener('change', (e) => updateSelectedStyle('display', e.target.value));
+    styleDirection.addEventListener('change', (e) => updateSelectedStyle('flex-direction', e.target.value));
+    styleGap.addEventListener('input', (e) => updateSelectedStyle('gap', e.target.value));
+    styleBg.addEventListener('input', (e) => updateSelectedStyle('background', e.target.value));
+    btnToggleClass.addEventListener('click', () => {
+      const selected = Array.from(ws.getSelectedIds());
+      if (selected.length === 1) {
+        ws.toggleClass(selected[0], 'demo-highlight');
+        updateNodeList();
+      }
+    });
+
+    // ── Helpers ──────────────────────────────────────
+
+    function toast(msg) {
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = msg;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => el.remove(), 2500);
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+  </script>
+</body>
+</html>

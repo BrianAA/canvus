@@ -1,0 +1,3 @@
+# 5. Stylesheet Injection and JavaScript Execution Strategy
+
+To isolate custom page styles and prevent global state pollution, the SDK handles stylesheets by encouraging the host to pass style contents as raw CSS strings via `injectCSS()`, which mounts them as scoped `<style>` blocks in the Shadow DOM. To maintain visual integrity and prevent scripts from breaking the visual editor, JavaScript execution inside the Shadow DOM is disabled by default (matching native browser `innerHTML` behavior). If script execution is required for dynamic widgets in the future, the host must explicitly invoke a script evaluator wrapper that safely scopes actions to the shadow tree boundary.

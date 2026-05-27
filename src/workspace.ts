@@ -1,0 +1,2120 @@
+// ─────────────────────────────────────────────────────────────
+// canvus/src/workspace.ts
+// Unified Interaction Controller — Milestone 4.
+//
+// Orchestrates the complete Synchronous Reflow Loop:
+//   pointerdown → mode detection
+//   pointermove → delta → style surgery → sync reflow →
+//                 measurement → guide computation → render
+//   pointerup   → flat string bridge → commit callback
+//
+// This is the single public entry point for consumers.
+// It owns the ShadowMount, OverlayRenderer, and all event
+// bindings. The consumer provides a container element and
+// callbacks; everything else is handled internally.
+// ─────────────────────────────────────────────────────────────
+
+import type {
+  Rect,
+  ResolvedNode,
+  ResizeAnchor,
+  Vec2,
+  ViewportMatrix,
+  WebHTMLNode,
+  Operation,
+} from "./types.js";
+
+import { createDefaultViewport, resolveNode } from "./types.js";
+
+import {
+  applyPan,
+  applyWheelZoom,
+  hitTestElements,
+  screenToCanvas,
+  rectsIntersect,
+} from "./matrix.js";
+
+import { ShadowMount } from "./shadow-mount.js";
+import { NodeTree } from "./tree.js";
+import { findDropTarget } from "./drop-zone.js";
+import type { DropTarget } from "./drop-zone.js";
+
+import type { Guide, LayoutBadgeInfo, GridOverlayInfo, OverlayStyle, SpacingAdjusterType, SpacingAdjusterInfo } from "./renderer.js";
+import {
+  OverlayRenderer,
+  anchorCursor,
+  computeAlignmentGuides,
+  computeSnappedPosition,
+} from "./renderer.js";
+
+import { detectLayout, getLayoutLabel, parseGridTracks } from "./layout.js";
+
+// ── Configuration ───────────────────────────────────────────
+
+/** Configuration options for the workspace. */
+export interface WorkspaceConfig {
+  /** Partial overlay style overrides. */
+  overlayStyle?: Partial<OverlayStyle>;
+  /** Snap threshold for alignment guides (canvas-space px). @default 5 */
+  snapThreshold?: number;
+  /** Minimum element dimension during resize (canvas-space px). @default 40 */
+  minResizeSize?: number;
+  /** Enable snap-to-align guides during drag/resize. @default true */
+  enableSnapGuides?: boolean;
+}
+
+// ── Event Callbacks ─────────────────────────────────────────
+
+/** Callback signatures for workspace lifecycle events. */
+export interface WorkspaceCallbacks {
+  /**
+   * **Flat String Bridge output.**
+   * Fired on `pointerup` after a drag or resize gesture completes.
+   * Receives the node's clean inner HTML string ready for AST commit.
+   */
+  onHTMLCommit?: (id: string, html: string) => void;
+
+  /** Fired whenever any node's canvas-space bounding rect changes. */
+  onNodeRectChange?: (id: string, rect: Rect) => void;
+
+  /** Fired whenever the viewport transform changes (pan/zoom). */
+  onViewportChange?: (viewport: Readonly<ViewportMatrix>) => void;
+
+  /** Fired when the selection set changes. */
+  onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
+
+  /** Fired when the active selection parent hierarchy path changes (breadcrumbs). */
+  onBreadcrumbChange?: (path: string[]) => void;
+
+  /** Fired when the interaction mode changes (idle/pan/drag/resize). */
+  onInteractionChange?: (mode: string | null) => void;
+
+  /** Fired when visual editor gestures complete and generate history operations. */
+  onOperationsGenerated?: (operations: Operation[]) => void;
+
+  /** Fired when double-clicking a text node to delegate rich-text editing to the host. */
+  onTextEditRequest?: (
+    nodeId: string,
+    element: HTMLElement,
+    commit: (newHTML: string) => void
+  ) => void;
+}
+
+// ── Resize Math ─────────────────────────────────────────────
+
+/**
+ * Computes a new bounding rect after applying a resize delta
+ * from a given anchor direction. Enforces a minimum size.
+ */
+function computeResizedRect(
+  start: Readonly<Rect>,
+  anchor: ResizeAnchor,
+  dx: number,
+  dy: number,
+  minSize: number,
+): Rect {
+  let { x, y, width, height } = start;
+
+  // Each anchor affects different edges.
+  // Cardinal anchors constrain to one axis.
+  // Intercardinal anchors affect both axes.
+  const affectsLeft = anchor === "nw" || anchor === "w" || anchor === "sw";
+  const affectsRight = anchor === "ne" || anchor === "e" || anchor === "se";
+  const affectsTop = anchor === "nw" || anchor === "n" || anchor === "ne";
+  const affectsBottom = anchor === "sw" || anchor === "s" || anchor === "se";
+
+  if (affectsRight) {
+    width = Math.max(minSize, width + dx);
+  }
+  if (affectsLeft) {
+    const newWidth = Math.max(minSize, width - dx);
+    x = x + (width - newWidth); // Shift origin to compensate.
+    width = newWidth;
+  }
+  if (affectsBottom) {
+    height = Math.max(minSize, height + dy);
+  }
+  if (affectsTop) {
+    const newHeight = Math.max(minSize, height - dy);
+    y = y + (height - newHeight);
+    height = newHeight;
+  }
+
+  return { x, y, width, height };
+}
+
+// ── Workspace Class ─────────────────────────────────────────
+
+/**
+ * The top-level orchestration engine for a Canvus workspace.
+ *
+ * ### What it owns
+ * - A `ShadowMount` for the HTML projection layer.
+ * - An `OverlayRenderer` for the canvas affordance layer.
+ * - All pointer, wheel, and keyboard event bindings.
+ * - The complete interaction state machine (pan / drag / resize).
+ *
+ * ### Synchronous Reflow Loop (per pointermove frame)
+ * ```
+ * pointer delta
+ *   → style surgery (setNodeRect / setNodePosition)
+ *   → browser synchronous reflow
+ *   → measureNode() reads updated layout
+ *   → rect cache updated
+ *   → alignment guides computed
+ *   → OverlayRenderer.render()
+ * ```
+ *
+ * ### Flat String Bridge
+ * On `pointerup` after any mutating gesture, calls
+ * `ShadowMount.extractHTML()` and fires `onHTMLCommit`
+ * with the pristine semantic HTML string.
+ *
+ * ### Usage
+ * ```ts
+ * const ws = new Workspace(document.getElementById('editor')!, {
+ *   onHTMLCommit: (id, html) => console.log(id, html),
+ * });
+ * ws.addNode({ id: 'card-1', rawMarkup: '<div>Hello</div>', currentRect: null });
+ * ```
+ */
+export class Workspace {
+  // ── Internal Subsystems ─────────────────────────
+
+  private readonly mount: ShadowMount;
+  private readonly renderer: OverlayRenderer;
+  private readonly container: HTMLElement;
+  private readonly canvas: HTMLCanvasElement;
+
+  // ── Configuration ───────────────────────────────
+
+  private readonly callbacks: WorkspaceCallbacks;
+  private readonly snapThreshold: number;
+  private readonly minResizeSize: number;
+  private readonly enableSnapGuides: boolean;
+
+  // ── Workspace State ─────────────────────────────
+
+  private viewport: ViewportMatrix;
+  private readonly tree = new NodeTree();
+  private readonly selectedIds = new Set<string>();
+  private hoveredId: string | null = null;
+  private activeAnchor: ResizeAnchor | null = null;
+  private guides: Guide[] = [];
+
+  // ── Scoped Selection Scope ──────────────────────
+  private enteredContainerId: string | null = null;
+  private lastPointerDownTime = 0;
+  private lastPointerDownId: string | null = null;
+  private editAllowedOnDblClick = false;
+
+  // ── Drag & Drop State ───────────────────────────
+  private activeDropTarget: DropTarget | null = null;
+
+  // ── Interaction State Machine ───────────────────
+
+  private spaceDown = false;
+  private isPanning = false;
+  private isDragging = false;
+  private pointerDownReadyToDrag = false;
+  private isResizing = false;
+  private isMarqueeSelecting = false;
+  private marqueeStartCanvas: Vec2 | null = null;
+  private marqueeCurrentCanvas: Vec2 | null = null;
+  private preMarqueeSelectedIds = new Set<string>();
+  private hoveredAdjusterType: SpacingAdjusterType | null = null;
+  private activeAdjusterType: SpacingAdjusterType | null = null;
+  private adjusterStartValue = 0;
+  private adjusterStartValueStr: string | null = null;
+  private dragStartCanvas: Vec2 | null = null;
+  private dragStartNodePos: Vec2 | null = null;
+  private dragStartParentId: string | null = null;
+  private dragStartIndex = -1;
+  private resizeStartRect: Rect | null = null;
+  private disposed = false;
+  private renderRequested = false;
+
+  // ── Bound Event Handlers (for cleanup) ──────────
+
+  private readonly onWheel: (e: WheelEvent) => void;
+  private readonly onPointerDown: (e: PointerEvent) => void;
+  private readonly onPointerMove: (e: PointerEvent) => void;
+  private readonly onPointerUp: (e: PointerEvent) => void;
+  private readonly onKeyDown: (e: KeyboardEvent) => void;
+  private readonly onKeyUp: (e: KeyboardEvent) => void;
+  private readonly onWindowResize: () => void;
+  private readonly onDblClick: (e: MouseEvent) => void;
+
+  // ── Constructor ─────────────────────────────────
+
+  constructor(
+    container: HTMLElement,
+    callbacks: WorkspaceCallbacks = {},
+    config: WorkspaceConfig = {},
+  ) {
+    this.container = container;
+    this.callbacks = callbacks;
+    this.snapThreshold = config.snapThreshold ?? 5;
+    this.minResizeSize = config.minResizeSize ?? 40;
+    this.enableSnapGuides = config.enableSnapGuides ?? true;
+    this.viewport = createDefaultViewport();
+
+    // ── Ensure container is positioned ────────────
+    const pos = getComputedStyle(container).position;
+    if (pos === "static") {
+      container.style.position = "relative";
+    }
+    container.style.overflow = "hidden";
+
+    // ── Create Canvas Overlay ─────────────────────
+    this.canvas = document.createElement("canvas");
+    this.canvas.style.cssText =
+      "position:absolute;inset:0;pointer-events:none;z-index:10;";
+    container.appendChild(this.canvas);
+
+    // ── Initialize Subsystems ─────────────────────
+    this.renderer = new OverlayRenderer(this.canvas, config.overlayStyle);
+
+    this.mount = new ShadowMount(container, (id, rect) => {
+      // ResizeObserver callback — update cache and re-render.
+      const node = this.tree.get(id);
+      if (node) {
+        node.currentRect = rect;
+        this.callbacks.onNodeRectChange?.(id, rect);
+        this.render();
+      }
+    });
+
+    this.mount.applyViewportTransform(this.viewport);
+
+    // ── Bind Events ───────────────────────────────
+    this.onWheel = this.handleWheel.bind(this);
+    this.onPointerDown = this.handlePointerDown.bind(this);
+    this.onPointerMove = this.handlePointerMove.bind(this);
+    this.onPointerUp = this.handlePointerUp.bind(this);
+    this.onKeyDown = this.handleKeyDown.bind(this);
+    this.onKeyUp = this.handleKeyUp.bind(this);
+    this.onWindowResize = this.handleResize.bind(this);
+    this.onDblClick = this.handleDblClick.bind(this);
+
+    container.addEventListener("wheel", this.onWheel, { passive: false });
+    container.addEventListener("pointerdown", this.onPointerDown);
+    container.addEventListener("pointermove", this.onPointerMove);
+    container.addEventListener("pointerup", this.onPointerUp);
+    container.addEventListener("dblclick", this.onDblClick);
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("resize", this.onWindowResize);
+
+    // ── Initial Sizing ────────────────────────────
+    this.handleResize();
+  }
+
+  // ── Public API: Node Management ─────────────────
+
+  /**
+   * Mounts a new HTML node into the workspace.
+   *
+   * Performs the **Geometry Extraction Loop**: injects the markup
+   * into the Shadow DOM, forces a synchronous layout read, and
+   * returns the measured canvas-space bounding rect.
+   *
+   * @param node     - The node descriptor.
+   * @param parentId - Optional parent node ID for nested mounting.
+   * @param index    - Optional insertion index within the parent's children.
+   * @returns The initial bounding rect after browser layout.
+   */
+  addNode(
+    node: Readonly<WebHTMLNode>,
+    parentId?: string | null,
+    index?: number,
+  ): Rect {
+    this.assertNotDisposed();
+
+    // Resolve to internal representation.
+    const resolved = resolveNode(node);
+    resolved.parentId = parentId ?? null;
+
+    // Mount into shadow DOM.
+    let rect: Rect;
+    if (resolved.parentId !== null) {
+      rect = this.mount.addChildNode(node, resolved.parentId, index);
+    } else {
+      rect = this.mount.addNode(node);
+    }
+    resolved.currentRect = rect;
+
+    // Add to tree.
+    this.tree.addNode(resolved, index);
+
+    // If this node has a parent, register it in the parent's childIds.
+    // (NodeTree.addNode already handles this via the tree structure.)
+
+    // Synchronously measure and detect layout mode on mount.
+    this.remeasureSubtree(resolved.id);
+    if (resolved.parentId !== null) {
+      this.remeasureSubtree(resolved.parentId);
+    }
+
+    this.render();
+    return resolved.currentRect ?? rect;
+  }
+
+  /** Removes a node and all its descendants from the workspace. */
+  removeNode(id: string): boolean {
+    // Remove all descendants first (depth-first).
+    const descendantIds = this.tree.getDescendantIds(id);
+    for (const did of descendantIds) {
+      this.mount.removeNode(did);
+      this.selectedIds.delete(did);
+    }
+
+    const removed = this.mount.removeNode(id);
+    if (removed) {
+      this.tree.removeNode(id); // Also removes descendants from tree.
+      this.selectedIds.delete(id);
+      this.render();
+    }
+    return removed;
+  }
+
+  /** Hot-swaps the inner HTML of a mounted node. */
+  updateMarkup(id: string, markup: string): Rect | null {
+    const rect = this.mount.updateMarkup(id, markup);
+    if (rect) {
+      const node = this.tree.get(id);
+      if (node) {
+        node.rawMarkup = markup;
+        node.currentRect = rect;
+      }
+      this.render();
+    }
+    return rect;
+  }
+
+  // ── Public API: Tree Operations ─────────────────
+
+  /**
+   * Moves a node to a new parent (or to root level).
+   * Handles both DOM reparenting and tree model update.
+   * Fires `onHTMLCommit` with the new parent's HTML.
+   */
+  reparentNode(
+    nodeId: string,
+    newParentId: string | null,
+    index?: number,
+  ): void {
+    const node = this.tree.get(nodeId);
+    const oldParentId = node?.parentId ?? null;
+
+    // DOM reparenting.
+    this.mount.reparentNodeDOM(nodeId, newParentId, index);
+
+    // Tree model update.
+    this.tree.reparentNode(nodeId, newParentId, index);
+
+    // Re-measure affected nodes.
+    this.remeasureSubtree(nodeId);
+    if (newParentId) this.remeasureSubtree(newParentId);
+    if (oldParentId) this.remeasureSubtree(oldParentId);
+
+    this.render();
+
+    // Flat string bridge: commit the old parent's HTML if it existed.
+    if (oldParentId) {
+      const oldHtml = this.mount.extractHTML(oldParentId);
+      if (oldHtml) {
+        this.callbacks.onHTMLCommit?.(oldParentId, oldHtml);
+      }
+    }
+
+    // Flat string bridge: commit the new parent's HTML.
+    const commitTarget = newParentId ?? nodeId;
+    const html = this.mount.extractHTML(commitTarget);
+    if (html) {
+      this.callbacks.onHTMLCommit?.(commitTarget, html);
+    }
+  }
+
+  /**
+   * Reorders a child within its current parent.
+   */
+  reorderChild(nodeId: string, newIndex: number): void {
+    const node = this.tree.get(nodeId);
+    if (!node?.parentId) return;
+
+    // DOM reorder: remove and re-insert at new index.
+    this.mount.reparentNodeDOM(nodeId, node.parentId, newIndex);
+
+    // Tree model update.
+    this.tree.reorderChild(nodeId, newIndex);
+
+    // Re-measure the parent's children.
+    this.remeasureSubtree(node.parentId);
+
+    this.render();
+  }
+
+  /** Returns the NodeTree for advanced tree queries. */
+  getNodeTree(): NodeTree {
+    return this.tree;
+  }
+
+  /** Returns the wrapper DOM element for a node ID. */
+  getWrapper(id: string): HTMLElement | null {
+    return this.mount.getWrapper(id);
+  }
+
+  /**
+   * Mutates a single CSS style property on the specified node's content element.
+   * Automatically triggers browser reflow, updates internal tree boundaries,
+   * re-renders visual overlays, and commits clean HTML back to AST.
+   */
+  setNodeStyle(id: string, property: string, value: string | null): void {
+    const node = this.tree.get(id);
+    if (!node) return;
+
+    // Apply the style change
+    this.mount.setNodeStyle(id, property, value);
+
+    // Sync layout display mode changes
+    if (property === "display") {
+      const mode = (value ?? "none") as any;
+      node.layoutMode = mode;
+    }
+
+    // Remeasure layout subtree boundaries
+    this.remeasureSubtree(id);
+    if (node.parentId) {
+      this.remeasureSubtree(node.parentId);
+    }
+
+    this.render();
+
+    // Commit html changes via flat string bridge
+    const commitTarget = node.parentId ?? id;
+    const html = this.mount.extractHTML(commitTarget);
+    if (html) {
+      this.callbacks.onHTMLCommit?.(commitTarget, html);
+    }
+  }
+
+  /**
+   * Mutates multiple CSS style properties on the specified node's content element.
+   * Batch-updates styles, triggers a single reflow/remeasure loop, and commits changes.
+   */
+  setNodeStyles(id: string, styles: Record<string, string | null>): void {
+    const node = this.tree.get(id);
+    if (!node) return;
+
+    // Batch apply styles
+    this.mount.setNodeStyles(id, styles);
+
+    // Sync layout display mode changes if any
+    for (const [prop, val] of Object.entries(styles)) {
+      if (prop === "display") {
+        node.layoutMode = (val ?? "none") as any;
+      }
+    }
+
+    // Remeasure layout subtree boundaries
+    this.remeasureSubtree(id);
+    if (node.parentId) {
+      this.remeasureSubtree(node.parentId);
+    }
+
+    this.render();
+
+    // Commit html changes via flat string bridge
+    const commitTarget = node.parentId ?? id;
+    const html = this.mount.extractHTML(commitTarget);
+    if (html) {
+      this.callbacks.onHTMLCommit?.(commitTarget, html);
+    }
+  }
+
+  // ── Public API: Selection ───────────────────────
+
+  /** Selects a node by ID, clearing previous selection. */
+  selectNode(id: string): void {
+    this.selectedIds.clear();
+    this.selectedIds.add(id);
+    this.callbacks.onSelectionChange?.(this.selectedIds);
+    this.render();
+  }
+
+  /** Clears all selection. */
+  deselectAll(): void {
+    this.selectedIds.clear();
+    this.callbacks.onSelectionChange?.(this.selectedIds);
+    this.render();
+  }
+
+  /** Returns the current selection set (read-only view). */
+  getSelectedIds(): ReadonlySet<string> {
+    return this.selectedIds;
+  }
+
+  // ── Public API: Viewport ────────────────────────
+
+  /** Returns the current viewport transform. */
+  getViewport(): Readonly<ViewportMatrix> {
+    return this.viewport;
+  }
+
+  /** Programmatically sets the viewport (e.g. for "fit to content"). */
+  setViewport(vp: ViewportMatrix): void {
+    this.viewport = vp;
+    this.mount.applyViewportTransform(vp);
+    this.callbacks.onViewportChange?.(vp);
+    this.render();
+  }
+
+  /** Resets viewport to 1:1 scale, zero offset. */
+  resetViewport(): void {
+    this.setViewport(createDefaultViewport());
+  }
+
+  // ── Public API: State Accessors ─────────────────
+
+  /** Returns a snapshot of all tracked nodes (depth-first order). */
+  getNodes(): ReadonlyArray<Readonly<ResolvedNode>> {
+    return this.tree.flatten();
+  }
+
+  /** Returns the underlying ShadowMount for advanced access. */
+  getShadowMount(): ShadowMount {
+    return this.mount;
+  }
+
+  /** Returns the underlying OverlayRenderer for advanced access. */
+  getOverlayRenderer(): OverlayRenderer {
+    return this.renderer;
+  }
+
+  /**
+   * Extracts the clean inner HTML of a node.
+   * This is the **Flat String Bridge** — call it at any time
+   * to read the current semantic HTML string.
+   */
+  extractHTML(id: string): string | null {
+    return this.mount.extractHTML(id);
+  }
+
+  /**
+   * Programmatically replays an Operation (mutation payload) onto the workspace.
+   * This is the core API used for Undo/Redo replay and collaboration sync.
+   */
+  applyOperation(op: Operation): void {
+    this.assertNotDisposed();
+
+    const node = this.tree.get(op.nodeId);
+    if (!node) return;
+
+    switch (op.type) {
+      case "reparent": {
+        const { newParentId, index } = op.payload;
+        this.reparentNode(op.nodeId, newParentId, index);
+        break;
+      }
+      case "reorder": {
+        const { index } = op.payload;
+        this.reorderChild(op.nodeId, index);
+        break;
+      }
+      case "update-style": {
+        const styles = op.payload;
+        const wrapper = this.mount.getWrapper(op.nodeId);
+        const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
+        if (!wrapper || !contentRoot) break;
+
+        const stylesToApply: Record<string, string | null> = {};
+
+        for (const [prop, val] of Object.entries(styles)) {
+          const value = val as string | null;
+
+          // Check if it's wrapper geometric positioning styles for root elements
+          if (node.parentId === null && (prop === "left" || prop === "top" || prop === "width" || prop === "height")) {
+            if (prop === "left" || prop === "top") {
+              const currentX = node.currentRect ? node.currentRect.x : 0;
+              const currentY = node.currentRect ? node.currentRect.y : 0;
+              const parsedVal = value ? parseFloat(value) : 0;
+              const newX = prop === "left" ? parsedVal : currentX;
+              const newY = prop === "top" ? parsedVal : currentY;
+              this.mount.setNodePosition(op.nodeId, newX, newY);
+            } else {
+              const parsedVal = value ? (value === "auto" ? "auto" : parseFloat(value)) : "auto";
+              const newW = prop === "width" ? parsedVal : null;
+              const newH = prop === "height" ? parsedVal : null;
+              this.mount.setNodeSize(op.nodeId, newW, newH);
+            }
+          } else {
+            // Apply property directly to content root stylesheet
+            stylesToApply[prop] = value;
+          }
+        }
+
+        if (Object.keys(stylesToApply).length > 0) {
+          this.mount.setNodeStyles(op.nodeId, stylesToApply);
+        }
+
+        this.remeasureSubtree(op.nodeId);
+        if (node.parentId) {
+          this.remeasureSubtree(node.parentId);
+        }
+        this.render();
+        break;
+      }
+      case "update-classes": {
+        const { add, remove } = op.payload;
+        const wrapper = this.mount.getWrapper(op.nodeId);
+        const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
+        if (!contentRoot) break;
+
+        if (Array.isArray(remove)) {
+          for (const cls of remove) {
+            contentRoot.classList.remove(cls);
+          }
+        }
+        if (Array.isArray(add)) {
+          for (const cls of add) {
+            contentRoot.classList.add(cls);
+          }
+        }
+
+        this.remeasureSubtree(op.nodeId);
+        if (node.parentId) {
+          this.remeasureSubtree(node.parentId);
+        }
+        this.render();
+        break;
+      }
+      case "update-text": {
+        const { path, html } = op.payload;
+        const wrapper = this.mount.getWrapper(op.nodeId);
+        const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
+        if (!contentRoot) break;
+
+        const targetEl = getDOMElementByPath(contentRoot, path);
+        if (targetEl) {
+          targetEl.innerHTML = html;
+        }
+
+        this.remeasureSubtree(op.nodeId);
+        if (node.parentId) {
+          this.remeasureSubtree(node.parentId);
+        }
+        this.render();
+        break;
+      }
+    }
+  }
+
+  /** Adds a CSS class name directly to the content root of a node. */
+  addClass(id: string, className: string): void {
+    const node = this.tree.get(id);
+    if (!node) return;
+
+    const wrapper = this.mount.getWrapper(id);
+    const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
+    if (!contentRoot) return;
+
+    if (contentRoot.classList.contains(className)) return;
+
+    contentRoot.classList.add(className);
+
+    this.remeasureSubtree(id);
+    if (node.parentId) {
+      this.remeasureSubtree(node.parentId);
+    }
+    this.render();
+
+    const commitTarget = node.parentId ?? id;
+    const html = this.mount.extractHTML(commitTarget);
+    if (html) {
+      this.callbacks.onHTMLCommit?.(commitTarget, html);
+    }
+
+    this.callbacks.onOperationsGenerated?.([{
+      type: "update-classes",
+      nodeId: id,
+      payload: { add: [className], remove: [] },
+      undoPayload: { add: [], remove: [className] }
+    }]);
+  }
+
+  /** Removes a CSS class name directly from the content root of a node. */
+  removeClass(id: string, className: string): void {
+    const node = this.tree.get(id);
+    if (!node) return;
+
+    const wrapper = this.mount.getWrapper(id);
+    const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
+    if (!contentRoot) return;
+
+    if (!contentRoot.classList.contains(className)) return;
+
+    contentRoot.classList.remove(className);
+
+    this.remeasureSubtree(id);
+    if (node.parentId) {
+      this.remeasureSubtree(node.parentId);
+    }
+    this.render();
+
+    const commitTarget = node.parentId ?? id;
+    const html = this.mount.extractHTML(commitTarget);
+    if (html) {
+      this.callbacks.onHTMLCommit?.(commitTarget, html);
+    }
+
+    this.callbacks.onOperationsGenerated?.([{
+      type: "update-classes",
+      nodeId: id,
+      payload: { add: [], remove: [className] },
+      undoPayload: { add: [className], remove: [] }
+    }]);
+  }
+
+  /** Toggles a CSS class name directly on the content root of a node. */
+  toggleClass(id: string, className: string): void {
+    const node = this.tree.get(id);
+    if (!node) return;
+
+    const wrapper = this.mount.getWrapper(id);
+    const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
+    if (!contentRoot) return;
+
+    const hasClass = contentRoot.classList.contains(className);
+    if (hasClass) {
+      this.removeClass(id, className);
+    } else {
+      this.addClass(id, className);
+    }
+  }
+
+  /**
+   * Forces a synchronous geometry measurement of all nodes
+   * and updates the internal rect cache.
+   */
+  measureAll(): Map<string, Rect> {
+    const rects = this.mount.measureAll();
+    for (const [id, rect] of rects) {
+      const node = this.tree.get(id);
+      if (node) {
+        node.currentRect = rect;
+        const wrapper = this.mount.getWrapper(id);
+        if (wrapper) {
+          const contentRoot = wrapper.firstElementChild as HTMLElement | null;
+          if (contentRoot) {
+            node.layoutMode = detectLayout(contentRoot).mode;
+          }
+        }
+      }
+    }
+    this.render();
+    return rects;
+  }
+
+  // ── Public API: Stylesheet Injection ────────────
+
+  /** Injects a CSS string into the shadow root. */
+  injectCSS(css: string): HTMLStyleElement {
+    return this.mount.injectStylesheet(css);
+  }
+
+  /** Loads an external stylesheet into the shadow root. */
+  injectCSSLink(href: string): Promise<HTMLLinkElement> {
+    return this.mount.injectStylesheetLink(href);
+  }
+
+  // ── Disposal ────────────────────────────────────
+
+  /** Tears down the workspace completely. */
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+
+    // Remove event listeners.
+    this.container.removeEventListener("wheel", this.onWheel);
+    this.container.removeEventListener("pointerdown", this.onPointerDown);
+    this.container.removeEventListener("pointermove", this.onPointerMove);
+    this.container.removeEventListener("pointerup", this.onPointerUp);
+    this.container.removeEventListener("dblclick", this.onDblClick);
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("resize", this.onWindowResize);
+
+    // Tear down subsystems.
+    this.mount.dispose();
+    this.canvas.remove();
+
+    // Clear state.
+    this.tree.clear();
+    this.selectedIds.clear();
+  }
+
+  // ── Event Handlers ──────────────────────────────
+
+  /** Cursor-anchored zoom on scroll wheel. */
+  private handleWheel(e: WheelEvent): void {
+    e.preventDefault();
+    const rect = this.getContainerRect();
+    this.viewport = applyWheelZoom(
+      e.clientX, e.clientY, e.deltaY, this.viewport, rect,
+    );
+    this.mount.applyViewportTransform(this.viewport);
+    this.callbacks.onViewportChange?.(this.viewport);
+    this.render();
+  }
+
+  /** Interaction mode detection on pointer down. */
+  private handlePointerDown(e: PointerEvent): void {
+    const rect = this.getContainerRect();
+    const canvasPos = screenToCanvas(
+      e.clientX, e.clientY, this.viewport, rect,
+    );
+
+    // ── Space + pointer = Pan ─────────────────────
+    if (this.spaceDown) {
+      this.isPanning = true;
+      this.container.classList.add("canvus-panning");
+      this.container.setPointerCapture(e.pointerId);
+      this.callbacks.onInteractionChange?.("pan");
+      return;
+    }
+
+    // ── Handle hit-test (resize) ──────────────────
+    if (this.selectedIds.size === 1) {
+      const selId = this.selectedIds.values().next().value as string;
+      const selNode = this.tree.get(selId);
+      if (selNode?.currentRect) {
+        const localX = e.clientX - rect.x;
+        const localY = e.clientY - rect.y;
+        const anchor = this.renderer.hitTestHandle(
+          localX, localY, selNode.currentRect, this.viewport,
+        );
+        if (anchor) {
+          this.isResizing = true;
+          this.activeAnchor = anchor;
+          this.dragStartCanvas = canvasPos;
+          this.resizeStartRect = { ...selNode.currentRect };
+          this.container.setPointerCapture(e.pointerId);
+          this.container.style.cursor = anchorCursor(anchor);
+          this.canvas.style.pointerEvents = "auto";
+          this.callbacks.onInteractionChange?.("resize-node");
+          this.render();
+          return;
+        }
+      }
+    }
+
+    // ── Spacing Adjusters hit-test ────────────────
+    if (this.selectedIds.size === 1) {
+      const selId = this.selectedIds.values().next().value as string;
+      const adjusters = this.computeSpacingAdjusters(selId);
+      const hitAdjuster = adjusters.find(adj =>
+        canvasPos.x >= adj.rect.x &&
+        canvasPos.x <= adj.rect.x + adj.rect.width &&
+        canvasPos.y >= adj.rect.y &&
+        canvasPos.y <= adj.rect.y + adj.rect.height
+      );
+
+      if (hitAdjuster) {
+        this.activeAdjusterType = hitAdjuster.type;
+        this.adjusterStartValue = hitAdjuster.value;
+        const wrapper = this.mount.getWrapper(selId);
+        const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
+        this.adjusterStartValueStr = contentRoot ? (contentRoot.style.getPropertyValue(hitAdjuster.type) || null) : null;
+        this.dragStartCanvas = canvasPos;
+        this.container.setPointerCapture(e.pointerId);
+        this.callbacks.onInteractionChange?.("adjust-spacing");
+
+        const isVertical = hitAdjuster.type.includes("top") || hitAdjuster.type.includes("bottom");
+        this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
+        this.canvas.style.pointerEvents = "auto";
+
+        this.render();
+        return;
+      }
+    }
+
+    // ── Node hit-test (select + drag) ─────────────
+    const nodeList = this.getOrderedNodeList();
+    const hitId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
+
+    const now = Date.now();
+    const isDoubleClick = (now - this.lastPointerDownTime < 350) && (hitId !== null && hitId === this.lastPointerDownId);
+    this.lastPointerDownTime = now;
+    this.lastPointerDownId = hitId;
+
+    let targetSelectId: string | null = null;
+
+    if (hitId) {
+      const isCmdClick = e.metaKey || e.ctrlKey;
+
+      if (isCmdClick) {
+        // Cmd+Click: deep select the hit element directly
+        targetSelectId = hitId;
+        this.enteredContainerId = this.tree.get(hitId)?.parentId ?? null;
+      } else if (isDoubleClick) {
+        // Double click: Figma-like drill down
+        const path = this.tree.getPath(hitId);
+        let foundSelectedIdx = -1;
+        for (let i = 0; i < path.length; i++) {
+          if (this.selectedIds.has(path[i]!.id)) {
+            foundSelectedIdx = i;
+            break;
+          }
+        }
+        if (foundSelectedIdx !== -1 && foundSelectedIdx < path.length - 1) {
+          // Drill down one level
+          const nextParent = path[foundSelectedIdx]!;
+          const nextSelect = path[foundSelectedIdx + 1]!;
+          this.enteredContainerId = nextParent.id;
+          targetSelectId = nextSelect.id;
+        } else {
+          // If the leaf is selected, or nothing in the path is selected
+          if (path.length > 0) {
+            this.enteredContainerId = path[0]!.id;
+            targetSelectId = path[1]?.id ?? path[0]!.id;
+          } else {
+            targetSelectId = hitId;
+          }
+        }
+      } else {
+        // Single Click: resolve based on current entered scope
+        const resolvedId = this.findSelectableNode(hitId, this.enteredContainerId);
+        if (resolvedId) {
+          targetSelectId = resolvedId;
+        } else {
+          // Clicked outside currently entered container: exit scope, select root ancestor
+          this.enteredContainerId = null;
+          targetSelectId = this.findSelectableNode(hitId, null);
+        }
+      }
+    }
+
+    if (isDoubleClick && targetSelectId && this.selectedIds.has(targetSelectId)) {
+      this.editAllowedOnDblClick = true;
+    } else {
+      this.editAllowedOnDblClick = false;
+    }
+
+    if (targetSelectId) {
+      const isShift = e.shiftKey;
+      if (isShift) {
+        if (this.selectedIds.has(targetSelectId)) {
+          this.selectedIds.delete(targetSelectId);
+        } else {
+          this.selectedIds.add(targetSelectId);
+        }
+      } else {
+        this.selectedIds.clear();
+        this.selectedIds.add(targetSelectId);
+      }
+      this.callbacks.onSelectionChange?.(this.selectedIds);
+      this.updateBreadcrumb();
+
+      this.isDragging = false;
+      this.pointerDownReadyToDrag = true;
+      this.dragStartCanvas = canvasPos;
+      const hitNode = this.tree.get(targetSelectId)!;
+      this.dragStartNodePos = {
+        x: hitNode.currentRect!.x,
+        y: hitNode.currentRect!.y,
+      };
+      this.dragStartParentId = hitNode.parentId;
+      this.dragStartIndex = this.tree.getChildIndex(targetSelectId);
+    } else {
+      // Click on empty space — start marquee selection
+      const isShift = e.shiftKey;
+      if (!isShift) {
+        this.selectedIds.clear();
+        this.enteredContainerId = null;
+        this.guides = [];
+        this.callbacks.onSelectionChange?.(this.selectedIds);
+        this.updateBreadcrumb();
+      }
+
+      this.preMarqueeSelectedIds = new Set(this.selectedIds);
+      this.isMarqueeSelecting = true;
+      this.marqueeStartCanvas = canvasPos;
+      this.marqueeCurrentCanvas = canvasPos;
+      this.container.setPointerCapture(e.pointerId);
+      this.callbacks.onInteractionChange?.("select-marquee");
+    }
+
+    this.render();
+  }
+
+  /**
+   * The core **Synchronous Reflow Loop**.
+   *
+   * On each pointer move during an active gesture:
+   *   1. Compute canvas-space delta.
+   *   2. Style surgery (setNodeRect / setNodePosition).
+   *   3. Browser reflows synchronously.
+   *   4. measureNode() reads updated dimensions.
+   *   5. Rect cache updated.
+   *   6. Alignment guides computed.
+   *   7. Overlay re-rendered.
+   */
+  private handlePointerMove(e: PointerEvent): void {
+    const rect = this.getContainerRect();
+    const canvasPos = screenToCanvas(
+      e.clientX, e.clientY, this.viewport, rect,
+    );
+
+    // ── Spacing Adjusters Dragging ────────────────
+    if (this.activeAdjusterType && this.dragStartCanvas) {
+      const selId = this.selectedIds.values().next().value as string;
+      const node = this.tree.get(selId);
+      if (!node) return;
+
+      const isVertical = this.activeAdjusterType.includes("top") || this.activeAdjusterType.includes("bottom");
+      this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
+      this.canvas.style.pointerEvents = "auto";
+
+      const dx = canvasPos.x - this.dragStartCanvas.x;
+      const dy = canvasPos.y - this.dragStartCanvas.y;
+
+      let delta = 0;
+      switch (this.activeAdjusterType) {
+        case "padding-top":
+          delta = dy;
+          break;
+        case "padding-bottom":
+          delta = dy;
+          break;
+        case "padding-left":
+          delta = dx;
+          break;
+        case "padding-right":
+          delta = -dx;
+          break;
+        case "margin-top":
+          delta = -dy;
+          break;
+        case "margin-bottom":
+          delta = dy;
+          break;
+        case "margin-left":
+          delta = -dx;
+          break;
+        case "margin-right":
+          delta = dx;
+          break;
+      }
+
+      const newValue = Math.max(0, Math.round(this.adjusterStartValue + delta));
+
+      // Style surgery - direct DOM mutation
+      this.mount.setNodeStyle(selId, this.activeAdjusterType, `${newValue}px`);
+
+      // Synchronous reflow + measurement
+      this.remeasureSubtree(selId);
+      if (node.parentId) {
+        this.remeasureSubtree(node.parentId);
+      }
+
+      this.render();
+      return;
+    }
+
+    // ── Marquee Selection ──────────────────────────
+    if (this.isMarqueeSelecting && this.marqueeStartCanvas) {
+      this.marqueeCurrentCanvas = canvasPos;
+      const mRect = this.getMarqueeRect()!;
+
+      // Find all selectable nodes inside or intersecting the marquee rect
+      const selectableNodes = this.getOrderedNodeList();
+      const currentMarqueeSelection = new Set<string>();
+
+      for (const node of selectableNodes) {
+        if (!node.currentRect) continue;
+
+        const treeNode = this.tree.get(node.id);
+        if (!treeNode) continue;
+
+        // Scoping constraint
+        if (this.enteredContainerId !== null) {
+          if (treeNode.parentId !== this.enteredContainerId) continue;
+        } else {
+          if (treeNode.parentId !== null) continue;
+        }
+
+        if (rectsIntersect(node.currentRect, mRect)) {
+          currentMarqueeSelection.add(node.id);
+        }
+      }
+
+      this.selectedIds.clear();
+      if (e.shiftKey) {
+        for (const id of this.preMarqueeSelectedIds) {
+          this.selectedIds.add(id);
+        }
+      }
+      for (const id of currentMarqueeSelection) {
+        this.selectedIds.add(id);
+      }
+
+      this.callbacks.onSelectionChange?.(this.selectedIds);
+      this.updateBreadcrumb();
+      this.render();
+      return;
+    }
+
+    // ── Drag initiation ───────────────────────────
+    if (this.pointerDownReadyToDrag && this.dragStartCanvas) {
+      const dx = canvasPos.x - this.dragStartCanvas.x;
+      const dy = canvasPos.y - this.dragStartCanvas.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist >= 3) {
+        this.isDragging = true;
+        this.pointerDownReadyToDrag = false;
+        this.callbacks.onInteractionChange?.("drag-node");
+        this.container.setPointerCapture(e.pointerId);
+      }
+    }
+
+    // ── Hover tracking ────────────────────────────
+    if (!this.isPanning && !this.isDragging && !this.isResizing) {
+      const nodeList = this.getOrderedNodeList();
+      this.hoveredId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
+
+      // Handle hover cursor.
+      if (this.selectedIds.size === 1) {
+        const selId = this.selectedIds.values().next().value as string;
+        const selNode = this.tree.get(selId);
+        if (selNode?.currentRect) {
+          const localX = e.clientX - rect.x;
+          const localY = e.clientY - rect.y;
+          const anchor = this.renderer.hitTestHandle(
+            localX, localY, selNode.currentRect, this.viewport,
+          );
+          if (anchor) {
+            this.container.style.cursor = anchorCursor(anchor);
+            this.hoveredAdjusterType = null;
+            this.canvas.style.pointerEvents = "auto";
+          } else {
+            // Spacing adjusters check
+            const adjusters = this.computeSpacingAdjusters(selId);
+            const hoveredAdj = adjusters.find(adj =>
+              canvasPos.x >= adj.rect.x &&
+              canvasPos.x <= adj.rect.x + adj.rect.width &&
+              canvasPos.y >= adj.rect.y &&
+              canvasPos.y <= adj.rect.y + adj.rect.height
+            );
+
+            if (hoveredAdj) {
+              this.hoveredAdjusterType = hoveredAdj.type;
+              const isVertical = hoveredAdj.type.includes("top") || hoveredAdj.type.includes("bottom");
+              this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
+              this.canvas.style.pointerEvents = "auto";
+            } else {
+              this.hoveredAdjusterType = null;
+              this.container.style.cursor = "default";
+              this.canvas.style.pointerEvents = "none";
+            }
+          }
+        } else {
+          this.hoveredAdjusterType = null;
+          this.container.style.cursor = "default";
+          this.canvas.style.pointerEvents = "none";
+        }
+      } else {
+        this.hoveredAdjusterType = null;
+        this.container.style.cursor = "default";
+        this.canvas.style.pointerEvents = "none";
+      }
+
+      this.render();
+      return;
+    }
+
+    // ── Pan ────────────────────────────────────────
+    if (this.isPanning) {
+      this.viewport = applyPan(
+        e.movementX, e.movementY, this.viewport,
+      );
+      this.mount.applyViewportTransform(this.viewport);
+      this.callbacks.onViewportChange?.(this.viewport);
+      this.render();
+      return;
+    }
+
+    // ── Resize (Synchronous Reflow Loop) ──────────
+    if (this.isResizing && this.activeAnchor && this.dragStartCanvas && this.resizeStartRect) {
+      const selId = this.selectedIds.values().next().value as string;
+      const node = this.tree.get(selId);
+      if (!node) return;
+
+      const dx = canvasPos.x - this.dragStartCanvas.x;
+      const dy = canvasPos.y - this.dragStartCanvas.y;
+
+      // 1. Compute new rect from anchor delta.
+      const newRect = computeResizedRect(
+        this.resizeStartRect, this.activeAnchor, dx, dy, this.minResizeSize,
+      );
+
+      // 2. Style surgery — direct DOM mutation.
+      this.mount.setNodeRect(selId, newRect);
+
+      // 3. Synchronous reflow + measurement.
+      //    Reading dimensions forces the browser to reflow NOW.
+      this.remeasureSubtree(selId);
+
+      // 4. Compute alignment guides.
+      if (this.enableSnapGuides && node.currentRect) {
+        const otherRects = this.getOtherRects(selId);
+        this.guides = computeAlignmentGuides(
+          node.currentRect, otherRects, this.snapThreshold,
+        );
+      }
+
+      // 5. Notify.
+      if (node.currentRect) {
+        this.callbacks.onNodeRectChange?.(selId, node.currentRect);
+      }
+
+      // 6. Render overlay.
+      this.container.style.cursor = anchorCursor(this.activeAnchor);
+      this.canvas.style.pointerEvents = "auto";
+      this.render();
+      return;
+    }
+
+    // ── Drag (Synchronous Reflow Loop) ────────────
+    if (this.isDragging && this.dragStartCanvas && this.dragStartNodePos) {
+      const selId = this.selectedIds.values().next().value as string;
+      const node = this.tree.get(selId);
+      if (!node?.currentRect) return;
+
+      const dx = canvasPos.x - this.dragStartCanvas.x;
+      const dy = canvasPos.y - this.dragStartCanvas.y;
+
+      if (node.parentId !== null) {
+        // ── Flow Child Drag ─────────────────────────
+        // Translate the node visually.
+        const wrapper = this.mount.getWrapper(selId);
+        if (wrapper) {
+          wrapper.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+        }
+        // Update its rect cache directly to match its visual dragged position.
+        node.currentRect = {
+          x: this.dragStartNodePos.x + dx,
+          y: this.dragStartNodePos.y + dy,
+          width: node.currentRect.width,
+          height: node.currentRect.height,
+        };
+      } else {
+        // ── Root Node Drag (Absolute) ───────────────
+        let newX = this.dragStartNodePos.x + dx;
+        let newY = this.dragStartNodePos.y + dy;
+
+        // Snap-to-align.
+        if (this.enableSnapGuides) {
+          const candidateRect: Rect = {
+            x: newX, y: newY,
+            width: node.currentRect.width,
+            height: node.currentRect.height,
+          };
+          const otherRects = this.getOtherRects(selId);
+          const snapped = computeSnappedPosition(
+            candidateRect, otherRects, this.snapThreshold,
+          );
+          newX = snapped.x;
+          newY = snapped.y;
+
+          // Compute visible guide lines.
+          const snappedRect: Rect = {
+            x: newX, y: newY,
+            width: node.currentRect.width,
+            height: node.currentRect.height,
+          };
+          this.guides = computeAlignmentGuides(
+            snappedRect, otherRects, this.snapThreshold,
+          );
+        }
+
+        // Style surgery — direct DOM mutation.
+        this.mount.setNodePosition(selId, newX, newY);
+
+        // Synchronous reflow + measurement of subtree (dragged node + descendants).
+        this.remeasureSubtree(selId);
+      }
+
+      // Detect active drop target container & flow position (M8)
+      this.activeDropTarget = findDropTarget(
+        selId,
+        canvasPos,
+        this.tree,
+        (id) => this.mount.getWrapper(id)
+      );
+
+      // Notify.
+      if (node.currentRect) {
+        this.callbacks.onNodeRectChange?.(selId, node.currentRect);
+      }
+
+      // Render overlay.
+      this.render();
+    }
+  }
+
+  /**
+   * Gesture completion.
+   *
+   * **Flat String Bridge**: on mouseup after a mutating gesture,
+   * extracts the clean HTML and fires `onHTMLCommit`.
+   */
+  private handlePointerUp(e: PointerEvent): void {
+    // Identify the node that was being manipulated.
+    let commitId: string | null = null;
+    const operations: Operation[] = [];
+
+    if (this.isDragging || this.isResizing) {
+      if (this.selectedIds.size === 1) {
+        commitId = this.selectedIds.values().next().value as string;
+      }
+    }
+
+    if (this.activeAdjusterType) {
+      if (this.selectedIds.size === 1) {
+        const selId = this.selectedIds.values().next().value as string;
+        const wrapper = this.mount.getWrapper(selId);
+        const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
+        if (contentRoot && this.activeAdjusterType) {
+          const finalValueStr = contentRoot.style.getPropertyValue(this.activeAdjusterType) || null;
+          if (finalValueStr !== this.adjusterStartValueStr) {
+            operations.push({
+              type: "update-style",
+              nodeId: selId,
+              payload: { [this.activeAdjusterType]: finalValueStr },
+              undoPayload: { [this.activeAdjusterType]: this.adjusterStartValueStr }
+            });
+          }
+        }
+        const node = this.tree.get(selId);
+        commitId = (node && node.parentId !== null) ? node.parentId : selId;
+      }
+      this.activeAdjusterType = null;
+      this.dragStartCanvas = null;
+      this.container.style.cursor = "default";
+      this.adjusterStartValueStr = null;
+    }
+
+    if (this.isMarqueeSelecting) {
+      this.isMarqueeSelecting = false;
+      this.marqueeStartCanvas = null;
+      this.marqueeCurrentCanvas = null;
+      this.preMarqueeSelectedIds.clear();
+    }
+
+    // Reset interaction state.
+    if (this.isPanning) {
+      this.isPanning = false;
+      this.container.classList.remove("canvus-panning");
+    }
+
+    if (this.isDragging) {
+      this.isDragging = false;
+      this.dragStartCanvas = null;
+
+      if (commitId) {
+        // Clear transform if it was a flow child.
+        const node = this.tree.get(commitId);
+        if (node && node.parentId !== null) {
+          const wrapper = this.mount.getWrapper(commitId);
+          if (wrapper) {
+            wrapper.style.transform = "";
+          }
+        }
+
+        const oldParentId = this.dragStartParentId;
+        const oldIndex = this.dragStartIndex;
+        const oldPos = this.dragStartNodePos;
+
+        if (this.activeDropTarget) {
+          const { parentId, insertionIndex } = this.activeDropTarget;
+          const node = this.tree.get(commitId);
+          if (node) {
+            if (parentId === node.parentId) {
+              this.reorderChild(commitId, insertionIndex);
+              const newIndex = this.tree.getChildIndex(commitId);
+              if (newIndex !== oldIndex) {
+                operations.push({
+                  type: "reorder",
+                  nodeId: commitId,
+                  payload: { index: newIndex },
+                  undoPayload: { index: oldIndex }
+                });
+              }
+            } else {
+              this.reparentNode(commitId, parentId, insertionIndex);
+              const newIndex = this.tree.getChildIndex(commitId);
+              operations.push({
+                type: "reparent",
+                nodeId: commitId,
+                payload: { newParentId: parentId, index: newIndex },
+                undoPayload: { newParentId: oldParentId, index: oldIndex }
+              });
+            }
+          }
+        } else {
+          // Promote to root if dragged onto empty space
+          const node = this.tree.get(commitId);
+          if (node) {
+            if (node.parentId !== null) {
+              this.reparentNode(commitId, null);
+              if (node.currentRect) {
+                this.mount.setNodePosition(commitId, node.currentRect.x, node.currentRect.y);
+                this.remeasureSubtree(commitId);
+              }
+              operations.push({
+                type: "reparent",
+                nodeId: commitId,
+                payload: { newParentId: null, index: -1 },
+                undoPayload: { newParentId: oldParentId, index: oldIndex }
+              });
+            } else if (oldParentId === null && oldPos) {
+              const newX = node.currentRect ? node.currentRect.x : oldPos.x;
+              const newY = node.currentRect ? node.currentRect.y : oldPos.y;
+              if (newX !== oldPos.x || newY !== oldPos.y) {
+                operations.push({
+                  type: "update-style",
+                  nodeId: commitId,
+                  payload: { left: `${newX}px`, top: `${newY}px` },
+                  undoPayload: { left: `${oldPos.x}px`, top: `${oldPos.y}px` }
+                });
+              }
+            }
+          }
+        }
+      }
+      this.activeDropTarget = null;
+      this.dragStartNodePos = null;
+      this.dragStartParentId = null;
+      this.dragStartIndex = -1;
+
+      if (commitId) {
+        const node = this.tree.get(commitId);
+        if (node?.currentRect) {
+          this.callbacks.onNodeRectChange?.(commitId, node.currentRect);
+        }
+      }
+    }
+
+    this.pointerDownReadyToDrag = false;
+
+    if (this.isResizing) {
+      this.isResizing = false;
+      this.activeAnchor = null;
+      this.dragStartCanvas = null;
+
+      if (commitId && this.resizeStartRect) {
+        const node = this.tree.get(commitId);
+        if (node?.currentRect) {
+          const finalRect = node.currentRect;
+          const startRect = this.resizeStartRect;
+          if (finalRect.width !== startRect.width || finalRect.height !== startRect.height ||
+              finalRect.x !== startRect.x || finalRect.y !== startRect.y) {
+            
+            const payload: any = {
+              width: `${finalRect.width}px`,
+              height: `${finalRect.height}px`
+            };
+            const undoPayload: any = {
+              width: `${startRect.width}px`,
+              height: `${startRect.height}px`
+            };
+
+            if (node.parentId === null) {
+              payload.left = `${finalRect.x}px`;
+              payload.top = `${finalRect.y}px`;
+              undoPayload.left = `${startRect.x}px`;
+              undoPayload.top = `${startRect.y}px`;
+            }
+
+            operations.push({
+              type: "update-style",
+              nodeId: commitId,
+              payload,
+              undoPayload
+            });
+          }
+          this.callbacks.onNodeRectChange?.(commitId, node.currentRect);
+        }
+      }
+      this.resizeStartRect = null;
+    }
+
+    // Clear guides.
+    this.guides = [];
+
+    // Release pointer capture.
+    this.container.releasePointerCapture(e.pointerId);
+
+    if (operations.length > 0) {
+      this.callbacks.onOperationsGenerated?.(operations);
+    }
+
+    this.canvas.style.pointerEvents = "none";
+    this.callbacks.onInteractionChange?.(null);
+    this.render();
+
+    // ── Flat String Bridge ────────────────────────
+    // Extract clean HTML and fire commit callback.
+    if (commitId) {
+      const html = this.mount.extractHTML(commitId);
+      if (html) {
+        this.callbacks.onHTMLCommit?.(commitId, html);
+      }
+    }
+  }
+
+  /** Spacebar tracking for pan mode. */
+  private handleKeyDown(e: KeyboardEvent): void {
+    const target = e.composedPath()[0] || null;
+    if (isEditableTarget(target)) return;
+
+    if (e.code === "Space" && !e.repeat) {
+      e.preventDefault();
+      this.spaceDown = true;
+      this.container.classList.add("canvus-panning");
+    } else if (e.code === "Escape") {
+      this.handleEscapeKey();
+    }
+  }
+
+  private handleKeyUp(e: KeyboardEvent): void {
+    const target = e.composedPath()[0] || null;
+    if (isEditableTarget(target)) return;
+
+    if (e.code === "Space") {
+      this.spaceDown = false;
+      if (!this.isPanning) {
+        this.container.classList.remove("canvus-panning");
+      }
+    }
+  }
+
+  /** Resize canvas to match container dimensions. */
+  private handleResize(): void {
+    this.renderer.resize(
+      this.container.clientWidth,
+      this.container.clientHeight,
+    );
+    this.render();
+  }
+
+  /** Double-click text editing handler. */
+  private handleDblClick(e: MouseEvent): void {
+    const targetEl = e.composedPath()[0] as HTMLElement | null;
+    if (!targetEl) return;
+
+    // Find the enclosing node wrapper
+    let curr: HTMLElement | null = targetEl;
+    let nodeId: string | null = null;
+    while (curr && curr !== this.container) {
+      if (curr.classList.contains("canvus-node-wrapper")) {
+        nodeId = curr.getAttribute("data-canvus-id");
+        break;
+      }
+      curr = curr.parentElement;
+    }
+
+    if (!nodeId) return;
+    if (!this.editAllowedOnDblClick || !this.selectedIds.has(nodeId)) {
+      this.editAllowedOnDblClick = false;
+      return;
+    }
+    this.editAllowedOnDblClick = false;
+
+    const node = this.tree.get(nodeId);
+    if (!node) return;
+
+    const wrapper = this.mount.getWrapper(nodeId);
+    const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
+    if (!wrapper || !contentRoot) return;
+
+    const path = getDOMPath(contentRoot, targetEl);
+    const originalHTML = targetEl.innerHTML;
+
+    // Option B: Custom Editor Mount Escape Hatch
+    if (this.callbacks.onTextEditRequest) {
+      this.callbacks.onTextEditRequest(nodeId, targetEl, (newHTML: string) => {
+        targetEl.innerHTML = newHTML;
+
+        this.remeasureSubtree(nodeId!);
+        if (node.parentId) {
+          this.remeasureSubtree(node.parentId);
+        }
+        this.render();
+
+        const commitTarget = node.parentId ?? nodeId!;
+        const htmlStr = this.mount.extractHTML(commitTarget);
+        if (htmlStr) {
+          this.callbacks.onHTMLCommit?.(commitTarget, htmlStr);
+        }
+
+        this.callbacks.onOperationsGenerated?.([{
+          type: "update-text",
+          nodeId: nodeId!,
+          payload: { path, html: newHTML },
+          undoPayload: { path, html: originalHTML }
+        }]);
+      });
+      return;
+    }
+
+    // Option A: Plain-Text Inline Editor
+    // Restrict to plaintext only to prevent formatting tag injection
+    wrapper.classList.add("canvus-editing");
+    targetEl.setAttribute("contenteditable", "plaintext-only");
+    targetEl.focus();
+
+    // Select all text natively for easier editing
+    const selection = window.getSelection();
+    if (selection) {
+      const range = document.createRange();
+      range.selectNodeContents(targetEl);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    const handleKey = (ev: KeyboardEvent) => {
+      // Escape -> Cancel
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        targetEl.innerHTML = originalHTML;
+        targetEl.blur();
+        return;
+      }
+
+      // Enter -> Save for single line tags
+      const isSingleLine = /^(H[1-6]|BUTTON|A|SPAN|LABEL)$/i.test(targetEl.tagName);
+      if (isSingleLine && ev.key === "Enter") {
+        ev.preventDefault();
+        targetEl.blur();
+        return;
+      }
+
+      // Block rich text hotkeys (Cmd+B, Cmd+I, etc.)
+      const isCmdOrCtrl = ev.metaKey || ev.ctrlKey;
+      if (isCmdOrCtrl && (ev.key.toLowerCase() === "b" || ev.key.toLowerCase() === "i" || ev.key.toLowerCase() === "u")) {
+        ev.preventDefault();
+      }
+    };
+
+    const handleBlur = () => {
+      wrapper.classList.remove("canvus-editing");
+      targetEl.removeAttribute("contenteditable");
+      targetEl.removeEventListener("keydown", handleKey);
+      targetEl.removeEventListener("blur", handleBlur);
+
+      const finalHTML = targetEl.innerHTML;
+      if (finalHTML !== originalHTML) {
+        this.remeasureSubtree(nodeId!);
+        if (node.parentId) {
+          this.remeasureSubtree(node.parentId);
+        }
+        this.render();
+
+        const commitTarget = node.parentId ?? nodeId!;
+        const htmlStr = this.mount.extractHTML(commitTarget);
+        if (htmlStr) {
+          this.callbacks.onHTMLCommit?.(commitTarget, htmlStr);
+        }
+
+        this.callbacks.onOperationsGenerated?.([{
+          type: "update-text",
+          nodeId: nodeId!,
+          payload: { path, html: finalHTML },
+          undoPayload: { path, html: originalHTML }
+        }]);
+      }
+    };
+
+    targetEl.addEventListener("keydown", handleKey);
+    targetEl.addEventListener("blur", handleBlur);
+  }
+
+  // ── Render ──────────────────────────────────────
+
+  /** Throttles redrawing using requestAnimationFrame to prevent layout thrashing. */
+  private render(): void {
+    if (this.renderRequested) return;
+    this.renderRequested = true;
+    requestAnimationFrame(() => {
+      this.renderRequested = false;
+      this.renderSync();
+    });
+  }
+
+  /** Pushes a complete frame to the overlay renderer immediately. */
+  private renderSync(): void {
+    // Compute layout badges for selected containers.
+    const layoutBadges: LayoutBadgeInfo[] = [];
+    const gridOverlays: GridOverlayInfo[] = [];
+
+    for (const selId of this.selectedIds) {
+      const node = this.tree.get(selId);
+      if (!node?.currentRect) continue;
+
+      // Detect layout mode from the shadow DOM element.
+      const wrapper = this.mount.getWrapper(selId);
+      if (!wrapper) continue;
+
+      // Inspect the first child element (the user's content root).
+      const contentRoot = wrapper.firstElementChild as HTMLElement | null;
+      if (!contentRoot) continue;
+
+      const info = detectLayout(contentRoot);
+      node.layoutMode = info.mode;
+
+      // Only show badges for containers with children.
+      if (node.childIds.length > 0 || info.mode === "flex" || info.mode === "grid" ||
+          info.mode === "inline-flex" || info.mode === "inline-grid") {
+        const label = getLayoutLabel(info);
+        layoutBadges.push({ rect: node.currentRect, label });
+
+        // Grid track overlays.
+        if ((info.mode === "grid" || info.mode === "inline-grid") &&
+            info.gridTemplateColumns && info.gridTemplateRows) {
+          gridOverlays.push({
+            rect: node.currentRect,
+            columns: parseGridTracks(info.gridTemplateColumns),
+            rows: parseGridTracks(info.gridTemplateRows),
+          });
+        }
+      }
+    }
+
+    // Compute spacing adjusters if a single node is selected
+    let spacingAdjusters: SpacingAdjusterInfo[] | undefined;
+    if (this.selectedIds.size === 1 && !this.isMarqueeSelecting) {
+      const selId = this.selectedIds.values().next().value as string;
+      spacingAdjusters = this.computeSpacingAdjusters(selId);
+    }
+
+    this.renderer.render({
+      viewport: this.viewport,
+      nodes: this.getOrderedNodeList(),
+      selectedIds: this.selectedIds,
+      hoveredId: this.hoveredId,
+      activeAnchor: this.activeAnchor,
+      guides: this.guides,
+      layoutBadges: layoutBadges.length > 0 ? layoutBadges : undefined,
+      gridOverlays: gridOverlays.length > 0 ? gridOverlays : undefined,
+      activeDropTarget: this.activeDropTarget,
+      marqueeRect: this.getMarqueeRect(),
+      spacingAdjusters,
+      draggedNodeId: this.isDragging && this.selectedIds.size === 1 ? this.selectedIds.values().next().value : null,
+      resizedNodeId: this.isResizing && this.selectedIds.size === 1 ? this.selectedIds.values().next().value : null,
+    });
+  }
+
+  // ── Private Helpers ─────────────────────────────
+
+  /** Returns the container's bounding rect as our `Rect`. */
+  private getContainerRect(): Rect {
+    const b = this.container.getBoundingClientRect();
+    return { x: b.x, y: b.y, width: b.width, height: b.height };
+  }
+
+  /** Returns nodes in depth-first order for hit testing and rendering. */
+  private getOrderedNodeList(): ReadonlyArray<Readonly<{ id: string; currentRect: Rect | null }>> {
+    return this.tree.flatten();
+  }
+
+  /** Returns canvas-space rects of all nodes except the given ID. */
+  private getOtherRects(excludeId: string): Rect[] {
+    const rects: Rect[] = [];
+    for (const node of this.tree.values()) {
+      if (node.id !== excludeId && node.currentRect) {
+        rects.push(node.currentRect);
+      }
+    }
+    return rects;
+  }
+
+  /**
+   * Re-measures a node and all its descendants using
+   * canvas-space coordinate extraction.
+   */
+  private remeasureSubtree(id: string): void {
+    const rect = this.mount.measureNodeCanvasSpace(id);
+    const node = this.tree.get(id);
+    if (node) {
+      if (rect) node.currentRect = rect;
+      const wrapper = this.mount.getWrapper(id);
+      if (wrapper) {
+        const contentRoot = wrapper.firstElementChild as HTMLElement | null;
+        if (contentRoot) {
+          node.layoutMode = detectLayout(contentRoot).mode;
+        }
+      }
+    }
+
+    const descendants = this.tree.getDescendantIds(id);
+    for (const did of descendants) {
+      const dRect = this.mount.measureNodeCanvasSpace(did);
+      const dNode = this.tree.get(did);
+      if (dNode) {
+        if (dRect) dNode.currentRect = dRect;
+        const dWrapper = this.mount.getWrapper(did);
+        if (dWrapper) {
+          const dContentRoot = dWrapper.firstElementChild as HTMLElement | null;
+          if (dContentRoot) {
+            dNode.layoutMode = detectLayout(dContentRoot).mode;
+          }
+        }
+      }
+    }
+  }
+
+  /** Ascends selection and scope when Escape key is pressed. */
+  private handleEscapeKey(): void {
+    if (this.selectedIds.size === 1) {
+      const selId = this.selectedIds.values().next().value as string;
+      const node = this.tree.get(selId);
+      if (node && node.parentId !== null) {
+        this.selectedIds.clear();
+        this.selectedIds.add(node.parentId);
+        this.enteredContainerId = this.tree.get(node.parentId)?.parentId ?? null;
+        this.callbacks.onSelectionChange?.(this.selectedIds);
+      } else {
+        this.deselectAll();
+        this.enteredContainerId = null;
+      }
+    } else if (this.enteredContainerId) {
+      const parent = this.tree.get(this.enteredContainerId);
+      this.enteredContainerId = parent?.parentId ?? null;
+    } else {
+      this.deselectAll();
+      this.enteredContainerId = null;
+    }
+    this.updateBreadcrumb();
+    this.render();
+  }
+
+  /** Resolves which node is selectable based on click position and scope depth. */
+  private findSelectableNode(hitId: string, scopeId: string | null): string | null {
+    if (scopeId === null) {
+      const path = this.tree.getPath(hitId);
+      return path[0]?.id ?? null;
+    } else {
+      const path = this.tree.getPath(hitId);
+      const scopeIndex = path.findIndex(n => n.id === scopeId);
+      if (scopeIndex !== -1 && scopeIndex < path.length - 1) {
+        return path[scopeIndex + 1]?.id ?? null;
+      }
+      return null;
+    }
+  }
+
+  /** Updates the active breadcrumbs and calls external callback. */
+  private updateBreadcrumb(): void {
+    if (this.callbacks.onBreadcrumbChange) {
+      if (this.selectedIds.size === 1) {
+        const selId = this.selectedIds.values().next().value as string;
+        const path = this.tree.getPath(selId).map(n => n.id);
+        this.callbacks.onBreadcrumbChange(path);
+      } else if (this.enteredContainerId) {
+        const path = this.tree.getPath(this.enteredContainerId).map(n => n.id);
+        this.callbacks.onBreadcrumbChange(path);
+      } else {
+        this.callbacks.onBreadcrumbChange([]);
+      }
+    }
+  }
+
+  private getMarqueeRect(): Rect | null {
+    if (!this.isMarqueeSelecting || !this.marqueeStartCanvas || !this.marqueeCurrentCanvas) {
+      return null;
+    }
+    return {
+      x: Math.min(this.marqueeStartCanvas.x, this.marqueeCurrentCanvas.x),
+      y: Math.min(this.marqueeStartCanvas.y, this.marqueeCurrentCanvas.y),
+      width: Math.abs(this.marqueeStartCanvas.x - this.marqueeCurrentCanvas.x),
+      height: Math.abs(this.marqueeStartCanvas.y - this.marqueeCurrentCanvas.y),
+    };
+  }
+
+  private computeSpacingAdjusters(id: string): SpacingAdjusterInfo[] {
+    const node = this.tree.get(id);
+    if (!node || !node.currentRect) return [];
+
+    const wrapper = this.mount.getWrapper(id);
+    if (!wrapper) return [];
+
+    const contentRoot = wrapper.firstElementChild as HTMLElement | null;
+    const element = contentRoot ?? wrapper;
+    const cs = getComputedStyle(element);
+
+    const padTop = parseFloat(cs.paddingTop) || 0;
+    const padRight = parseFloat(cs.paddingRight) || 0;
+    const padBottom = parseFloat(cs.paddingBottom) || 0;
+    const padLeft = parseFloat(cs.paddingLeft) || 0;
+
+    const marTop = parseFloat(cs.marginTop) || 0;
+    const marRight = parseFloat(cs.marginRight) || 0;
+    const marBottom = parseFloat(cs.marginBottom) || 0;
+    const marLeft = parseFloat(cs.marginLeft) || 0;
+
+    const { x, y, width, height } = node.currentRect;
+    const thickness = 10;
+
+    const adjusters: SpacingAdjusterInfo[] = [];
+
+    const addAdjuster = (type: SpacingAdjusterType, rect: Rect, value: number) => {
+      if (value > 0 || this.activeAdjusterType === type) {
+        adjusters.push({
+          type,
+          rect,
+          value,
+          isHovered: this.hoveredAdjusterType === type,
+          isActive: this.activeAdjusterType === type,
+        });
+      }
+    };
+
+    // Calculate content bounds (inset by margins, since the wrapper includes the margins)
+    const cx = x + marLeft;
+    const cy = y + marTop;
+    const cw = Math.max(0, width - marLeft - marRight);
+    const ch = Math.max(0, height - marTop - marBottom);
+
+    // Padding adjusters (drawn inside the content bounds)
+    // Pad top
+    const pth = Math.max(thickness, padTop);
+    addAdjuster("padding-top", {
+      x: cx + padLeft,
+      y: cy,
+      width: Math.max(10, cw - padLeft - padRight),
+      height: pth,
+    }, padTop);
+
+    // Pad bottom
+    const pbh = Math.max(thickness, padBottom);
+    addAdjuster("padding-bottom", {
+      x: cx + padLeft,
+      y: cy + ch - pbh,
+      width: Math.max(10, cw - padLeft - padRight),
+      height: pbh,
+    }, padBottom);
+
+    // Pad left
+    const plw = Math.max(thickness, padLeft);
+    addAdjuster("padding-left", {
+      x: cx,
+      y: cy + padTop,
+      width: plw,
+      height: Math.max(10, ch - padTop - padBottom),
+    }, padLeft);
+
+    // Pad right
+    const prw = Math.max(thickness, padRight);
+    addAdjuster("padding-right", {
+      x: cx + cw - prw,
+      y: cy + padTop,
+      width: prw,
+      height: Math.max(10, ch - padTop - padBottom),
+    }, padRight);
+
+    // Margin adjusters (drawn inside the wrapper, outside/around the content bounds)
+    // Mar top
+    const mth = Math.max(thickness, marTop);
+    addAdjuster("margin-top", {
+      x: cx,
+      y: cy - mth,
+      width: cw,
+      height: mth,
+    }, marTop);
+
+    // Mar bottom
+    const mbh = Math.max(thickness, marBottom);
+    addAdjuster("margin-bottom", {
+      x: cx,
+      y: cy + ch,
+      width: cw,
+      height: mbh,
+    }, marBottom);
+
+    // Mar left
+    const mlw = Math.max(thickness, marLeft);
+    addAdjuster("margin-left", {
+      x: cx - mlw,
+      y: cy,
+      width: mlw,
+      height: ch,
+    }, marLeft);
+
+    // Mar right
+    const mrw = Math.max(thickness, marRight);
+    addAdjuster("margin-right", {
+      x: cx + cw,
+      y: cy,
+      width: mrw,
+      height: ch,
+    }, marRight);
+
+    return adjusters;
+  }
+
+  private assertNotDisposed(): void {
+    if (this.disposed) {
+      throw new Error(
+        "[Workspace] Instance has been disposed.",
+      );
+    }
+  }
+}
+
+// ── DOM Path Helpers ────────────────────────────────────────
+
+/**
+ * Computes a relative DOM index path from a container root to a target element.
+ */
+function getDOMPath(root: HTMLElement, target: HTMLElement): number[] {
+  const path: number[] = [];
+  let curr: HTMLElement | null = target;
+  while (curr && curr !== root) {
+    const parentEl: HTMLElement | null = curr.parentElement;
+    if (!parentEl) break;
+    const index = Array.from(parentEl.children).indexOf(curr);
+    path.unshift(index);
+    curr = parentEl;
+  }
+  return path;
+}
+
+/**
+ * Retrieves a descendant element inside a container root using a DOM index path.
+ */
+function getDOMElementByPath(root: HTMLElement, path: number[]): HTMLElement | null {
+  let curr: HTMLElement = root;
+  for (const index of path) {
+    const next = curr.children[index] as HTMLElement | null;
+    if (!next) return null;
+    curr = next;
+  }
+  return curr;
+}
+
+/**
+ * Checks if the target element of an event is editable (input, textarea, select, or contenteditable).
+ */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!target || !(target instanceof HTMLElement)) return false;
+  const tagName = target.tagName.toUpperCase();
+  return (
+    tagName === "INPUT" ||
+    tagName === "TEXTAREA" ||
+    tagName === "SELECT" ||
+    target.isContentEditable
+  );
+}
+

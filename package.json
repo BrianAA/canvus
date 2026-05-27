@@ -1,0 +1,19 @@
+{
+  "name": "canvus",
+  "version": "0.1.0",
+  "description": "High-performance HTML-in-Canvas Interactive Workspace SDK",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "demo": "npx -y serve . -l 3000 --no-clipboard",
+    "docs:validate": "node scripts/validate-docs.js"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "playwright": "^1.60.0",
+    "typescript": "^5.8.3"
+  }
+}
