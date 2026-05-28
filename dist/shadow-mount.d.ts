@@ -33,6 +33,8 @@ export declare class ShadowMount {
     private readonly shadow;
     /** Map of node ID → internal metadata (wrapper + position). */
     private readonly nodes;
+    /** Uniform scale applied to host via applied viewport transform. */
+    private currentScale;
     /**
      * Reverse lookup: wrapper Element → node ID.
      * Required because `ResizeObserver` callbacks receive the
@@ -180,6 +182,20 @@ export declare class ShadowMount {
      */
     getWrapper(id: string): HTMLElement | null;
     /**
+     * Returns the content root element for a mounted node by its ID.
+     * For wrapper-based nodes, this is `wrapper.firstElementChild`.
+     * For direct (wrapper-less) nodes, the wrapper IS the content root.
+     *
+     * @param id - The node ID.
+     * @returns The content root element, or `null` if not mounted.
+     */
+    getContentRoot(id: string): HTMLElement | null;
+    /**
+     * Temporarily disables or re-enables all CSS transitions and animations
+     * inside the shadow DOM (useful to avoid layout lag during drag-and-drop).
+     */
+    setTransitionsEnabled(enabled: boolean): void;
+    /**
      * Reads the current canvas-space bounding rect of a mounted
      * node by performing a synchronous layout query.
      *
@@ -324,11 +340,16 @@ export declare class ShadowMount {
      */
     private readWrapperRect;
     /**
+     * Computes the bounding box of an element in canvas-space relative to the shadow host.
+     * Handles scale adjustments correctly and is robust for all elements including SVGs.
+     */
+    private getBoundingBoxCanvasSpace;
+    /**
      * Returns the content root element for a mounted node.
      * For wrapper-based nodes, this is `wrapper.firstElementChild`.
      * For direct (wrapper-less) nodes, the wrapper IS the content root.
      */
-    private getContentRoot;
+    private getContentRootInternal;
     /**
      * Processes a batch of `ResizeObserverEntry` records, resolving
      * each observed element back to its node ID and firing the

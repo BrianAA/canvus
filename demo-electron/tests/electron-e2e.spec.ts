@@ -159,5 +159,65 @@ test.describe('Electron E2E Integration Suite', () => {
       await electronApp.close();
     }
   });
+
+  test('loads CSS Layer Pressure Test, selects a card, and performs drag-and-drop grid repositioning', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
+      window.on('pageerror', err => console.error('PAGE ERROR:', err));
+      await window.waitForLoadState('domcontentloaded');
+
+      // Select 'CSS Layer Pressure Test'
+      const templateSelect = window.locator('#sel-template');
+      await templateSelect.selectOption('pressure-test');
+
+      // Wait for the grid card to be visible in the shadow DOM
+      const card = window.locator('[data-canvus-id="imported-node-1"]');
+      await expect(card).toBeVisible({ timeout: 10000 });
+
+      // Click on the root node to select it and register its children
+      const rootNodeCard = window.locator('#node-list .node-card', { hasText: 'imported-node-1' });
+      await rootNodeCard.click();
+
+      // Now the grid child is registered. Click it to register the cards.
+      const gridNodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ imported-node-1__child-1$/ });
+      await expect(gridNodeCard).toBeVisible();
+      await gridNodeCard.click();
+
+      // Click on Card 3 in the node list to select it before dragging
+      const cardNodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ imported-node-1__child-1__child-3$/ });
+      await expect(cardNodeCard).toBeVisible();
+      await cardNodeCard.click();
+
+      // Get bounding box of Card 3 on the canvas
+      const targetCard = window.locator('[data-canvus-id="imported-node-1__child-1__child-3"]');
+      await expect(targetCard).toBeVisible();
+      const box = await targetCard.boundingBox();
+      expect(box).not.toBeNull();
+
+      const startX = box!.x + box!.width / 2;
+      const startY = box!.y + box!.height / 2;
+
+      // Click and drag from Card 1 center to Card 2 column
+      await window.mouse.move(startX, startY);
+      await window.mouse.down();
+      await window.waitForTimeout(200);
+      await window.mouse.move(startX + 250, startY, { steps: 10 });
+      await window.waitForTimeout(200);
+      await window.mouse.up();
+
+      // Verify that a commit log entry was generated
+      const commitLogEntry = window.locator('#commit-log .commit-entry');
+      await expect(commitLogEntry.first()).toBeVisible({ timeout: 5000 });
+
+    } finally {
+      await electronApp.close();
+    }
+  });
 });
 

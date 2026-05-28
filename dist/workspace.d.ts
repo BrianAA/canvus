@@ -129,6 +129,7 @@ export declare class Workspace {
     private readonly onKeyUp;
     private readonly onWindowResize;
     private readonly onDblClick;
+    private readonly onDragStart;
     constructor(container: HTMLElement, callbacks?: WorkspaceCallbacks, config?: WorkspaceConfig);
     /**
      * Mounts a new HTML node into the workspace.
@@ -161,6 +162,8 @@ export declare class Workspace {
     getNodeTree(): NodeTree;
     /** Returns the wrapper DOM element for a node ID. */
     getWrapper(id: string): HTMLElement | null;
+    /** Returns the user's content root element for a node ID. */
+    getContentRoot(id: string): HTMLElement | null;
     /**
      * Mutates a single CSS style property on the specified node's content element.
      * Automatically triggers browser reflow, updates internal tree boundaries,
@@ -320,5 +323,6 @@ export declare class Workspace {
     private getMarqueeRect;
     private computeSpacingAdjusters;
     private assertNotDisposed;
+    private safeSetPointerCapture;
 }
 //# sourceMappingURL=workspace.d.ts.map

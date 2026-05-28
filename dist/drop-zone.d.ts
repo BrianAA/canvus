@@ -44,5 +44,5 @@ export interface DropTarget {
 export declare function findDropTarget(draggedId: string, canvasPos: {
     x: number;
     y: number;
-}, tree: NodeTree, getWrapper: (id: string) => HTMLElement | null): DropTarget | null;
+}, tree: NodeTree, getWrapper: (id: string) => HTMLElement | null, getContentRoot?: (id: string) => HTMLElement | null): DropTarget | null;
 //# sourceMappingURL=drop-zone.d.ts.map

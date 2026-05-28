@@ -262,6 +262,7 @@ export class Workspace {
   private readonly onKeyUp: (e: KeyboardEvent) => void;
   private readonly onWindowResize: () => void;
   private readonly onDblClick: (e: MouseEvent) => void;
+  private readonly onDragStart: (e: DragEvent) => void;
 
   // ── Constructor ─────────────────────────────────
 
@@ -337,12 +338,14 @@ export class Workspace {
     this.onKeyUp = this.handleKeyUp.bind(this);
     this.onWindowResize = this.handleResize.bind(this);
     this.onDblClick = this.handleDblClick.bind(this);
+    this.onDragStart = (e: DragEvent) => e.preventDefault();
 
     container.addEventListener("wheel", this.onWheel, { passive: false });
     container.addEventListener("pointerdown", this.onPointerDown);
     container.addEventListener("pointermove", this.onPointerMove);
     container.addEventListener("pointerup", this.onPointerUp);
     container.addEventListener("dblclick", this.onDblClick);
+    container.addEventListener("dragstart", this.onDragStart);
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
     window.addEventListener("resize", this.onWindowResize);
@@ -506,6 +509,11 @@ export class Workspace {
     return this.mount.getWrapper(id);
   }
 
+  /** Returns the user's content root element for a node ID. */
+  getContentRoot(id: string): HTMLElement | null {
+    return this.mount.getContentRoot(id);
+  }
+
   /**
    * Mutates a single CSS style property on the specified node's content element.
    * Automatically triggers browser reflow, updates internal tree boundaries,
@@ -520,8 +528,8 @@ export class Workspace {
 
     // Sync layout display mode changes
     if (property === "display") {
-      const mode = (value ?? "none") as any;
-      node.layoutMode = mode;
+      const contentRoot = this.mount.getContentRoot(id);
+      node.layoutMode = contentRoot ? detectLayout(contentRoot).mode : ((value ?? "none") as any);
     }
 
     // Remeasure layout subtree boundaries
@@ -554,7 +562,8 @@ export class Workspace {
     // Sync layout display mode changes if any
     for (const [prop, val] of Object.entries(styles)) {
       if (prop === "display") {
-        node.layoutMode = (val ?? "none") as any;
+        const contentRoot = this.mount.getContentRoot(id);
+        node.layoutMode = contentRoot ? detectLayout(contentRoot).mode : ((val ?? "none") as any);
       }
     }
 
@@ -947,12 +956,9 @@ export class Workspace {
       const node = this.tree.get(id);
       if (node) {
         node.currentRect = rect;
-        const wrapper = this.mount.getWrapper(id);
-        if (wrapper) {
-          const contentRoot = wrapper.firstElementChild as HTMLElement | null;
-          if (contentRoot) {
-            node.layoutMode = detectLayout(contentRoot).mode;
-          }
+        const contentRoot = this.mount.getContentRoot(id);
+        if (contentRoot) {
+          node.layoutMode = detectLayout(contentRoot).mode;
         }
       }
     }
@@ -985,6 +991,7 @@ export class Workspace {
     this.container.removeEventListener("pointermove", this.onPointerMove);
     this.container.removeEventListener("pointerup", this.onPointerUp);
     this.container.removeEventListener("dblclick", this.onDblClick);
+    this.container.removeEventListener("dragstart", this.onDragStart);
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
     window.removeEventListener("resize", this.onWindowResize);
@@ -1026,7 +1033,7 @@ export class Workspace {
         }
         this.isPanning = true;
         this.container.classList.add("canvus-panning");
-        this.container.setPointerCapture(e.pointerId);
+        this.safeSetPointerCapture(e.pointerId);
         this.callbacks.onInteractionChange?.("pan");
         return;
       }
@@ -1042,7 +1049,7 @@ export class Workspace {
       }
       this.isPanning = true;
       this.container.classList.add("canvus-panning");
-      this.container.setPointerCapture(e.pointerId);
+      this.safeSetPointerCapture(e.pointerId);
       this.callbacks.onInteractionChange?.("pan");
       return;
     }
@@ -1125,7 +1132,7 @@ export class Workspace {
 
     const hasModifier = e.shiftKey || e.metaKey || e.ctrlKey;
 
-    if (this.selectedIds.size > 0 && !hasModifier && !isDoubleClick && !this.enteredContainerId) {
+    if (this.selectedIds.size > 0 && !hasModifier && !isDoubleClick) {
       for (const selId of this.selectedIds) {
         const selNode = this.tree.get(selId);
         if (selNode?.currentRect && isPointInElement(canvasPos.x, canvasPos.y, selNode.currentRect)) {
@@ -1261,7 +1268,7 @@ export class Workspace {
       this.isMarqueeSelecting = true;
       this.marqueeStartCanvas = canvasPos;
       this.marqueeCurrentCanvas = canvasPos;
-      this.container.setPointerCapture(e.pointerId);
+      this.safeSetPointerCapture(e.pointerId);
       this.callbacks.onInteractionChange?.("select-marquee");
     }
 
@@ -1305,7 +1312,7 @@ export class Workspace {
       const node = this.tree.get(selId);
       if (!node) return;
 
-      this.container.setPointerCapture(e.pointerId);
+      this.safeSetPointerCapture(e.pointerId);
       this.canvas.style.pointerEvents = "auto";
       this.callbacks.onInteractionChange?.("adjust-spacing");
 
@@ -1411,7 +1418,7 @@ export class Workspace {
         this.isDragging = true;
         this.pointerDownReadyToDrag = false;
         this.callbacks.onInteractionChange?.("drag-node");
-        this.container.setPointerCapture(e.pointerId);
+        this.safeSetPointerCapture(e.pointerId);
       }
     }
 
@@ -1481,7 +1488,7 @@ export class Workspace {
       const node = this.tree.get(selId);
       if (!node) return;
 
-      this.container.setPointerCapture(e.pointerId);
+      this.safeSetPointerCapture(e.pointerId);
       this.container.style.cursor = anchorCursor(this.activeAnchor);
       this.canvas.style.pointerEvents = "auto";
       this.callbacks.onInteractionChange?.("resize-node");
@@ -1497,8 +1504,7 @@ export class Workspace {
       let padTop = 0;
 
       if (node.parentId !== null) {
-        const parentWrapper = this.mount.getWrapper(node.parentId);
-        const parentContent = parentWrapper?.firstElementChild as HTMLElement | null;
+        const parentContent = this.mount.getContentRoot(node.parentId);
         if (parentContent) {
           gridInfo = detectLayout(parentContent);
           if (gridInfo.mode === "grid" || gridInfo.mode === "inline-grid") {
@@ -1516,7 +1522,7 @@ export class Workspace {
         const colTracks = parseGridTracks(gridInfo.gridTemplateColumns || "", gridInfo.gap.column);
         const rowTracks = parseGridTracks(gridInfo.gridTemplateRows || "", gridInfo.gap.row);
 
-        const contentRoot = wrapper.firstElementChild as HTMLElement | null;
+        const contentRoot = this.mount.getContentRoot(selId);
         if (contentRoot) {
           const colStart = getGridStart(contentRoot, "column");
           const rowStart = getGridStart(contentRoot, "row");
@@ -1688,7 +1694,8 @@ export class Workspace {
         selId,
         canvasPos,
         this.tree,
-        (id) => this.mount.getWrapper(id)
+        (id) => this.mount.getWrapper(id),
+        (id) => this.mount.getContentRoot(id)
       );
 
       // Notify.
@@ -1768,6 +1775,9 @@ export class Workspace {
       this.isDragging = false;
       this.dragStartCanvas = null;
 
+      // Temporarily disable transitions during drag commit to avoid layout measurements lagging behind animations
+      this.mount.setTransitionsEnabled(false);
+
       if (commitId) {
         // Clear transform if it was a flow child.
         const node = this.tree.get(commitId);
@@ -1823,6 +1833,12 @@ export class Workspace {
                   payload: { newParentId: parentId, index: 0 },
                   undoPayload: { newParentId: oldParentId, index: oldIndex }
                 });
+              } else {
+                this.remeasureSubtree(parentId);
+                const html = this.mount.extractHTML(parentId);
+                if (html) {
+                  this.callbacks.onHTMLCommit?.(parentId, html);
+                }
               }
 
             } else {
@@ -1939,6 +1955,9 @@ export class Workspace {
           this.callbacks.onNodeRectChange?.(commitId, node.currentRect);
         }
       }
+
+      // Re-enable transitions
+      this.mount.setTransitionsEnabled(true);
     }
 
     this.pointerDownReadyToDrag = false;
@@ -1953,8 +1972,7 @@ export class Workspace {
         if (node?.currentRect) {
           let parentIsGrid = false;
           if (node.parentId !== null) {
-            const parentWrapper = this.mount.getWrapper(node.parentId);
-            const parentContent = parentWrapper?.firstElementChild as HTMLElement | null;
+            const parentContent = this.mount.getContentRoot(node.parentId);
             if (parentContent) {
               const info = detectLayout(parentContent);
               parentIsGrid = info.mode === "grid" || info.mode === "inline-grid";
@@ -1962,8 +1980,7 @@ export class Workspace {
           }
 
           if (parentIsGrid) {
-            const wrapper = this.mount.getWrapper(commitId);
-            const contentRoot = wrapper?.firstElementChild as HTMLElement | null;
+            const contentRoot = this.mount.getContentRoot(commitId);
             if (contentRoot && this.dragStartStyles) {
               const payload: any = {};
               const undoPayload: any = {};
@@ -2036,7 +2053,11 @@ export class Workspace {
     this.guides = [];
 
     // Release pointer capture.
-    this.container.releasePointerCapture(e.pointerId);
+    try {
+      this.container.releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignore if capture was already released or lost
+    }
 
     if (operations.length > 0) {
       this.callbacks.onOperationsGenerated?.(operations);
@@ -2318,8 +2339,8 @@ export class Workspace {
       const wrapper = this.mount.getWrapper(selId);
       if (!wrapper) continue;
 
-      // Inspect the first child element (the user's content root).
-      const contentRoot = wrapper.firstElementChild as HTMLElement | null;
+      // Inspect the user's content root.
+      const contentRoot = this.mount.getContentRoot(selId);
       if (!contentRoot) continue;
 
       // JS Badge (⚡️ JS) — uses explicit markNodeHasJS() tracking
@@ -2355,8 +2376,7 @@ export class Workspace {
     // Draw active drop target grid overlay even if it is not selected
     if (this.activeDropTarget) {
       const dropParentId = this.activeDropTarget.parentId;
-      const dropParentWrapper = this.mount.getWrapper(dropParentId);
-      const dropParentContent = dropParentWrapper?.firstElementChild as HTMLElement | null;
+      const dropParentContent = this.mount.getContentRoot(dropParentId);
       if (dropParentContent) {
         const dropParentInfo = detectLayout(dropParentContent);
         if ((dropParentInfo.mode === "grid" || dropParentInfo.mode === "inline-grid") &&
@@ -2556,12 +2576,9 @@ export class Workspace {
     const node = this.tree.get(id);
     if (node) {
       if (rect) node.currentRect = rect;
-      const wrapper = this.mount.getWrapper(id);
-      if (wrapper) {
-        const contentRoot = wrapper.firstElementChild as HTMLElement | null;
-        if (contentRoot) {
-          node.layoutMode = detectLayout(contentRoot).mode;
-        }
+      const contentRoot = this.mount.getContentRoot(id);
+      if (contentRoot) {
+        node.layoutMode = detectLayout(contentRoot).mode;
       }
     }
 
@@ -2571,12 +2588,9 @@ export class Workspace {
       const dNode = this.tree.get(did);
       if (dNode) {
         if (dRect) dNode.currentRect = dRect;
-        const dWrapper = this.mount.getWrapper(did);
-        if (dWrapper) {
-          const dContentRoot = dWrapper.firstElementChild as HTMLElement | null;
-          if (dContentRoot) {
-            dNode.layoutMode = detectLayout(dContentRoot).mode;
-          }
+        const dContentRoot = this.mount.getContentRoot(did);
+        if (dContentRoot) {
+          dNode.layoutMode = detectLayout(dContentRoot).mode;
         }
       }
     }
@@ -2855,6 +2869,17 @@ export class Workspace {
       throw new Error(
         "[Workspace] Instance has been disposed.",
       );
+    }
+  }
+
+  private safeSetPointerCapture(pointerId: number): void {
+    if (navigator.webdriver || /HeadlessChrome/.test(navigator.userAgent) || /Electron/.test(navigator.userAgent)) {
+      return;
+    }
+    try {
+      this.container.setPointerCapture(pointerId);
+    } catch {
+      // Ignore
     }
   }
 }

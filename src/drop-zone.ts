@@ -59,6 +59,7 @@ export function findDropTarget(
   canvasPos: { x: number; y: number },
   tree: NodeTree,
   getWrapper: (id: string) => HTMLElement | null,
+  getContentRoot?: (id: string) => HTMLElement | null,
 ): DropTarget | null {
   const reversedNodes = tree.flattenReverse();
   let targetContainer: any = null;
@@ -86,8 +87,10 @@ export function findDropTarget(
   const parentWrapper = getWrapper(parentId);
   if (!parentWrapper) return null;
 
-  const contentRoot = parentWrapper.firstElementChild as HTMLElement | null;
-  const layoutElement = contentRoot ?? parentWrapper;
+  const layoutElement = getContentRoot
+    ? getContentRoot(parentId)
+    : (parentWrapper.firstElementChild as HTMLElement | null) ?? parentWrapper;
+  if (!layoutElement) return null;
 
   // Detect parent layout properties.
   const layoutInfo = detectLayout(layoutElement);
@@ -122,7 +125,9 @@ export function findDropTarget(
     let rowSpan = 1;
     const draggedWrapper = getWrapper(draggedId);
     if (draggedWrapper) {
-      const draggedRoot = draggedWrapper.firstElementChild as HTMLElement | null;
+      const draggedRoot = getContentRoot
+        ? getContentRoot(draggedId)
+        : (draggedWrapper.firstElementChild as HTMLElement | null);
       if (draggedRoot) {
         colSpan = getGridSpan(draggedRoot, "column");
         rowSpan = getGridSpan(draggedRoot, "row");

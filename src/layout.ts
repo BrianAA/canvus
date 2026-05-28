@@ -371,14 +371,14 @@ export function getLayoutLabel(info: LayoutInfo): string {
  * Handles compound values like "inline-flex", "inline-grid".
  */
 function resolveLayoutMode(display: string): LayoutMode {
-  // Normalize: CSS can return compound values like "inline flex".
+  // Normalize: CSS can return compound values like "inline flex" or "block grid".
   const d = display.toLowerCase().trim();
 
-  if (d === "flex") return "flex";
-  if (d === "inline-flex" || d === "inline flex") return "inline-flex";
-  if (d === "grid") return "grid";
-  if (d === "inline-grid" || d === "inline grid") return "inline-grid";
-  if (d === "inline" || d === "inline-block") return "inline";
+  if (d.includes("inline-flex") || d.includes("inline flex")) return "inline-flex";
+  if (d.includes("inline-grid") || d.includes("inline grid")) return "inline-grid";
+  if (d.includes("flex")) return "flex";
+  if (d.includes("grid")) return "grid";
+  if (d === "inline" || d === "inline-block" || d.includes("inline")) return "inline";
   if (d === "none") return "none";
 
   // Everything else (block, table, list-item, etc.) → block.

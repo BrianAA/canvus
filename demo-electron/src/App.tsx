@@ -106,20 +106,18 @@ export default function App() {
         if (arr.length === 1) {
           const selectedId = arr[0]!;
           const wrapper = workspaceInstance.getWrapper(selectedId);
-          if (wrapper) {
-            const contentRoot = wrapper.firstElementChild as HTMLElement | null;
-            if (contentRoot) {
-              setDisplay(contentRoot.style.display || '');
-              setDirection(contentRoot.style.flexDirection || '');
-              setGridColumns(contentRoot.style.gridTemplateColumns || '');
-              setGridRows(contentRoot.style.gridTemplateRows || '');
-              setGap(contentRoot.style.gap || '');
-              setBg(contentRoot.style.background || '');
+          const contentRoot = workspaceInstance.getContentRoot(selectedId);
+          if (wrapper && contentRoot) {
+            setDisplay(contentRoot.style.display || '');
+            setDirection(contentRoot.style.flexDirection || '');
+            setGridColumns(contentRoot.style.gridTemplateColumns || '');
+            setGridRows(contentRoot.style.gridTemplateRows || '');
+            setGap(contentRoot.style.gap || '');
+            setBg(contentRoot.style.background || '');
 
-              setForceHover(wrapper.classList.contains('canvus-state-hover'));
-              setForceActive(wrapper.classList.contains('canvus-state-active'));
-              setForceFocus(wrapper.classList.contains('canvus-state-focus'));
-            }
+            setForceHover(wrapper.classList.contains('canvus-state-hover'));
+            setForceActive(wrapper.classList.contains('canvus-state-active'));
+            setForceFocus(wrapper.classList.contains('canvus-state-focus'));
           }
         }
         triggerNodeRefresh(workspaceInstance);

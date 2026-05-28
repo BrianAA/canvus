@@ -497,6 +497,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Lazy Child Registration: Children of nodes are registered lazily on parent selection, significantly improving workspace startup performance and preventing layout distortion.
+- Sibling Selection/Hover Support: Enhanced selection resolution to allow selecting and hovering siblings and children at all depths of the active registry hierarchy.
+- Dynamic Forced Hover States: Automatically injects/removes `.canvus-state-hover` class on canvas elements under the cursor so CSS `:hover` styles render correctly despite pointer-event blocking overlays.
 - Explicit JavaScript flagging: Added `markNodeHasJS()`, `unmarkNodeHasJS()`, and `hasJSMark()` APIs on `Workspace` to flag content nodes with JS behavior.
 - Visual script badges: Renders a specialized amber `⚡️ JS` badge next to the selection boundary for selected nodes containing guest script behavior (read from host JS marks).
 - Side-by-side badge layout rendering: Draws multiple layout/script badges side-by-side with automatic horizontal offset accumulation.
@@ -507,12 +510,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Marquee selection for multi-node selection via drag rectangle
 
 ### Changed
+- Refined workspace renderer to remove static child outlines around selected elements to avoid visual clutter.
+- Increased hover stroke contrast (indigo color and `1.5`px width) to ensure maximum visibility on both light and dark canvas backgrounds.
 - Transitioned script execution and stylesheet extraction to a host-driven architecture, removing automatic execution/parsing from the SDK core.
 - Streamlined CSS Isolation: Replaced the 300-line CSS parser/rewriter in `injectCSS()` with a lightweight regex performing minimal `:root`/`html`/`body` → `:host` rewriting.
 - Upgraded `isEditableTarget` to a robust, duck-typed check to prevent cross-document prototype check failures for shadow DOM target nodes.
 - Upgraded overlay renderer to support grid track visualization alongside flex layout badges
 
 ### Fixed
+- Fixed JS flagging in lazy registration by scanning elements containing script tags prior to stripping them in the Electron importer.
+- Playwright E2E integration tests adapted to drill-down selection and direct node class assertions.
 - Overlap hit-test interception on small elements: Double-clicking leaf/nested nodes bypasses resize handle / spacing adjuster hit-tests on the second click, allowing text editing mode to successfully activate.
 - Spacebar input on `<button>` elements: Intercepts the Spacebar key inside the inline editor, preventing default button click activation (which would toggle Preview Mode) and programmatically inserting spaces at the caret.
 - Interval-driven reset during text editing: Prevented background intervals (like `updateToggleBtn` in `test-page.html`) from resetting the text and cursor of an active button while the user is actively editing it.

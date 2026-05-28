@@ -58,6 +58,11 @@ interface MountedNode {
  * and enforces `border-box` sizing on all user elements.
  */
 const SHADOW_RESET_CSS = `
+:host(.canvus-no-transitions) * {
+  transition: none !important;
+  animation: none !important;
+}
+
 :host {
   all: initial;
   display: block;
@@ -135,6 +140,9 @@ export class ShadowMount {
 
   /** Map of node ID → internal metadata (wrapper + position). */
   private readonly nodes = new Map<string, MountedNode>();
+
+  /** Uniform scale applied to host via applied viewport transform. */
+  private currentScale = 1;
 
   /**
    * Reverse lookup: wrapper Element → node ID.
@@ -291,15 +299,12 @@ export class ShadowMount {
     // ── Start Observing Reflow ──────────────────────────
     this.resizeObserver.observe(targetToObserve);
 
-    // ── Synchronous Layout Read ─────────────────────────
-    // Forces the browser to compute layout NOW so we return
-    // an accurate rect. Reading `offsetWidth` triggers a
-    // synchronous reflow if one is pending.
+    const dims = this.getBoundingBoxCanvasSpace(targetToObserve);
     const rect: Rect = {
       x: cx,
       y: cy,
-      width: targetToObserve.offsetWidth,
-      height: targetToObserve.offsetHeight,
+      width: dims.width,
+      height: dims.height,
     };
 
     return rect;
@@ -362,7 +367,7 @@ export class ShadowMount {
     if (!wrapper) {
       // Fallback: programmatic addChildNode — insert raw markup directly
       // as a child of the parent's content root, no wrapper div.
-      const parentContentRoot = this.getContentRoot(parent);
+      const parentContentRoot = this.getContentRootInternal(parent);
       const insertTarget = parentContentRoot ?? parent.wrapper;
 
       const temp = document.createElement("div");
@@ -442,8 +447,8 @@ export class ShadowMount {
     // Measure canvas-space rect (accounts for nesting).
     const rect = this.measureNodeCanvasSpace(node.id) ?? {
       x: 0, y: 0,
-      width: targetToObserve.offsetWidth,
-      height: targetToObserve.offsetHeight,
+      width: this.getBoundingBoxCanvasSpace(targetToObserve).width,
+      height: this.getBoundingBoxCanvasSpace(targetToObserve).height,
     };
 
     // Update tracked position.
@@ -521,8 +526,8 @@ export class ShadowMount {
     const rect = this.measureNodeCanvasSpace(id) ?? {
       x: 0,
       y: 0,
-      width: element.offsetWidth,
-      height: element.offsetHeight,
+      width: this.getBoundingBoxCanvasSpace(element).width,
+      height: this.getBoundingBoxCanvasSpace(element).height,
     };
     mounted.canvasX = rect.x;
     mounted.canvasY = rect.y;
@@ -609,7 +614,7 @@ export class ShadowMount {
       mounted.wrapper.style.top = "auto";
 
       // Insert into parent's CONTENT ROOT (user's markup root).
-      const parentContentRoot = this.getContentRoot(newParent);
+      const parentContentRoot = this.getContentRootInternal(newParent);
       const insertTarget = parentContentRoot ?? newParent.wrapper;
       const parentChildren = insertTarget.querySelectorAll(
         ":scope > .canvus-node-wrapper, :scope > [data-canvus-id]",
@@ -687,6 +692,7 @@ export class ShadowMount {
    */
   applyViewportTransform(viewport: Readonly<ViewportMatrix>): void {
     this.assertNotDisposed();
+    this.currentScale = viewport.scale;
     this.host.style.transform =
       `translate(${viewport.offsetX}px, ${viewport.offsetY}px) scale(${viewport.scale})`;
   }
@@ -702,6 +708,32 @@ export class ShadowMount {
    */
   getWrapper(id: string): HTMLElement | null {
     return this.nodes.get(id)?.wrapper ?? null;
+  }
+
+  /**
+   * Returns the content root element for a mounted node by its ID.
+   * For wrapper-based nodes, this is `wrapper.firstElementChild`.
+   * For direct (wrapper-less) nodes, the wrapper IS the content root.
+   *
+   * @param id - The node ID.
+   * @returns The content root element, or `null` if not mounted.
+   */
+  getContentRoot(id: string): HTMLElement | null {
+    const mounted = this.nodes.get(id);
+    if (!mounted) return null;
+    return this.getContentRootInternal(mounted);
+  }
+
+  /**
+   * Temporarily disables or re-enables all CSS transitions and animations
+   * inside the shadow DOM (useful to avoid layout lag during drag-and-drop).
+   */
+  setTransitionsEnabled(enabled: boolean): void {
+    if (enabled) {
+      this.host.classList.remove("canvus-no-transitions");
+    } else {
+      this.host.classList.add("canvus-no-transitions");
+    }
   }
 
   /**
@@ -816,7 +848,7 @@ export class ShadowMount {
     const mounted = this.nodes.get(id);
     if (!mounted) return;
 
-    const contentRoot = this.getContentRoot(mounted);
+    const contentRoot = this.getContentRootInternal(mounted);
     if (!contentRoot) return;
 
     if (value === null || value === "") {
@@ -867,7 +899,7 @@ export class ShadowMount {
     const mounted = this.nodes.get(id);
     if (!mounted) return;
 
-    const contentRoot = this.getContentRoot(mounted);
+    const contentRoot = this.getContentRootInternal(mounted);
     if (!contentRoot) return;
 
     for (const [property, value] of Object.entries(styles)) {
@@ -931,28 +963,14 @@ export class ShadowMount {
     const target = mounted.isDirect
       ? wrapper
       : ((wrapper.firstElementChild as HTMLElement) || wrapper);
-    let x = 0;
-    let y = 0;
-    let current: HTMLElement | null = target;
 
-    // Walk up the offsetParent chain, accumulating offsets.
-    // Stop when we hit the shadow host (which has the viewport transform).
-    while (current && current !== this.host) {
-      x += current.offsetLeft;
-      y += current.offsetTop;
-      current = current.offsetParent as HTMLElement | null;
-    }
+    const rect = this.getBoundingBoxCanvasSpace(target);
 
     // Update the tracked position.
-    mounted.canvasX = x;
-    mounted.canvasY = y;
+    mounted.canvasX = rect.x;
+    mounted.canvasY = rect.y;
 
-    return {
-      x,
-      y,
-      width: target.offsetWidth,
-      height: target.offsetHeight,
-    };
+    return rect;
   }
 
   // ── Flat String Bridge ──────────────────────────────────
@@ -974,7 +992,7 @@ export class ShadowMount {
     if (!mounted) return null;
 
     // Get the user's content element.
-    const contentRoot = this.getContentRoot(mounted);
+    const contentRoot = this.getContentRootInternal(mounted);
     if (!contentRoot) {
       return mounted.wrapper.innerHTML;
     }
@@ -1180,11 +1198,22 @@ export class ShadowMount {
    * using pre-transform layout dimensions.
    */
   private readWrapperRect(mounted: MountedNode): Rect {
+    return this.getBoundingBoxCanvasSpace(mounted.wrapper);
+  }
+
+  /**
+   * Computes the bounding box of an element in canvas-space relative to the shadow host.
+   * Handles scale adjustments correctly and is robust for all elements including SVGs.
+   */
+  private getBoundingBoxCanvasSpace(el: HTMLElement): Rect {
+    const elRect = el.getBoundingClientRect();
+    const hostRect = this.host.getBoundingClientRect();
+    const scale = this.currentScale || 1;
     return {
-      x: mounted.canvasX,
-      y: mounted.canvasY,
-      width: mounted.wrapper.offsetWidth,
-      height: mounted.wrapper.offsetHeight,
+      x: (elRect.left - hostRect.left) / scale,
+      y: (elRect.top - hostRect.top) / scale,
+      width: elRect.width / scale,
+      height: elRect.height / scale,
     };
   }
 
@@ -1193,7 +1222,7 @@ export class ShadowMount {
    * For wrapper-based nodes, this is `wrapper.firstElementChild`.
    * For direct (wrapper-less) nodes, the wrapper IS the content root.
    */
-  private getContentRoot(mounted: MountedNode): HTMLElement | null {
+  private getContentRootInternal(mounted: MountedNode): HTMLElement | null {
     if (mounted.isDirect) {
       return mounted.wrapper;
     }

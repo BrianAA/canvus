@@ -18,7 +18,7 @@ import { isPointInElement } from "./matrix.js";
  * @param getWrapper - Callback to fetch a mounted wrapper DOM element.
  * @returns The resolved `DropTarget` details, or `null` if empty space.
  */
-export function findDropTarget(draggedId, canvasPos, tree, getWrapper) {
+export function findDropTarget(draggedId, canvasPos, tree, getWrapper, getContentRoot) {
     const reversedNodes = tree.flattenReverse();
     let targetContainer = null;
     // 1. Find the deepest container under the cursor.
@@ -41,8 +41,11 @@ export function findDropTarget(draggedId, canvasPos, tree, getWrapper) {
     const parentWrapper = getWrapper(parentId);
     if (!parentWrapper)
         return null;
-    const contentRoot = parentWrapper.firstElementChild;
-    const layoutElement = contentRoot ?? parentWrapper;
+    const layoutElement = getContentRoot
+        ? getContentRoot(parentId)
+        : parentWrapper.firstElementChild ?? parentWrapper;
+    if (!layoutElement)
+        return null;
     // Detect parent layout properties.
     const layoutInfo = detectLayout(layoutElement);
     const flowAxis = getFlowAxis(layoutInfo); // "x" (horizontal) or "y" (vertical)
@@ -64,7 +67,9 @@ export function findDropTarget(draggedId, canvasPos, tree, getWrapper) {
         let rowSpan = 1;
         const draggedWrapper = getWrapper(draggedId);
         if (draggedWrapper) {
-            const draggedRoot = draggedWrapper.firstElementChild;
+            const draggedRoot = getContentRoot
+                ? getContentRoot(draggedId)
+                : draggedWrapper.firstElementChild;
             if (draggedRoot) {
                 colSpan = getGridSpan(draggedRoot, "column");
                 rowSpan = getGridSpan(draggedRoot, "row");
