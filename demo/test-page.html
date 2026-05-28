@@ -106,55 +106,54 @@
         <button id="action-btn">Increment</button>
         <button id="toggle-preview-btn" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: inherit;">Switch to Preview Mode</button>
       </div>
+      <script>
+        const btn = document.querySelector("#action-btn");
+        const status = document.querySelector("#click-status");
+        let clicks = 0;
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          clicks++;
+          status.textContent = "Click count: " + clicks;
+          status.style.color = "#6366f1";
+        });
+
+        const toggleBtn = document.querySelector("#toggle-preview-btn");
+        function updateToggleBtn() {
+          if (toggleBtn.hasAttribute("contenteditable") || toggleBtn.isContentEditable) return;
+          if (window.ws) {
+            const isPreview = window.ws.isPreviewMode();
+            const nextText = isPreview ? "Switch to Edit Mode" : "Switch to Preview Mode";
+            const nextBg = isPreview ? "#ef4444" : "#10b981";
+            if (toggleBtn.textContent !== nextText) {
+              toggleBtn.textContent = nextText;
+            }
+            if (toggleBtn.style.background !== nextBg) {
+              toggleBtn.style.background = nextBg;
+            }
+          }
+        }
+
+        updateToggleBtn();
+        setInterval(updateToggleBtn, 300);
+
+        toggleBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (window.ws) {
+            const nextState = !window.ws.isPreviewMode();
+            window.ws.setPreviewMode(nextState);
+            
+            // Sync the host UI toggle button style/text
+            const hostBtn = window.parent.document.getElementById('btn-preview-mode');
+            if (hostBtn) {
+              hostBtn.textContent = nextState ? "Preview Mode" : "Edit Mode";
+              hostBtn.style.background = nextState ? "var(--accent)" : "var(--bg-elevated)";
+            }
+            
+            updateToggleBtn();
+          }
+        });
+      </script>
     </div>
   </div>
-
-  <script>
-    const btn = document.querySelector("#action-btn");
-    const status = document.querySelector("#click-status");
-    let clicks = 0;
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      clicks++;
-      status.textContent = "Click count: " + clicks;
-      status.style.color = "#6366f1";
-    });
-
-    const toggleBtn = document.querySelector("#toggle-preview-btn");
-    function updateToggleBtn() {
-      if (toggleBtn.hasAttribute("contenteditable") || toggleBtn.isContentEditable) return;
-      if (window.ws) {
-        const isPreview = window.ws.isPreviewMode();
-        const nextText = isPreview ? "Switch to Edit Mode" : "Switch to Preview Mode";
-        const nextBg = isPreview ? "#ef4444" : "#10b981";
-        if (toggleBtn.textContent !== nextText) {
-          toggleBtn.textContent = nextText;
-        }
-        if (toggleBtn.style.background !== nextBg) {
-          toggleBtn.style.background = nextBg;
-        }
-      }
-    }
-
-    updateToggleBtn();
-    setInterval(updateToggleBtn, 300);
-
-    toggleBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (window.ws) {
-        const nextState = !window.ws.isPreviewMode();
-        window.ws.setPreviewMode(nextState);
-        
-        // Sync the host UI toggle button style/text
-        const hostBtn = window.parent.document.getElementById('btn-preview-mode');
-        if (hostBtn) {
-          hostBtn.textContent = nextState ? "Preview Mode" : "Edit Mode";
-          hostBtn.style.background = nextState ? "var(--accent)" : "var(--bg-elevated)";
-        }
-        
-        updateToggleBtn();
-      }
-    });
-  </script>
 </body>
 </html>

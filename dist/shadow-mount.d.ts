@@ -297,6 +297,12 @@ export declare class ShadowMount {
      */
     private readWrapperRect;
     /**
+     * Returns the content root element for a mounted node.
+     * For wrapper-based nodes, this is `wrapper.firstElementChild`.
+     * For direct (wrapper-less) nodes, the wrapper IS the content root.
+     */
+    private getContentRoot;
+    /**
      * Processes a batch of `ResizeObserverEntry` records, resolving
      * each observed element back to its node ID and firing the
      * external `onRectChange` callback.

@@ -76,4 +76,81 @@ test.describe('Electron E2E Integration Suite', () => {
       await electronApp.close();
     }
   });
+
+  test('loads Standard Test Page template, verifies native CSS forced states via CDP, and guest script execution', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Locate template select dropdown
+      const templateSelect = window.locator('#sel-template');
+      await expect(templateSelect).toBeVisible();
+
+      // Select 'Standard Test Page'
+      await templateSelect.selectOption('test-page');
+
+      // Verify that the test-page is imported by checking the node list
+      const mainContainerNode = window.locator('#node-list .node-card', { hasText: 'main-container' });
+      await expect(mainContainerNode).toBeVisible({ timeout: 10000 });
+
+      // Verify that the Import Resource Log panel is visible
+      const importDebugger = window.locator('#import-debugger');
+      await expect(importDebugger).toBeVisible();
+
+      // Verify style tags count and external sheets log are visible
+      const styleTagsCount = window.locator('#import-log-styles');
+      await expect(styleTagsCount).toHaveText('1');
+
+      // Click on card-1 in the node tree to select it
+      const card1Node = window.locator('#node-list .node-card', { hasText: 'card-1' });
+      await expect(card1Node).toBeVisible();
+      await card1Node.click();
+
+      // Verify Styles Panel opens
+      const stylesPanel = window.locator('#sidebar-style-panel');
+      await expect(stylesPanel).toBeVisible();
+
+      // Verify that the card element inside Shadow DOM is visible
+      const cardElement = window.locator('#card-1');
+      await expect(cardElement).toBeVisible();
+
+      // Check hover forced state
+      const hoverCheckbox = window.locator('#chk-hover');
+      await expect(hoverCheckbox).not.toBeChecked();
+      await hoverCheckbox.click();
+      await expect(hoverCheckbox).toBeChecked();
+
+      // Check if .canvus-state-hover class is applied to the card-1 wrapper and content element
+      const wrapperElement = window.locator('.canvus-node-wrapper[data-canvus-id="card-1"]');
+      await expect(wrapperElement).toHaveClass(/canvus-state-hover/);
+      await expect(cardElement).toHaveClass(/canvus-state-hover/);
+
+      // Verify guest script node has JS mark and visual badge
+      const isMarkedJS = await window.evaluate(() => (window as any).ws.hasJSMark('banner'));
+      expect(isMarkedJS).toBe(true);
+
+      // Select the banner node
+      const bannerNode = window.locator('#node-list .node-card', { hasText: 'banner' });
+      await expect(bannerNode).toBeVisible();
+      await bannerNode.click();
+
+      // Click the simulated click button in sidebar to simulate event on banner node
+      const simClickButton = window.locator('#btn-sim-click');
+      await expect(simClickButton).toBeVisible();
+      await simClickButton.click();
+
+      // Verify toast notification is displayed for synthetic event dispatch
+      const toast = window.locator('.toast-item').last();
+      await expect(toast).toContainText("Simulated 'click' on banner");
+
+    } finally {
+      await electronApp.close();
+    }
+  });
 });
+

@@ -27,18 +27,27 @@ export type RectChangeCallback = (id: string, rect: Rect) => void;
 // ── Internal Node Wrapper Metadata ──────────────────────────
 
 /**
- * Tracks the DOM wrapper element and its last-known canvas-space
+ * Tracks the DOM element and its last-known canvas-space
  * position for each mounted node. Position is stored explicitly
  * rather than parsed back from `style.left` to avoid float
  * round-trip errors.
  */
 interface MountedNode {
-  /** The absolutely-positioned wrapper `<div>` inside the shadow tree. */
-  wrapper: HTMLDivElement;
+  /**
+   * For root nodes: the absolutely-positioned wrapper `<div>`.
+   * For direct (wrapper-less) flow children: the content element itself.
+   */
+  wrapper: HTMLElement;
   /** Canvas-space X position (matches `wrapper.style.left`). */
   canvasX: number;
   /** Canvas-space Y position (matches `wrapper.style.top`). */
   canvasY: number;
+  /**
+   * When `true`, `wrapper` IS the content element (no intermediate
+   * wrapper div). Used for flow children so CSS selectors like
+   * `parent > child` match correctly through the DOM tree.
+   */
+  isDirect?: boolean;
 }
 
 // ── Reset Stylesheet ────────────────────────────────────────
@@ -80,9 +89,7 @@ const SHADOW_RESET_CSS = `
 
 /* Flow-positioned children inherit their parent's layout mode. */
 .canvus-node-wrapper.canvus-flow-child {
-  position: relative;
-  left: auto !important;
-  top: auto !important;
+  display: contents;
 }
 
 .canvus-node-wrapper > * {
@@ -278,10 +285,11 @@ export class ShadowMount {
     // ── Register Tracking ───────────────────────────────
     const mounted: MountedNode = { wrapper, canvasX: cx, canvasY: cy };
     this.nodes.set(node.id, mounted);
-    this.elementToId.set(wrapper, node.id);
+    const targetToObserve = wrapper.firstElementChild as HTMLElement || wrapper;
+    this.elementToId.set(targetToObserve, node.id);
 
     // ── Start Observing Reflow ──────────────────────────
-    this.resizeObserver.observe(wrapper);
+    this.resizeObserver.observe(targetToObserve);
 
     // ── Synchronous Layout Read ─────────────────────────
     // Forces the browser to compute layout NOW so we return
@@ -290,8 +298,8 @@ export class ShadowMount {
     const rect: Rect = {
       x: cx,
       y: cy,
-      width: wrapper.offsetWidth,
-      height: wrapper.offsetHeight,
+      width: targetToObserve.offsetWidth,
+      height: targetToObserve.offsetHeight,
     };
 
     return rect;
@@ -332,30 +340,62 @@ export class ShadowMount {
       );
     }
 
-    // Check if the wrapper is already present in the shadow tree (e.g. from document importer)
-    let wrapper = this.shadow.querySelector(`.canvus-node-wrapper[data-canvus-id="${node.id}"]`) as HTMLDivElement | null;
+    // ── Locate or create the child element ──────────────────
+    // Priority 1: pre-mounted wrapper (legacy path)
+    let wrapper = this.shadow.querySelector(
+      `.canvus-node-wrapper[data-canvus-id="${node.id}"]`,
+    ) as HTMLElement | null;
+    let isDirect = false;
 
     if (!wrapper) {
-      // Create flow-child wrapper.
-      wrapper = document.createElement("div");
-      wrapper.className = "canvus-node-wrapper canvus-flow-child";
-      wrapper.setAttribute("data-canvus-id", node.id);
-      wrapper.innerHTML = node.rawMarkup;
+      // Priority 2: direct element marked by the importer (no wrapper div)
+      const directEl = this.shadow.querySelector(
+        `[data-canvus-id="${node.id}"]:not(.canvus-node-wrapper)`,
+      ) as HTMLElement | null;
 
-      // Insert into parent's CONTENT ROOT (user's markup root) so children
-      // participate in the parent's CSS layout context (flex, grid, block).
-      const insertTarget = parent.wrapper.firstElementChild as HTMLElement | null ?? parent.wrapper;
-      const parentChildren = insertTarget.querySelectorAll(
-        ":scope > .canvus-node-wrapper",
-      );
-      if (index !== undefined && index >= 0 && index < parentChildren.length) {
-        insertTarget.insertBefore(wrapper, parentChildren[index] ?? null);
-      } else {
-        insertTarget.appendChild(wrapper);
+      if (directEl) {
+        wrapper = directEl;
+        isDirect = true;
       }
     }
 
-    // Apply explicit width and height if provided (applies to both pre-mounted and new nodes)
+    if (!wrapper) {
+      // Fallback: programmatic addChildNode — insert raw markup directly
+      // as a child of the parent's content root, no wrapper div.
+      const parentContentRoot = this.getContentRoot(parent);
+      const insertTarget = parentContentRoot ?? parent.wrapper;
+
+      const temp = document.createElement("div");
+      temp.innerHTML = node.rawMarkup;
+      const newElement = temp.firstElementChild as HTMLElement;
+
+      if (newElement) {
+        newElement.setAttribute("data-canvus-id", node.id);
+
+        // Insert at the specified index if provided.
+        const existingChildren = insertTarget.querySelectorAll(
+          ":scope > [data-canvus-id]",
+        );
+        if (index !== undefined && index >= 0 && index < existingChildren.length) {
+          insertTarget.insertBefore(newElement, existingChildren[index] ?? null);
+        } else {
+          insertTarget.appendChild(newElement);
+        }
+
+        wrapper = newElement;
+        isDirect = true;
+      } else {
+        // Fallback to wrapper-based approach for text-only nodes
+        const wrapperDiv = document.createElement("div");
+        wrapperDiv.className = "canvus-node-wrapper canvus-flow-child";
+        wrapperDiv.setAttribute("data-canvus-id", node.id);
+        wrapperDiv.innerHTML = node.rawMarkup;
+        insertTarget.appendChild(wrapperDiv);
+        wrapper = wrapperDiv;
+      }
+    }
+
+    // Apply explicit dimensions if provided.
     if (node.currentRect) {
       if (node.currentRect.width > 0) {
         wrapper.style.width = `${node.currentRect.width}px`;
@@ -365,44 +405,50 @@ export class ShadowMount {
       }
     }
 
-    // Sync initial grid styles from content root to wrapper after DOM insertion
-    const contentRoot = wrapper.firstElementChild as HTMLElement | null;
-    if (contentRoot) {
-      const cs = getComputedStyle(contentRoot);
-      const gridProps = [
-        "grid-column-start",
-        "grid-column-end",
-        "grid-row-start",
-        "grid-row-end",
-        "grid-area",
-        "grid-column",
-        "grid-row",
-      ];
-      for (const prop of gridProps) {
-        const val = cs.getPropertyValue(prop);
-        if (val && val !== "auto" && val !== "normal" && val !== "none") {
-          wrapper.style.setProperty(prop, val);
+    // Grid style sync only needed for wrapper-based nodes (the wrapper
+    // needs grid placement copied from the content root). Direct elements
+    // already participate in the parent grid natively.
+    if (!isDirect) {
+      const contentRoot = wrapper.firstElementChild as HTMLElement | null;
+      if (contentRoot) {
+        const cs = getComputedStyle(contentRoot);
+        const gridProps = [
+          "grid-column-start",
+          "grid-column-end",
+          "grid-row-start",
+          "grid-row-end",
+          "grid-area",
+          "grid-column",
+          "grid-row",
+        ];
+        for (const prop of gridProps) {
+          const val = cs.getPropertyValue(prop);
+          if (val && val !== "auto" && val !== "normal" && val !== "none") {
+            wrapper.style.setProperty(prop, val);
+          }
         }
       }
     }
 
     // Register tracking.
-    const mounted: MountedNode = { wrapper, canvasX: 0, canvasY: 0 };
+    const mounted: MountedNode = { wrapper, canvasX: 0, canvasY: 0, isDirect };
     this.nodes.set(node.id, mounted);
-    this.elementToId.set(wrapper, node.id);
-    this.resizeObserver.observe(wrapper);
+    const targetToObserve = isDirect
+      ? wrapper
+      : (wrapper.firstElementChild as HTMLElement || wrapper);
+    this.elementToId.set(targetToObserve, node.id);
+    this.resizeObserver.observe(targetToObserve);
 
     // Measure canvas-space rect (accounts for nesting).
     const rect = this.measureNodeCanvasSpace(node.id) ?? {
       x: 0, y: 0,
-      width: wrapper.offsetWidth,
-      height: wrapper.offsetHeight,
+      width: targetToObserve.offsetWidth,
+      height: targetToObserve.offsetHeight,
     };
 
     // Update tracked position.
     mounted.canvasX = rect.x;
     mounted.canvasY = rect.y;
-
 
     return rect;
   }
@@ -426,8 +472,11 @@ export class ShadowMount {
       el.remove();
     }
 
-    this.resizeObserver.unobserve(mounted.wrapper);
-    this.elementToId.delete(mounted.wrapper);
+    const targetToObserve = mounted.isDirect
+      ? mounted.wrapper
+      : (mounted.wrapper.firstElementChild as HTMLElement || mounted.wrapper);
+    this.resizeObserver.unobserve(targetToObserve);
+    this.elementToId.delete(targetToObserve);
     mounted.wrapper.remove();
     this.nodes.delete(id);
 
@@ -473,14 +522,17 @@ export class ShadowMount {
       }
 
       // Become a flow child.
-      mounted.wrapper.classList.add("canvus-flow-child");
+      if (!mounted.isDirect) {
+        mounted.wrapper.classList.add("canvus-flow-child");
+      }
       mounted.wrapper.style.left = "auto";
       mounted.wrapper.style.top = "auto";
 
       // Insert into parent's CONTENT ROOT (user's markup root).
-      const insertTarget = newParent.wrapper.firstElementChild as HTMLElement | null ?? newParent.wrapper;
+      const parentContentRoot = this.getContentRoot(newParent);
+      const insertTarget = parentContentRoot ?? newParent.wrapper;
       const parentChildren = insertTarget.querySelectorAll(
-        ":scope > .canvus-node-wrapper",
+        ":scope > .canvus-node-wrapper, :scope > [data-canvus-id]",
       );
 
       if (index !== undefined && index >= 0 && index < parentChildren.length) {
@@ -684,7 +736,7 @@ export class ShadowMount {
     const mounted = this.nodes.get(id);
     if (!mounted) return;
 
-    const contentRoot = mounted.wrapper.firstElementChild as HTMLElement | null;
+    const contentRoot = this.getContentRoot(mounted);
     if (!contentRoot) return;
 
     if (value === null || value === "") {
@@ -694,55 +746,8 @@ export class ShadowMount {
     }
 
     // Synchronize geometry styling with SDK wrapper chrome
-    if (property === "width") {
-      if (value === null || value === "" || value === "auto") {
-        this.setNodeSize(id, "auto", null);
-      } else if (value.endsWith("px")) {
-        const val = parseFloat(value);
-        if (!isNaN(val)) this.setNodeSize(id, val, null);
-      }
-    } else if (property === "height") {
-      if (value === null || value === "" || value === "auto") {
-        this.setNodeSize(id, null, "auto");
-      } else if (value.endsWith("px")) {
-        const val = parseFloat(value);
-        if (!isNaN(val)) this.setNodeSize(id, null, val);
-      }
-    }
-
-    // Synchronize grid placement styles with the wrapper
-    if (
-      property.startsWith("grid-") ||
-      property === "grid" ||
-      property === "grid-area"
-    ) {
-      if (value === null || value === "") {
-        mounted.wrapper.style.removeProperty(property);
-      } else {
-        mounted.wrapper.style.setProperty(property, value);
-      }
-    }
-  }
-
-  /**
-   * Sets multiple CSS style properties directly on the node's content element
-   * (the first child element of the wrapper) in a single batch.
-   */
-  setNodeStyles(id: string, styles: Record<string, string | null>): void {
-    const mounted = this.nodes.get(id);
-    if (!mounted) return;
-
-    const contentRoot = mounted.wrapper.firstElementChild as HTMLElement | null;
-    if (!contentRoot) return;
-
-    for (const [property, value] of Object.entries(styles)) {
-      if (value === null || value === "") {
-        contentRoot.style.removeProperty(property);
-      } else {
-        contentRoot.style.setProperty(property, value);
-      }
-
-      // Synchronize geometry styling with SDK wrapper chrome
+    // (only needed for wrapper-based nodes)
+    if (!mounted.isDirect) {
       if (property === "width") {
         if (value === null || value === "" || value === "auto") {
           this.setNodeSize(id, "auto", null);
@@ -775,6 +780,59 @@ export class ShadowMount {
   }
 
   /**
+   * Sets multiple CSS style properties directly on the node's content element
+   * (the first child element of the wrapper) in a single batch.
+   */
+  setNodeStyles(id: string, styles: Record<string, string | null>): void {
+    const mounted = this.nodes.get(id);
+    if (!mounted) return;
+
+    const contentRoot = this.getContentRoot(mounted);
+    if (!contentRoot) return;
+
+    for (const [property, value] of Object.entries(styles)) {
+      if (value === null || value === "") {
+        contentRoot.style.removeProperty(property);
+      } else {
+        contentRoot.style.setProperty(property, value);
+      }
+
+      // Synchronize geometry styling with SDK wrapper chrome
+      // (only needed for wrapper-based nodes)
+      if (!mounted.isDirect) {
+        if (property === "width") {
+          if (value === null || value === "" || value === "auto") {
+            this.setNodeSize(id, "auto", null);
+          } else if (value.endsWith("px")) {
+            const val = parseFloat(value);
+            if (!isNaN(val)) this.setNodeSize(id, val, null);
+          }
+        } else if (property === "height") {
+          if (value === null || value === "" || value === "auto") {
+            this.setNodeSize(id, null, "auto");
+          } else if (value.endsWith("px")) {
+            const val = parseFloat(value);
+            if (!isNaN(val)) this.setNodeSize(id, null, val);
+          }
+        }
+
+        // Synchronize grid placement styles with the wrapper
+        if (
+          property.startsWith("grid-") ||
+          property === "grid" ||
+          property === "grid-area"
+        ) {
+          if (value === null || value === "") {
+            mounted.wrapper.style.removeProperty(property);
+          } else {
+            mounted.wrapper.style.setProperty(property, value);
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Computes the canvas-space bounding rect of a node by walking
    * the `offsetLeft`/`offsetTop` chain up to the shadow host.
    *
@@ -789,10 +847,13 @@ export class ShadowMount {
     const mounted = this.nodes.get(id);
     if (!mounted) return null;
 
-    const el = mounted.wrapper;
+    const wrapper = mounted.wrapper;
+    const target = mounted.isDirect
+      ? wrapper
+      : ((wrapper.firstElementChild as HTMLElement) || wrapper);
     let x = 0;
     let y = 0;
-    let current: HTMLElement | null = el;
+    let current: HTMLElement | null = target;
 
     // Walk up the offsetParent chain, accumulating offsets.
     // Stop when we hit the shadow host (which has the viewport transform).
@@ -809,8 +870,8 @@ export class ShadowMount {
     return {
       x,
       y,
-      width: el.offsetWidth,
-      height: el.offsetHeight,
+      width: target.offsetWidth,
+      height: target.offsetHeight,
     };
   }
 
@@ -832,14 +893,19 @@ export class ShadowMount {
     const mounted = this.nodes.get(id);
     if (!mounted) return null;
 
-    // Get the user's content element (the first child of the wrapper).
-    const contentRoot = mounted.wrapper.firstElementChild;
+    // Get the user's content element.
+    const contentRoot = this.getContentRoot(mounted);
     if (!contentRoot) {
       return mounted.wrapper.innerHTML;
     }
 
     // Clone the content element to avoid modifying the active DOM.
     const clone = contentRoot.cloneNode(true) as HTMLElement;
+
+    // Remove SDK tracking attribute from the clone.
+    if (mounted.isDirect) {
+      clone.removeAttribute("data-canvus-id");
+    }
 
     // Clean up forced state classes if present
     clone.classList.remove("canvus-state-hover", "canvus-state-active", "canvus-state-focus");
@@ -848,11 +914,16 @@ export class ShadowMount {
       el.classList.remove("canvus-state-hover", "canvus-state-active", "canvus-state-focus");
     }
 
-    // Find all child wrappers in the cloned tree.
-    const childWrappers = clone.querySelectorAll(".canvus-node-wrapper");
-    
-    for (const childWrapper of childWrappers) {
-      const childId = childWrapper.getAttribute("data-canvus-id");
+    // Find all child markers (both wrapper-based and direct elements).
+    const childMarkers = clone.querySelectorAll(
+      ".canvus-node-wrapper[data-canvus-id], [data-canvus-id]",
+    );
+
+    for (const marker of childMarkers) {
+      // Skip the clone root itself (relevant for direct elements).
+      if (marker === clone) continue;
+
+      const childId = marker.getAttribute("data-canvus-id");
       if (childId) {
         // Recursively extract the clean HTML for this child.
         const cleanChildHTML = this.extractHTML(childId);
@@ -861,15 +932,15 @@ export class ShadowMount {
           temp.innerHTML = cleanChildHTML;
           const cleanChildNode = temp.firstElementChild;
           if (cleanChildNode) {
-            childWrapper.replaceWith(cleanChildNode);
+            marker.replaceWith(cleanChildNode);
           } else {
-            childWrapper.remove();
+            marker.remove();
           }
         } else {
-          childWrapper.remove();
+          marker.remove();
         }
       } else {
-        childWrapper.remove();
+        marker.remove();
       }
     }
 
@@ -941,6 +1012,8 @@ export class ShadowMount {
     this.shadow.appendChild(link);
     return promise;
   }
+
+
 
   /**
    * Evaluates a script string inside a scoped closure where 'document' and 'window'
@@ -1036,6 +1109,18 @@ export class ShadowMount {
   }
 
   /**
+   * Returns the content root element for a mounted node.
+   * For wrapper-based nodes, this is `wrapper.firstElementChild`.
+   * For direct (wrapper-less) nodes, the wrapper IS the content root.
+   */
+  private getContentRoot(mounted: MountedNode): HTMLElement | null {
+    if (mounted.isDirect) {
+      return mounted.wrapper;
+    }
+    return mounted.wrapper.firstElementChild as HTMLElement | null;
+  }
+
+  /**
    * Processes a batch of `ResizeObserverEntry` records, resolving
    * each observed element back to its node ID and firing the
    * external `onRectChange` callback.
@@ -1084,3 +1169,5 @@ function rewriteForShadowDOM(css: string): string {
     .replace(/(?<![.\-\w])html(?![.\-\w])/g, ":host")
     .replace(/(^|[\s,]):root\b/gm, "$1:host");
 }
+
+

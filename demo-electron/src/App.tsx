@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Workspace } from '../../dist/index.js';
-import { importHTMLDocument } from './importer.ts';
+import { importHTMLDocument, ImportResultLog } from './importer.ts';
 import './index.css';
 
 // Declare type for Electron IPC bridge
@@ -8,6 +8,8 @@ declare global {
   interface Window {
     electronAPI?: {
       openFile: () => Promise<{ filePath: string; fileContent: string } | null>;
+      readFile: (filePath: string) => Promise<string | null>;
+      forcePseudoState: (nodeId: string, stateName: 'hover' | 'active' | 'focus', enabled: boolean) => Promise<boolean>;
     };
   }
 }
@@ -43,6 +45,7 @@ export default function App() {
   const [commitLogs, setCommitLogs] = useState<CommitLogEntry[]>([]);
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
   const [undoStack, setUndoStack] = useState<any[][]>([]);
+  const [importLog, setImportLog] = useState<ImportResultLog | null>(null);
 
   // Style input state
   const [display, setDisplay] = useState('');
@@ -172,6 +175,25 @@ export default function App() {
     setNodes(resolved);
   };
 
+  const loadHTMLContent = async (html: string, filePath?: string) => {
+    if (!ws) return;
+    try {
+      const log = await importHTMLDocument(ws, html, {
+        clearWorkspace: true,
+        baseUrl: filePath
+      });
+      setImportLog(log);
+      triggerNodeRefresh(ws);
+      if (filePath) {
+        addToast(`Imported ${pathBasename(filePath)} successfully!`);
+      } else {
+        addToast('Content loaded successfully!');
+      }
+    } catch (err: any) {
+      addToast(`Import Error: ${err.message}`);
+    }
+  };
+
   const handleImportFile = async () => {
     if (!ws) return;
     if (!window.electronAPI) {
@@ -186,8 +208,7 @@ export default function App() {
           btn.addEventListener('click', () => alert('Clicked mock button!'));
         </script>
       `;
-      importHTMLDocument(ws, mockHTML, { clearWorkspace: true });
-      triggerNodeRefresh(ws);
+      await loadHTMLContent(mockHTML);
       return;
     }
 
@@ -197,14 +218,74 @@ export default function App() {
         addToast('File selection canceled');
         return;
       }
-      importHTMLDocument(ws, res.fileContent, {
-        clearWorkspace: true,
-        baseUrl: res.filePath
-      });
-      triggerNodeRefresh(ws);
-      addToast(`Imported ${pathBasename(res.filePath)} successfully!`);
+      await loadHTMLContent(res.fileContent, res.filePath);
     } catch (err: any) {
       addToast(`Import Error: ${err.message}`);
+    }
+  };
+
+  const handleLoadTemplate = async (templateName: string) => {
+    if (!ws) return;
+    setImportLog(null);
+    if (templateName === 'welcome') {
+      ws.deselectAll();
+      const roots = ws.getNodeTree().getRoots();
+      for (const root of roots) {
+        ws.removeNode(root.id);
+      }
+      ws.addNode({
+        id: 'welcome-card',
+        rawMarkup: `<div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);border-radius:16px;padding:32px;color:#fff;box-shadow:0 12px 40px rgba(79,70,229,0.3);font-family:sans-serif"><h2 style="margin:0 0 10px;font-size:22px;font-weight:700">Canvus React + Electron Demo</h2><p style="margin:0;font-size:14px;opacity:0.9;line-height:1.6">Decoupled template imports, scoped JS execution, styles control, and E2E automation sandbox.</p></div>`,
+        currentRect: { x: 80, y: 80, width: 340, height: 0 }
+      });
+      triggerNodeRefresh(ws);
+      addToast('Welcome Card loaded');
+      return;
+    }
+
+    if (templateName === 'blank') {
+      ws.deselectAll();
+      const roots = ws.getNodeTree().getRoots();
+      for (const root of roots) {
+        ws.removeNode(root.id);
+      }
+      triggerNodeRefresh(ws);
+      addToast('Workspace cleared');
+      return;
+    }
+
+    let url = '';
+    let label = '';
+    if (templateName === 'test-page') {
+      url = '../demo/test-page.html';
+      label = 'Standard Test Page';
+    } else if (templateName === 'pressure-test') {
+      url = '../demo/pressure-test.html';
+      label = 'CSS Layer Pressure Test';
+    }
+
+    try {
+      let html = '';
+      if (window.electronAPI) {
+        const content = await window.electronAPI.readFile(url);
+        if (content) {
+          html = content;
+        }
+      }
+
+      if (!html) {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        html = await response.text();
+      }
+
+      const resolvedBaseUrl = `${window.location.origin}/${templateName === 'test-page' ? 'demo/test-page.html' : 'demo/pressure-test.html'}`;
+      await loadHTMLContent(html, resolvedBaseUrl);
+      addToast(`Loaded ${label}`);
+    } catch (err: any) {
+      addToast(`Failed to load template: ${err.message}`);
     }
   };
 
@@ -246,13 +327,22 @@ export default function App() {
     triggerNodeRefresh(ws);
   };
 
-  const toggleForcedState = (stateName: 'hover' | 'active' | 'focus', val: boolean) => {
+  const toggleForcedState = async (stateName: 'hover' | 'active' | 'focus', val: boolean) => {
     if (!ws || selectedIds.length !== 1) return;
     const id = selectedIds[0]!;
     ws.forceNodeState(id, stateName, val);
     if (stateName === 'hover') setForceHover(val);
     if (stateName === 'active') setForceActive(val);
     if (stateName === 'focus') setForceFocus(val);
+
+    if (window.electronAPI && window.electronAPI.forcePseudoState) {
+      try {
+        await window.electronAPI.forcePseudoState(id, stateName, val);
+      } catch (err) {
+        console.error('[App.tsx] Failed to force pseudo state via Electron CDP:', err);
+      }
+    }
+
     triggerNodeRefresh(ws);
   };
 
@@ -288,6 +378,31 @@ export default function App() {
         </div>
 
         <div className="sidebar-scroll">
+          {/* Quick-Load Templates */}
+          <div className="section">
+            <div className="section-title">Load Templates</div>
+            <div className="metric-row">
+              <span className="metric-label">Choose Page</span>
+              <select
+                id="sel-template"
+                className="select-input"
+                style={{ width: '180px' }}
+                defaultValue=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleLoadTemplate(e.target.value);
+                  }
+                }}
+              >
+                <option value="" disabled>-- Select Template --</option>
+                <option value="welcome">Welcome Card (Default)</option>
+                <option value="test-page">Standard Test Page</option>
+                <option value="pressure-test">CSS Layer Pressure Test</option>
+                <option value="blank">Blank Workspace</option>
+              </select>
+            </div>
+          </div>
+
           {/* Viewport Readout */}
           <div className="section">
             <div className="section-title">Viewport</div>
@@ -406,6 +521,68 @@ export default function App() {
               ))}
             </div>
           </div>
+
+          {/* Import Debugger / Resource Log */}
+          {importLog && (
+            <div className="section" id="import-debugger">
+              <div className="section-title">Import Resource Log</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px' }}>
+                {importLog.filePath && (
+                  <div className="metric-row" style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px', marginBottom: '2px' }}>
+                    <span className="metric-label">Source Path</span>
+                    <span className="metric-value" style={{ wordBreak: 'break-all', textAlign: 'right', maxWidth: '200px', fontSize: '10px' }} id="import-log-filepath">
+                      {pathBasename(importLog.filePath)}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="metric-row">
+                  <span className="metric-label">Style Blocks</span>
+                  <span className="metric-value" id="import-log-styles">{importLog.styleTagsCount}</span>
+                </div>
+
+                <div style={{ marginTop: '4px' }}>
+                  <span className="metric-label" style={{ fontWeight: 600, display: 'block', marginBottom: '4px' }}>External Stylesheets:</span>
+                  {importLog.externalStylesheets.length === 0 ? (
+                    <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '8px' }}>None</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '8px', maxHeight: '80px', overflowY: 'auto' }} id="import-log-links">
+                      {importLog.externalStylesheets.map((sheet: any, idx: number) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '160px' }} title={sheet.url}>
+                            {pathBasename(sheet.url)}
+                          </span>
+                          <span className={`node-badge ${sheet.status === 'preprocessed' ? 'child' : 'root'}`} style={{ fontSize: '8px' }}>
+                            {sheet.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: '6px', borderTop: '1px solid var(--border-subtle)', paddingTop: '6px' }}>
+                  <span className="metric-label" style={{ fontWeight: 600, display: 'block', marginBottom: '4px' }}>Executed Scripts:</span>
+                  {importLog.scriptsExecuted.length === 0 ? (
+                    <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '8px' }}>None</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '8px', maxHeight: '80px', overflowY: 'auto' }} id="import-log-scripts">
+                      {importLog.scriptsExecuted.map((script: any, idx: number) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>
+                            {script.src ? `Src: ${pathBasename(script.src)}` : `Inline (${script.codeLength} chars)`}
+                          </span>
+                          <span className="node-badge child" style={{ fontSize: '8px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--warning)' }}>
+                            {script.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Commit Log readout */}
           <div className="section">

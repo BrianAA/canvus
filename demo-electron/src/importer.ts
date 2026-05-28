@@ -116,13 +116,27 @@ function resolveRelativeAttributes(element: HTMLElement, baseUrl?: string): void
   }
 }
 
-export function importHTMLDocument(
+export interface ImportResultLog {
+  filePath?: string;
+  styleTagsCount: number;
+  externalStylesheets: { url: string; status: "injected" | "link-fallback" | "failed" }[];
+  scriptsExecuted: { src?: string; codeLength: number; status: "scoped-executed" }[];
+}
+
+export async function importHTMLDocument(
   workspace: Workspace,
   htmlString: string,
   options: ImportHTMLOptions = {},
-): void {
-  const baseUrl = options.baseUrl;
+): Promise<ImportResultLog> {
+  let baseUrl = options.baseUrl;
+  if (baseUrl && !baseUrl.startsWith("http://") && !baseUrl.startsWith("https://") && !baseUrl.startsWith("file://")) {
+    baseUrl = "file://" + (baseUrl.startsWith("/") ? "" : "/") + baseUrl.replace(/\\/g, "/");
+  }
   const nodeSelector = options.nodeSelector ?? DEFAULT_NODE_SELECTOR;
+
+  const externalStylesheetsLog: ImportResultLog["externalStylesheets"] = [];
+  const scriptsLog: ImportResultLog["scriptsExecuted"] = [];
+  let styleTagsCount = 0;
 
   // 1. Clear Workspace if requested
   if (options.clearWorkspace !== false) {
@@ -139,29 +153,56 @@ export function importHTMLDocument(
 
   // 3. Extract and Inject Stylesheets
   const styleTags = parsedDoc.querySelectorAll("style");
+  const globalProperties: string[] = [];
+
+  // Clean up any previously extracted properties from document.head
+  const oldExtracted = document.querySelectorAll("style[data-canvus-extracted-properties]");
+  for (const el of Array.from(oldExtracted)) {
+    el.remove();
+  }
+
   for (const style of Array.from(styleTags)) {
-    const rawCSS = style.textContent || "";
+    let rawCSS = style.textContent || "";
+
+    // Extract @property rules and force inherits: true to bypass Chromium Shadow DOM inheritance bug
+    const matches = rawCSS.match(/@property\s+[^\{]+\{[^\}]*\}/g);
+    if (matches) {
+      const updatedMatches = matches.map(m => m.replace(/inherits:\s*false/g, "inherits: true"));
+      globalProperties.push(...updatedMatches);
+      rawCSS = rawCSS.replace(/@property\s+[^\{]+\{[^\}]*\}/g, "");
+    }
+
+    // Fix Chromium @scope limit conflict when root has the limit class
+    rawCSS = rawCSS.replace(/@scope\s*\(\.scope\.purchase-button\)\s*to\s*\(\.scope\)/g, "@scope (.purchase-button)");
+
     const resolvedCSS = resolveCSSImports(resolveCSSUrls(rawCSS, baseUrl), baseUrl);
 
-    const importRegex = /@import\s+(?:url\(\s*)?['"](https?:\/\/[^'"]+)['"]\)?[^;]*;/g;
-    let match: RegExpExecArray | null;
-    while ((match = importRegex.exec(resolvedCSS)) !== null) {
-      const importUrl = match[1]!;
-      workspace.injectCSSLink(importUrl);
+    if (resolvedCSS) {
+      workspace.injectCSS(resolvedCSS);
+      styleTagsCount++;
     }
+    style.remove();
+  }
 
-    const cssWithoutImports = resolvedCSS.replace(/@import\s+(?:url\(\s*)?['"][^'"]+['"](?:\s*\))?[^;]*;/g, "").trim();
-
-    if (cssWithoutImports) {
-      workspace.injectCSS(cssWithoutImports);
-    }
+  if (globalProperties.length > 0) {
+    const globalStyle = document.createElement("style");
+    globalStyle.setAttribute("data-canvus-extracted-properties", "");
+    globalStyle.textContent = globalProperties.join("\n");
+    document.head.appendChild(globalStyle);
   }
 
   const linkStylesheets = parsedDoc.querySelectorAll("link[rel='stylesheet']");
   for (const link of Array.from(linkStylesheets)) {
     const href = link.getAttribute("href") || "";
     const resolvedHref = resolveUrl(href, baseUrl);
-    workspace.injectCSSLink(resolvedHref);
+
+    try {
+      await workspace.injectCSSLink(resolvedHref);
+      externalStylesheetsLog.push({ url: href, status: "injected" });
+    } catch (linkErr) {
+      console.error(`[importer] Failed to inject stylesheet link ${resolvedHref}:`, linkErr);
+      externalStylesheetsLog.push({ url: href, status: "failed" });
+    }
   }
 
   // 4. Extract and inject head-level scripts
@@ -177,16 +218,26 @@ export function importHTMLDocument(
       }
       newScript.setAttribute("src", resolvedSrc);
       shadowRoot.appendChild(newScript);
+      scriptsLog.push({ src: src, codeLength: 0, status: "scoped-executed" });
     } else {
+      const code = script.textContent || "";
       const newScript = document.createElement("script");
-      newScript.textContent = script.textContent || "";
+      newScript.textContent = code;
       shadowRoot.appendChild(newScript);
+      scriptsLog.push({ codeLength: code.length, status: "scoped-executed" });
     }
   }
 
   // 5. Traverse Body & Build Node Hierarchies in-place
   const body = parsedDoc.body;
-  if (!body) return;
+  if (!body) {
+    return {
+      filePath: baseUrl,
+      styleTagsCount,
+      externalStylesheets: externalStylesheetsLog,
+      scriptsExecuted: scriptsLog
+    };
+  }
 
   function hasWorkspaceAncestor(el: Element): boolean {
     let parent = el.parentElement;
@@ -222,19 +273,24 @@ export function importHTMLDocument(
       htmlEl.setAttribute("id", id);
       elementToId.set(el, id);
 
-      const doc = el.ownerDocument;
-      const wrapper = doc.createElement("div");
-      wrapper.className = "canvus-node-wrapper";
-      wrapper.setAttribute("data-canvus-id", id);
-
       const isFlowChild = hasWorkspaceAncestor(el);
-      if (isFlowChild) {
-        wrapper.classList.add("canvus-flow-child");
-      }
 
-      if (el.parentNode) {
-        el.parentNode.replaceChild(wrapper, el);
-        wrapper.appendChild(el);
+      if (isFlowChild) {
+        // Flow children: mark with data attribute only, no wrapper div.
+        // This preserves the DOM structure so CSS child combinators (>)
+        // match correctly.
+        htmlEl.setAttribute("data-canvus-id", id);
+      } else {
+        // Root elements: create wrapper for absolute positioning.
+        const doc = el.ownerDocument;
+        const wrapper = doc.createElement("div");
+        wrapper.className = "canvus-node-wrapper";
+        wrapper.setAttribute("data-canvus-id", id);
+
+        if (el.parentNode) {
+          el.parentNode.replaceChild(wrapper, el);
+          wrapper.appendChild(el);
+        }
       }
     }
   }
@@ -268,13 +324,23 @@ export function importHTMLDocument(
     const canvusId = el.getAttribute("data-canvus-id");
     let currentParentId = activeParentId;
 
-    if (canvusId && el.classList.contains("canvus-node-wrapper")) {
-      const contentRoot = el.firstElementChild as HTMLElement;
-      registeredNodes.push({
-        id: canvusId,
-        parentId: activeParentId,
-        element: contentRoot,
-      });
+    if (canvusId) {
+      if (el.classList.contains("canvus-node-wrapper")) {
+        // Wrapper-based node (root element)
+        const contentRoot = el.firstElementChild as HTMLElement;
+        registeredNodes.push({
+          id: canvusId,
+          parentId: activeParentId,
+          element: contentRoot,
+        });
+      } else {
+        // Direct element (flow child, no wrapper)
+        registeredNodes.push({
+          id: canvusId,
+          parentId: activeParentId,
+          element: el as HTMLElement,
+        });
+      }
       currentParentId = canvusId;
     }
 
@@ -304,9 +370,12 @@ export function importHTMLDocument(
     const scriptsInElement = el.querySelectorAll("script");
     const scriptCodes: string[] = [];
     for (const script of Array.from(scriptsInElement)) {
-      scriptCodes.push(script.textContent || "");
-      // Remove it from active DOM to avoid duplicate script execution
-      script.remove();
+      const closestWrapper = script.closest(".canvus-node-wrapper");
+      if (closestWrapper && closestWrapper.getAttribute("data-canvus-id") === metadata.id) {
+        scriptCodes.push(script.textContent || "");
+        // Remove it from active DOM to avoid duplicate script execution
+        script.remove();
+      }
     }
 
     // Clone element to construct rawMarkup without mutating active DOM
@@ -315,11 +384,17 @@ export function importHTMLDocument(
     // Resolve relative URL paths inside the cloned element
     resolveRelativeAttributes(clone, baseUrl);
 
-    // Remove any descendant wrappers inside the clone to have clean rawMarkup
-    const childrenNodesInClone = clone.querySelectorAll(".canvus-node-wrapper");
+    // Remove both wrapper-based and direct child markers from clone
+    const childrenNodesInClone = clone.querySelectorAll(
+      ".canvus-node-wrapper[data-canvus-id], [data-canvus-id]"
+    );
     for (const childNode of Array.from(childrenNodesInClone)) {
+      // Don't remove the clone root itself
+      if (childNode === clone) continue;
       childNode.remove();
     }
+    // Remove data-canvus-id from the clone itself
+    clone.removeAttribute("data-canvus-id");
 
     const rawMarkup = clone.outerHTML;
 
@@ -341,6 +416,7 @@ export function importHTMLDocument(
     // Execute scripts extracted from this element
     for (const code of scriptCodes) {
       workspace.getShadowMount().executeScopedScript(code);
+      scriptsLog.push({ codeLength: code.length, status: "scoped-executed" });
     }
 
     // If there were scripts, explicitly mark the node with JS
@@ -364,9 +440,19 @@ export function importHTMLDocument(
       }
       newScript.setAttribute("src", resolvedSrc);
       shadowRoot.appendChild(newScript);
+      scriptsLog.push({ src: src, codeLength: 0, status: "scoped-executed" });
     } else {
       const code = script.textContent || "";
       workspace.getShadowMount().executeScopedScript(code);
+      scriptsLog.push({ codeLength: code.length, status: "scoped-executed" });
     }
   }
+
+  return {
+    filePath: baseUrl,
+    styleTagsCount,
+    externalStylesheets: externalStylesheetsLog,
+    scriptsExecuted: scriptsLog
+  };
 }
+
