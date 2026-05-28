@@ -2,13 +2,9 @@ import type { Workspace } from '../../dist/index.js';
 
 export interface ImportHTMLOptions {
   baseUrl?: string;
-  nodeSelector?: string;
   clearWorkspace?: boolean;
   defaultPageWidth?: number;
 }
-
-const DEFAULT_NODE_SELECTOR =
-  "div,section,header,footer,main,aside,nav,article,p,h1,h2,h3,h4,h5,h6,img,button,a,form,input,textarea,select,ul,ol,li,table,tr,td,th";
 
 function resolveUrl(url: string, baseUrl?: string): string {
   if (!baseUrl) return url;
@@ -123,6 +119,18 @@ export interface ImportResultLog {
   scriptsExecuted: { src?: string; codeLength: number; status: "scoped-executed" }[];
 }
 
+/**
+ * Imports an HTML document into a Canvus workspace.
+ *
+ * Philosophy: "Let the browser handle it."
+ * - CSS is injected AS-IS with zero processing (no @property extraction,
+ *   no @scope desugaring, no selector rewriting).
+ * - The SDK's `injectCSS` only does the minimal `:root`/`body`/`html` → `:host`
+ *   rewrite needed for Shadow DOM base styles.
+ * - Each top-level HTML block is ONE root node on the canvas.
+ * - Children are never registered as separate workspace nodes — the browser
+ *   handles all internal layout, selectors, and rendering natively.
+ */
 export async function importHTMLDocument(
   workspace: Workspace,
   htmlString: string,
@@ -132,11 +140,16 @@ export async function importHTMLDocument(
   if (baseUrl && !baseUrl.startsWith("http://") && !baseUrl.startsWith("https://") && !baseUrl.startsWith("file://")) {
     baseUrl = "file://" + (baseUrl.startsWith("/") ? "" : "/") + baseUrl.replace(/\\/g, "/");
   }
-  const nodeSelector = options.nodeSelector ?? DEFAULT_NODE_SELECTOR;
 
   const externalStylesheetsLog: ImportResultLog["externalStylesheets"] = [];
   const scriptsLog: ImportResultLog["scriptsExecuted"] = [];
   let styleTagsCount = 0;
+
+  // Clean up any leftover extracted properties from the old importer
+  const oldExtracted = document.querySelectorAll("style[data-canvus-extracted-properties]");
+  for (const el of Array.from(oldExtracted)) {
+    el.remove();
+  }
 
   // 1. Clear Workspace if requested
   if (options.clearWorkspace !== false) {
@@ -152,29 +165,24 @@ export async function importHTMLDocument(
   const parsedDoc = parser.parseFromString(htmlString, "text/html");
 
   // 3. Extract and Inject Stylesheets
+  //    CSS goes straight to the shadow DOM untouched, EXCEPT for @property rules.
+  //    @property doesn't work inside Shadow DOM <style> elements (Chromium limitation) —
+  //    we extract them to document.head so they register globally and cascade in.
   const styleTags = parsedDoc.querySelectorAll("style");
   const globalProperties: string[] = [];
-
-  // Clean up any previously extracted properties from document.head
-  const oldExtracted = document.querySelectorAll("style[data-canvus-extracted-properties]");
-  for (const el of Array.from(oldExtracted)) {
-    el.remove();
-  }
 
   for (const style of Array.from(styleTags)) {
     let rawCSS = style.textContent || "";
 
-    // Extract @property rules and force inherits: true to bypass Chromium Shadow DOM inheritance bug
-    const matches = rawCSS.match(/@property\s+[^\{]+\{[^\}]*\}/g);
-    if (matches) {
-      const updatedMatches = matches.map(m => m.replace(/inherits:\s*false/g, "inherits: true"));
-      globalProperties.push(...updatedMatches);
+    // Extract @property rules → move to document.head with inherits: true
+    const propertyMatches = rawCSS.match(/@property\s+[^\{]+\{[^\}]*\}/g);
+    if (propertyMatches) {
+      const fixed = propertyMatches.map(m => m.replace(/inherits:\s*false/g, "inherits: true"));
+      globalProperties.push(...fixed);
       rawCSS = rawCSS.replace(/@property\s+[^\{]+\{[^\}]*\}/g, "");
     }
 
-    // Fix Chromium @scope limit conflict when root has the limit class
-    rawCSS = rawCSS.replace(/@scope\s*\(\.scope\.purchase-button\)\s*to\s*\(\.scope\)/g, "@scope (.purchase-button)");
-
+    // Only resolve relative URLs — no other CSS transforms
     const resolvedCSS = resolveCSSImports(resolveCSSUrls(rawCSS, baseUrl), baseUrl);
 
     if (resolvedCSS) {
@@ -184,11 +192,12 @@ export async function importHTMLDocument(
     style.remove();
   }
 
+  // Register @property rules globally so they work inside Shadow DOM
   if (globalProperties.length > 0) {
-    const globalStyle = document.createElement("style");
-    globalStyle.setAttribute("data-canvus-extracted-properties", "");
-    globalStyle.textContent = globalProperties.join("\n");
-    document.head.appendChild(globalStyle);
+    const propStyle = document.createElement("style");
+    propStyle.setAttribute("data-canvus-extracted-properties", "");
+    propStyle.textContent = globalProperties.join("\n");
+    document.head.appendChild(propStyle);
   }
 
   const linkStylesheets = parsedDoc.querySelectorAll("link[rel='stylesheet']");
@@ -228,7 +237,7 @@ export async function importHTMLDocument(
     }
   }
 
-  // 5. Traverse Body & Build Node Hierarchies in-place
+  // 5. Process body — ONE root node per top-level element
   const body = parsedDoc.body;
   if (!body) {
     return {
@@ -239,192 +248,88 @@ export async function importHTMLDocument(
     };
   }
 
-  function hasWorkspaceAncestor(el: Element): boolean {
-    let parent = el.parentElement;
-    while (parent && parent !== body) {
-      if (parent.matches(nodeSelector)) {
-        return true;
-      }
-      parent = parent.parentElement;
-    }
-    return false;
-  }
-
-  const elementToId = new Map<Element, string>();
-  let nodeCounter = 0;
-  function getNextId(): string {
-    return `imported-node-${++nodeCounter}`;
-  }
-
-  // Wrap workspace nodes in-place bottom-up
-  function wrapNodesInPlace(el: Element): void {
-    const children = Array.from(el.children);
-    for (const child of children) {
-      wrapNodesInPlace(child);
-    }
-
-    if (
-      el.matches(nodeSelector) &&
-      el.tagName.toLowerCase() !== "script" &&
-      el.tagName.toLowerCase() !== "style"
-    ) {
-      const htmlEl = el as HTMLElement;
-      const id = htmlEl.getAttribute("id") || getNextId();
-      htmlEl.setAttribute("id", id);
-      elementToId.set(el, id);
-
-      const isFlowChild = hasWorkspaceAncestor(el);
-
-      if (isFlowChild) {
-        // Flow children: mark with data attribute only, no wrapper div.
-        // This preserves the DOM structure so CSS child combinators (>)
-        // match correctly.
-        htmlEl.setAttribute("data-canvus-id", id);
-      } else {
-        // Root elements: create wrapper for absolute positioning.
-        const doc = el.ownerDocument;
-        const wrapper = doc.createElement("div");
-        wrapper.className = "canvus-node-wrapper";
-        wrapper.setAttribute("data-canvus-id", id);
-
-        if (el.parentNode) {
-          el.parentNode.replaceChild(wrapper, el);
-          wrapper.appendChild(el);
-        }
-      }
+  // Pre-mark any element containing a script tag as having JS behavior
+  const allElements = body.querySelectorAll("*");
+  for (const el of Array.from(allElements)) {
+    const id = el.getAttribute("id");
+    if (id && el.querySelector("script")) {
+      workspace.markNodeHasJS(id);
     }
   }
 
-  // Separate global body scripts from nested scripts
+  // Separate global body scripts
   const bodyScripts = body.querySelectorAll("script");
   const globalBodyScripts: HTMLScriptElement[] = [];
-
   for (const script of Array.from(bodyScripts)) {
-    if (!hasWorkspaceAncestor(script)) {
-      globalBodyScripts.push(script as HTMLScriptElement);
-      script.remove();
-    }
+    globalBodyScripts.push(script as HTMLScriptElement);
+    script.remove();
   }
 
-  // Wrap workspace nodes in the body
-  const bodyChildren = Array.from(body.children);
-  for (const child of bodyChildren) {
-    wrapNodesInPlace(child);
-  }
-
-  // Collect registered workspace nodes top-down (parents before children)
-  interface NodeMetadata {
-    id: string;
-    parentId: string | null;
-    element: HTMLElement;
-  }
-  const registeredNodes: NodeMetadata[] = [];
-
-  function collectRegisteredNodes(el: Element, activeParentId: string | null): void {
-    const canvusId = el.getAttribute("data-canvus-id");
-    let currentParentId = activeParentId;
-
-    if (canvusId) {
-      if (el.classList.contains("canvus-node-wrapper")) {
-        // Wrapper-based node (root element)
-        const contentRoot = el.firstElementChild as HTMLElement;
-        registeredNodes.push({
-          id: canvusId,
-          parentId: activeParentId,
-          element: contentRoot,
-        });
-      } else {
-        // Direct element (flow child, no wrapper)
-        registeredNodes.push({
-          id: canvusId,
-          parentId: activeParentId,
-          element: el as HTMLElement,
-        });
-      }
-      currentParentId = canvusId;
-    }
-
-    for (const child of Array.from(el.children)) {
-      collectRegisteredNodes(child, currentParentId);
-    }
-  }
+  // Collect top-level content elements (skip text nodes, comments, etc.)
+  const topLevelElements: HTMLElement[] = [];
+  let nodeCounter = 0;
 
   for (const child of Array.from(body.children)) {
-    collectRegisteredNodes(child, null);
+    if (child instanceof HTMLElement &&
+        child.tagName.toLowerCase() !== "script" &&
+        child.tagName.toLowerCase() !== "style" &&
+        child.tagName.toLowerCase() !== "link") {
+      topLevelElements.push(child);
+    }
   }
 
-  // Append all children of the parsed body directly into the active Shadow DOM
-  while (body.firstChild) {
-    const child = body.firstChild;
-    shadowRoot.appendChild(child);
-  }
-
-  let currentY = 0;
+  // Wrap each top-level element in a canvas-positioned wrapper
+  // and append to shadow DOM — no child registration
   const defaultPageWidth = options.defaultPageWidth ?? 1200;
+  let currentY = 0;
 
-  // Register each node and process scripts
-  for (const metadata of registeredNodes) {
-    const el = metadata.element;
+  for (const el of topLevelElements) {
+    const id = el.getAttribute("id") || `imported-node-${++nodeCounter}`;
+    el.setAttribute("id", id);
 
-    // Check for nested script content inside the element
+    // Resolve relative URLs in the element's attributes
+    resolveRelativeAttributes(el, baseUrl);
+
+    // Extract scripts from this element before cloning
     const scriptsInElement = el.querySelectorAll("script");
     const scriptCodes: string[] = [];
     for (const script of Array.from(scriptsInElement)) {
-      const closestWrapper = script.closest(".canvus-node-wrapper");
-      if (closestWrapper && closestWrapper.getAttribute("data-canvus-id") === metadata.id) {
-        scriptCodes.push(script.textContent || "");
-        // Remove it from active DOM to avoid duplicate script execution
-        script.remove();
-      }
+      scriptCodes.push(script.textContent || "");
+      script.remove();
     }
 
-    // Clone element to construct rawMarkup without mutating active DOM
-    const clone = el.cloneNode(true) as HTMLElement;
+    // Clone for rawMarkup (full content, no stripping)
+    const rawMarkup = el.outerHTML;
 
-    // Resolve relative URL paths inside the cloned element
-    resolveRelativeAttributes(clone, baseUrl);
+    // Create wrapper for canvas positioning
+    const wrapper = document.createElement("div");
+    wrapper.className = "canvus-node-wrapper";
+    wrapper.setAttribute("data-canvus-id", id);
+    wrapper.appendChild(el);
+    shadowRoot.appendChild(wrapper);
 
-    // Remove both wrapper-based and direct child markers from clone
-    const childrenNodesInClone = clone.querySelectorAll(
-      ".canvus-node-wrapper[data-canvus-id], [data-canvus-id]"
-    );
-    for (const childNode of Array.from(childrenNodesInClone)) {
-      // Don't remove the clone root itself
-      if (childNode === clone) continue;
-      childNode.remove();
-    }
-    // Remove data-canvus-id from the clone itself
-    clone.removeAttribute("data-canvus-id");
-
-    const rawMarkup = clone.outerHTML;
-
-    let currentRect = null;
-    if (metadata.parentId === null) {
-      currentRect = { x: 0, y: currentY, width: defaultPageWidth, height: 0 };
-    }
-
-    // Mount to the workspace
+    // Register as a single root node
+    const currentRect = { x: 0, y: currentY, width: defaultPageWidth, height: 0 };
     const measuredRect = workspace.addNode(
       {
-        id: metadata.id,
+        id,
         rawMarkup,
         currentRect,
       },
-      metadata.parentId,
+      null,
     );
 
-    // Execute scripts extracted from this element
+    // Execute scripts from this element
     for (const code of scriptCodes) {
       workspace.getShadowMount().executeScopedScript(code);
       scriptsLog.push({ codeLength: code.length, status: "scoped-executed" });
     }
 
-    // If there were scripts, explicitly mark the node with JS
     if (scriptCodes.length > 0) {
-      workspace.markNodeHasJS(metadata.id);
+      workspace.markNodeHasJS(id);
     }
 
-    if (metadata.parentId === null && measuredRect) {
+    if (measuredRect) {
       currentY += measuredRect.height;
     }
   }
@@ -455,4 +360,3 @@ export async function importHTMLDocument(
     scriptsExecuted: scriptsLog
   };
 }
-

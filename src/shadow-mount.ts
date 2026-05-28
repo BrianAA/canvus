@@ -484,6 +484,86 @@ export class ShadowMount {
   }
 
   /**
+   * Registers an existing DOM element for tracking without modifying
+   * the DOM structure. Used for lazy child registration: when the user
+   * drills into a node, its immediate children are tracked so they
+   * get hover states, selection handles, resize, and drag.
+   *
+   * The element receives a `data-canvus-id` attribute for identity,
+   * but NO wrapper div is added — CSS selectors remain intact.
+   *
+   * @param id      - The node ID to assign.
+   * @param element - The existing DOM element to track.
+   * @returns The element's canvas-space bounding rect, or null.
+   */
+  trackExistingElement(id: string, element: HTMLElement): Rect | null {
+    this.assertNotDisposed();
+
+    if (this.nodes.has(id)) {
+      return this.measureNodeCanvasSpace(id);
+    }
+
+    // Tag the element for identity (non-destructive — just a data attribute)
+    element.setAttribute("data-canvus-id", id);
+
+    // Register tracking
+    const mounted: MountedNode = {
+      wrapper: element,
+      canvasX: 0,
+      canvasY: 0,
+      isDirect: true,
+    };
+    this.nodes.set(id, mounted);
+    this.elementToId.set(element, id);
+    this.resizeObserver.observe(element);
+
+    // Measure canvas-space rect
+    const rect = this.measureNodeCanvasSpace(id) ?? {
+      x: 0,
+      y: 0,
+      width: element.offsetWidth,
+      height: element.offsetHeight,
+    };
+    mounted.canvasX = rect.x;
+    mounted.canvasY = rect.y;
+
+    return rect;
+  }
+
+  /**
+   * Stops tracking a node without removing the DOM element.
+   * The inverse of `trackExistingElement` — cleans up the
+   * `data-canvus-id` attribute, ResizeObserver, and internal maps,
+   * but leaves the element in the DOM untouched.
+   *
+   * Used for lazy deregistration when the user drills back up
+   * or deselects a parent node.
+   *
+   * @param id - The node ID to stop tracking.
+   * @returns `true` if the node was being tracked and was untracked.
+   */
+  untrackNode(id: string): boolean {
+    const mounted = this.nodes.get(id);
+    if (!mounted) return false;
+
+    // Only untrack direct (wrapper-less) nodes.
+    // Wrapper-based nodes should use removeNode() instead.
+    if (!mounted.isDirect) return false;
+
+    // Stop observing
+    this.resizeObserver.unobserve(mounted.wrapper);
+    this.elementToId.delete(mounted.wrapper);
+
+    // Clean up the data attribute
+    mounted.wrapper.removeAttribute("data-canvus-id");
+
+    // Remove from tracking
+    this.nodes.delete(id);
+
+    return true;
+  }
+
+  /**
    * Moves a node's DOM wrapper from its current parent into a
    * new parent's wrapper at the specified index.
    *

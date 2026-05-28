@@ -106,6 +106,14 @@ test.describe('Electron E2E Integration Suite', () => {
       const styleTagsCount = window.locator('#import-log-styles');
       await expect(styleTagsCount).toHaveText('1');
 
+      // Select main-container to register its immediate children (page-header, layout-grid, banner)
+      await mainContainerNode.click();
+
+      // Select layout-grid to register its children (card-1, card-2)
+      const layoutGridNode = window.locator('#node-list .node-card', { hasText: 'layout-grid' });
+      await expect(layoutGridNode).toBeVisible();
+      await layoutGridNode.click();
+
       // Click on card-1 in the node tree to select it
       const card1Node = window.locator('#node-list .node-card', { hasText: 'card-1' });
       await expect(card1Node).toBeVisible();
@@ -125,10 +133,9 @@ test.describe('Electron E2E Integration Suite', () => {
       await hoverCheckbox.click();
       await expect(hoverCheckbox).toBeChecked();
 
-      // Check if .canvus-state-hover class is applied to the card-1 wrapper and content element
-      const wrapperElement = window.locator('.canvus-node-wrapper[data-canvus-id="card-1"]');
-      await expect(wrapperElement).toHaveClass(/canvus-state-hover/);
-      await expect(cardElement).toHaveClass(/canvus-state-hover/);
+      // Check if .canvus-state-hover class is applied to the card-1 element
+      const trackedElement = window.locator('[data-canvus-id="card-1"]');
+      await expect(trackedElement).toHaveClass(/canvus-state-hover/);
 
       // Verify guest script node has JS mark and visual badge
       const isMarkedJS = await window.evaluate(() => (window as any).ws.hasJSMark('banner'));

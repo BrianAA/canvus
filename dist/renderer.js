@@ -13,8 +13,8 @@ const DEFAULT_STYLE = {
     selectionWidth: 2,
     selectionGlow: "rgba(99, 102, 241, 0.4)",
     selectionGlowRadius: 12,
-    hoverStroke: "rgba(255, 255, 255, 0.18)",
-    hoverWidth: 1,
+    hoverStroke: "rgba(99, 102, 241, 0.6)",
+    hoverWidth: 1.5,
     hoverDash: [5, 5],
     handleSize: 8,
     handleFill: "#ffffff",
@@ -184,21 +184,7 @@ export class OverlayRenderer {
             }
         }
         // 4.5 Scoped Selection Affordances (M7)
-        // Draw available children outlines of selected containers.
-        ctx.strokeStyle = style.childOutlineStroke;
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 3]);
-        for (const id of selectedIds) {
-            const node = nodes.find(n => n.id === id);
-            if (node?.childIds) {
-                for (const cid of node.childIds) {
-                    const p = projected.get(cid);
-                    if (p) {
-                        ctx.strokeRect(p.sx, p.sy, p.sw, p.sh);
-                    }
-                }
-            }
-        }
+        // (Static children outlines removed per request; outlines are now only shown on hover)
         // Draw parent highlight when a child is selected to maintain spatial context.
         ctx.strokeStyle = style.parentHighlightStroke;
         ctx.lineWidth = 1.5;

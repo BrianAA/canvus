@@ -54,9 +54,7 @@ body {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.04) 0%, transparent 80%),
-    var(--bg-primary);
+  background: #ffffff;
 }
 
 .grid-overlay {

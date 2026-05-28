@@ -99,6 +99,33 @@ export declare class ShadowMount {
      */
     removeNode(id: string): boolean;
     /**
+     * Registers an existing DOM element for tracking without modifying
+     * the DOM structure. Used for lazy child registration: when the user
+     * drills into a node, its immediate children are tracked so they
+     * get hover states, selection handles, resize, and drag.
+     *
+     * The element receives a `data-canvus-id` attribute for identity,
+     * but NO wrapper div is added — CSS selectors remain intact.
+     *
+     * @param id      - The node ID to assign.
+     * @param element - The existing DOM element to track.
+     * @returns The element's canvas-space bounding rect, or null.
+     */
+    trackExistingElement(id: string, element: HTMLElement): Rect | null;
+    /**
+     * Stops tracking a node without removing the DOM element.
+     * The inverse of `trackExistingElement` — cleans up the
+     * `data-canvus-id` attribute, ResizeObserver, and internal maps,
+     * but leaves the element in the DOM untouched.
+     *
+     * Used for lazy deregistration when the user drills back up
+     * or deselects a parent node.
+     *
+     * @param id - The node ID to stop tracking.
+     * @returns `true` if the node was being tracked and was untracked.
+     */
+    untrackNode(id: string): boolean;
+    /**
      * Moves a node's DOM wrapper from its current parent into a
      * new parent's wrapper at the specified index.
      *

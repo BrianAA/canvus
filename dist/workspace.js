@@ -102,6 +102,12 @@ export class Workspace {
     tree = new NodeTree();
     selectedIds = new Set();
     hoveredId = null;
+    dynamicHoveredId = null;
+    forcedStates = {
+        hover: new Set(),
+        active: new Set(),
+        focus: new Set()
+    };
     activeAnchor = null;
     guides = [];
     // ── Scoped Selection Scope ──────────────────────
@@ -138,6 +144,9 @@ export class Workspace {
     previewMode = false;
     /** Set of node IDs explicitly marked as containing JavaScript behavior. */
     jsMarkedNodes = new Set();
+    /** Set of node IDs that were lazily registered (children discovered on selection). */
+    lazyRegisteredIds = new Set();
+    lazyChildCounter = 0;
     // ── Bound Event Handlers (for cleanup) ──────────
     onWheel;
     onPointerDown;
@@ -398,14 +407,18 @@ export class Workspace {
     // ── Public API: Selection ───────────────────────
     /** Selects a node by ID, clearing previous selection. */
     selectNode(id) {
+        const prev = new Set(this.selectedIds);
         this.selectedIds.clear();
         this.selectedIds.add(id);
+        this.syncLazyChildren(prev, this.selectedIds);
         this.callbacks.onSelectionChange?.(this.selectedIds);
         this.render();
     }
     /** Clears all selection. */
     deselectAll() {
+        const prev = new Set(this.selectedIds);
         this.selectedIds.clear();
+        this.syncLazyChildren(prev, this.selectedIds);
         this.callbacks.onSelectionChange?.(this.selectedIds);
         this.render();
     }
@@ -439,6 +452,7 @@ export class Workspace {
         // Clear selection, hover, and active interactions.
         if (enabled) {
             this.selectedIds.clear();
+            this.clearDynamicHover();
             this.hoveredId = null;
             this.activeDropTarget = null;
             this.activeAdjusterType = null;
@@ -458,20 +472,13 @@ export class Workspace {
     // ── Public API: State Forcing ───────────────────
     /** Forces a pseudo-class state (hover, active, focus) on the specified node element. */
     forceNodeState(nodeId, state, enabled) {
-        const wrapper = this.mount.getWrapper(nodeId);
-        if (!wrapper)
-            return;
-        const contentRoot = wrapper.firstElementChild;
-        const className = `canvus-state-${state}`;
         if (enabled) {
-            wrapper.classList.add(className);
-            contentRoot?.classList.add(className);
+            this.forcedStates[state].add(nodeId);
         }
         else {
-            wrapper.classList.remove(className);
-            contentRoot?.classList.remove(className);
+            this.forcedStates[state].delete(nodeId);
         }
-        this.remeasureSubtree(nodeId);
+        this.setNodeStateClass(nodeId, state, enabled);
         this.render();
     }
     // ── Public API: JS Badge Marking ────────────────
@@ -877,7 +884,7 @@ export class Workspace {
         let targetSelectId = null;
         let clickInsideSelection = false;
         const hasModifier = e.shiftKey || e.metaKey || e.ctrlKey;
-        if (this.selectedIds.size > 0 && !hasModifier && !isDoubleClick) {
+        if (this.selectedIds.size > 0 && !hasModifier && !isDoubleClick && !this.enteredContainerId) {
             for (const selId of this.selectedIds) {
                 const selNode = this.tree.get(selId);
                 if (selNode?.currentRect && isPointInElement(canvasPos.x, canvasPos.y, selNode.currentRect)) {
@@ -935,6 +942,8 @@ export class Workspace {
                     const resolvedId = this.findSelectableNode(hitId, this.enteredContainerId);
                     if (resolvedId) {
                         targetSelectId = resolvedId;
+                        const node = this.tree.get(resolvedId);
+                        this.enteredContainerId = node?.parentId ?? null;
                     }
                     else {
                         // Clicked outside currently entered container: exit scope, select root ancestor
@@ -952,6 +961,7 @@ export class Workspace {
         }
         if (targetSelectId) {
             if (!clickInsideSelection) {
+                const prevSelection = new Set(this.selectedIds);
                 const isShift = e.shiftKey;
                 if (isShift) {
                     if (this.selectedIds.has(targetSelectId)) {
@@ -965,6 +975,7 @@ export class Workspace {
                     this.selectedIds.clear();
                     this.selectedIds.add(targetSelectId);
                 }
+                this.syncLazyChildren(prevSelection, this.selectedIds);
                 this.callbacks.onSelectionChange?.(this.selectedIds);
                 this.updateBreadcrumb();
             }
@@ -998,9 +1009,11 @@ export class Workspace {
             // Click on empty space — start marquee selection
             const isShift = e.shiftKey;
             if (!isShift) {
+                const prevSelection = new Set(this.selectedIds);
                 this.selectedIds.clear();
                 this.enteredContainerId = null;
                 this.guides = [];
+                this.syncLazyChildren(prevSelection, this.selectedIds);
                 this.callbacks.onSelectionChange?.(this.selectedIds);
                 this.updateBreadcrumb();
             }
@@ -2026,6 +2039,113 @@ export class Workspace {
         const b = this.container.getBoundingClientRect();
         return { x: b.x, y: b.y, width: b.width, height: b.height };
     }
+    // ── Lazy Child Registration ──────────────────────
+    /**
+     * Orchestrates lazy child registration on selection changes.
+     * When a node is newly selected, its immediate DOM children are
+     * registered for tracking. When deselected, its lazy children
+     * are unregistered (DOM left untouched).
+     */
+    syncLazyChildren(prev, next) {
+        // Deregister children of nodes that were deselected —
+        // BUT keep siblings alive if a child of that node is now selected
+        // (user drilled down, not backed out).
+        for (const id of prev) {
+            if (!next.has(id)) {
+                const children = this.tree.getChildren(id);
+                const hasSelectedChild = children.some(c => next.has(c.id));
+                if (!hasSelectedChild) {
+                    this.deregisterLazyChildren(id);
+                }
+            }
+        }
+        // Register children of newly selected nodes
+        for (const id of next) {
+            if (!prev.has(id)) {
+                this.registerImmediateChildren(id);
+            }
+        }
+    }
+    /**
+     * Registers the immediate DOM children of a node as tracked
+     * workspace nodes. Uses `trackExistingElement` — no wrapper
+     * divs, no DOM structure changes. Children get hover states,
+     * selection handles, resize, and drag for free.
+     */
+    registerImmediateChildren(parentId) {
+        const wrapper = this.mount.getWrapper(parentId);
+        if (!wrapper)
+            return;
+        // For root nodes: content root is wrapper's first child.
+        // For direct nodes: content root is the wrapper itself.
+        const isDirectNode = this.lazyRegisteredIds.has(parentId);
+        const contentRoot = isDirectNode
+            ? wrapper
+            : wrapper.firstElementChild;
+        if (!contentRoot)
+            return;
+        const children = Array.from(contentRoot.children);
+        for (const child of children) {
+            const tag = child.tagName?.toLowerCase();
+            if (!tag || tag === "script" || tag === "style" || tag === "link")
+                continue;
+            // Use existing id or generate a stable one
+            const existingId = child.getAttribute("id");
+            const id = existingId || `${parentId}__child-${++this.lazyChildCounter}`;
+            if (!existingId) {
+                child.setAttribute("id", id);
+            }
+            // Skip if already tracked
+            if (this.tree.get(id))
+                continue;
+            // Track the existing DOM element (adds data-canvus-id + ResizeObserver)
+            const rect = this.mount.trackExistingElement(id, child);
+            // Add to the workspace tree as a child of the parent
+            const resolved = resolveNode({
+                id,
+                rawMarkup: child.outerHTML,
+                currentRect: rect,
+            });
+            resolved.parentId = parentId;
+            if (rect)
+                resolved.currentRect = rect;
+            this.tree.addNode(resolved);
+            this.lazyRegisteredIds.add(id);
+            // Detect layout mode
+            resolved.layoutMode = detectLayout(child).mode;
+        }
+        // Enter the parent scope so the next click targets children
+        if (children.length > 0) {
+            this.enteredContainerId = parentId;
+            this.updateBreadcrumb();
+        }
+    }
+    /**
+     * Deregisters all lazily-registered children of a node.
+     * Removes tracking (ResizeObserver, data-canvus-id attribute,
+     * tree entry) but leaves the DOM element in place.
+     */
+    deregisterLazyChildren(parentId) {
+        const childNodes = this.tree.getChildren(parentId);
+        for (const child of childNodes) {
+            if (!this.lazyRegisteredIds.has(child.id))
+                continue;
+            // Skip children that are currently selected — they're being
+            // drilled into and must stay alive in the tree.
+            if (this.selectedIds.has(child.id))
+                continue;
+            // Recursively deregister grandchildren first
+            this.deregisterLazyChildren(child.id);
+            // Remove selection state
+            this.selectedIds.delete(child.id);
+            // Untrack from ShadowMount (removes data-canvus-id, ResizeObserver)
+            this.mount.untrackNode(child.id);
+            // Remove from tree
+            this.tree.removeNode(child.id);
+            // Clean up lazy tracking
+            this.lazyRegisteredIds.delete(child.id);
+        }
+    }
     /** Returns nodes in depth-first order for hit testing and rendering. */
     getOrderedNodeList() {
         return this.tree.flatten();
@@ -2104,39 +2224,91 @@ export class Workspace {
     }
     /** Resolves which node is selectable based on click position and scope depth. */
     findSelectableNode(hitId, scopeId) {
+        const path = this.tree.getPath(hitId);
+        if (path.length === 0)
+            return null;
         if (scopeId === null) {
-            const path = this.tree.getPath(hitId);
             return path[0]?.id ?? null;
         }
-        else {
-            const path = this.tree.getPath(hitId);
-            const scopeIndex = path.findIndex(n => n.id === scopeId);
-            if (scopeIndex !== -1 && scopeIndex < path.length - 1) {
-                return path[scopeIndex + 1]?.id ?? null;
+        const scopePath = this.tree.getPath(scopeId);
+        let deepestCommonIdxInPath = -1;
+        let deepestCommonIdxInScope = -1;
+        for (let i = 0; i < path.length; i++) {
+            const idx = scopePath.findIndex(n => n.id === path[i].id);
+            if (idx !== -1) {
+                deepestCommonIdxInPath = i;
+                deepestCommonIdxInScope = idx;
             }
-            return null;
         }
+        if (deepestCommonIdxInPath !== -1) {
+            if (deepestCommonIdxInScope === scopePath.length - 1) {
+                if (deepestCommonIdxInPath < path.length - 1) {
+                    return path[deepestCommonIdxInPath + 1]?.id ?? null;
+                }
+                return scopeId;
+            }
+            else {
+                if (deepestCommonIdxInPath < path.length - 1) {
+                    return path[deepestCommonIdxInPath + 1]?.id ?? null;
+                }
+                return path[deepestCommonIdxInPath]?.id ?? null;
+            }
+        }
+        return path[0]?.id ?? null;
     }
     /** Updates the hovered node ID based on current pointer position and Cmd/Ctrl modifier. */
     updateHover(isCmdPressed) {
         if (!this.lastCanvasPos || this.isPanning || this.isDragging || this.isResizing) {
+            this.clearDynamicHover();
             this.hoveredId = null;
             return;
         }
         const nodeList = this.getOrderedNodeList();
         const hitId = hitTestElements(this.lastCanvasPos.x, this.lastCanvasPos.y, nodeList);
+        let nextHoveredId = null;
         if (hitId) {
             if (isCmdPressed) {
-                this.hoveredId = hitId;
+                nextHoveredId = hitId;
             }
             else {
-                this.hoveredId = this.findSelectableNode(hitId, this.enteredContainerId);
+                nextHoveredId = this.findSelectableNode(hitId, this.enteredContainerId);
             }
         }
-        else {
-            this.hoveredId = null;
+        if (nextHoveredId !== this.dynamicHoveredId) {
+            if (this.dynamicHoveredId && !this.forcedStates.hover.has(this.dynamicHoveredId)) {
+                this.setNodeStateClass(this.dynamicHoveredId, "hover", false);
+            }
+            if (nextHoveredId) {
+                this.setNodeStateClass(nextHoveredId, "hover", true);
+            }
+            this.dynamicHoveredId = nextHoveredId;
         }
+        this.hoveredId = nextHoveredId;
         this.render();
+    }
+    clearDynamicHover() {
+        if (this.dynamicHoveredId) {
+            if (!this.forcedStates.hover.has(this.dynamicHoveredId)) {
+                this.setNodeStateClass(this.dynamicHoveredId, "hover", false);
+            }
+            this.dynamicHoveredId = null;
+        }
+    }
+    setNodeStateClass(nodeId, state, enabled) {
+        const wrapper = this.mount.getWrapper(nodeId);
+        if (!wrapper)
+            return;
+        const contentRoot = wrapper.firstElementChild;
+        const className = `canvus-state-${state}`;
+        if (enabled) {
+            wrapper.classList.add(className);
+            contentRoot?.classList.add(className);
+        }
+        else {
+            wrapper.classList.remove(className);
+            contentRoot?.classList.remove(className);
+        }
+        this.remeasureSubtree(nodeId);
     }
     /** Updates the active breadcrumbs and calls external callback. */
     updateBreadcrumb() {

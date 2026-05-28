@@ -83,6 +83,8 @@ export declare class Workspace {
     private readonly tree;
     private readonly selectedIds;
     private hoveredId;
+    private dynamicHoveredId;
+    private readonly forcedStates;
     private activeAnchor;
     private guides;
     private enteredContainerId;
@@ -116,6 +118,9 @@ export declare class Workspace {
     private previewMode;
     /** Set of node IDs explicitly marked as containing JavaScript behavior. */
     private readonly jsMarkedNodes;
+    /** Set of node IDs that were lazily registered (children discovered on selection). */
+    private readonly lazyRegisteredIds;
+    private lazyChildCounter;
     private readonly onWheel;
     private readonly onPointerDown;
     private readonly onPointerMove;
@@ -273,6 +278,26 @@ export declare class Workspace {
     private renderSync;
     /** Returns the container's bounding rect as our `Rect`. */
     private getContainerRect;
+    /**
+     * Orchestrates lazy child registration on selection changes.
+     * When a node is newly selected, its immediate DOM children are
+     * registered for tracking. When deselected, its lazy children
+     * are unregistered (DOM left untouched).
+     */
+    private syncLazyChildren;
+    /**
+     * Registers the immediate DOM children of a node as tracked
+     * workspace nodes. Uses `trackExistingElement` — no wrapper
+     * divs, no DOM structure changes. Children get hover states,
+     * selection handles, resize, and drag for free.
+     */
+    private registerImmediateChildren;
+    /**
+     * Deregisters all lazily-registered children of a node.
+     * Removes tracking (ResizeObserver, data-canvus-id attribute,
+     * tree entry) but leaves the DOM element in place.
+     */
+    private deregisterLazyChildren;
     /** Returns nodes in depth-first order for hit testing and rendering. */
     private getOrderedNodeList;
     /** Returns canvas-space rects of all nodes except the given ID. */
@@ -288,6 +313,8 @@ export declare class Workspace {
     private findSelectableNode;
     /** Updates the hovered node ID based on current pointer position and Cmd/Ctrl modifier. */
     private updateHover;
+    private clearDynamicHover;
+    private setNodeStateClass;
     /** Updates the active breadcrumbs and calls external callback. */
     private updateBreadcrumb;
     private getMarqueeRect;
