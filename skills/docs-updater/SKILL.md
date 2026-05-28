@@ -54,7 +54,6 @@ This file maps every public export in `src/index.ts` to its documentation page i
 | `src/drop-zone.ts` | `docs-site/pages/sdk/drop-zone.mdx` | Drop target calculation, insertion indicators |
 | `src/workspace.ts` | `docs-site/pages/sdk/workspace-api.mdx` | All public Workspace methods and callbacks |
 | `src/workspace.ts` | `docs-site/pages/sdk/configuration.mdx` | WorkspaceConfig, WorkspaceCallbacks |
-| `src/importer.ts` | `docs-site/pages/guides/importing.mdx` | importHTMLDocument, ImportHTMLOptions |
 
 ### Sync Rules
 

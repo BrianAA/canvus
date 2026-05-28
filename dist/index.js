@@ -10,6 +10,5 @@ export { NodeTree, computeAggregateBounds } from "./tree.js";
 export { detectLayout, getFlowAxis, getFlowSign, getLayoutLabel, detectChildSlots, parseGridTracks, } from "./layout.js";
 export { OverlayRenderer, anchorCursor, computeAlignmentGuides, computeSnappedPosition, } from "./renderer.js";
 export { Workspace } from "./workspace.js";
-export { importHTMLDocument } from "./importer.js";
 export { findDropTarget } from "./drop-zone.js";
 //# sourceMappingURL=index.js.map

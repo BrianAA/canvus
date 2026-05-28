@@ -38,8 +38,8 @@ Dragging these adjusters modifies CSS padding/margin in real-time with live nume
 ### Layout & Script Indicators
 
 - **Layout badges** — Small labels showing the display mode (flex, grid, block) on container nodes.
-- **Script badges** — A specialized `⚡️ JS` badge (drawn in amber) that appears on selected elements that contain guest JavaScript logic, interactive event listeners, or have been queried by guest scripts.
-- **Side-by-side badges** — When a container has both layout rules and JavaScript, both badges render side-by-side automatically.
+- **Script badges** — A specialized `⚡️ JS` badge (drawn in amber) that appears on selected elements that have been explicitly marked by the host as containing JavaScript logic via `ws.markNodeHasJS(nodeId)`.
+- **Side-by-side badges** — When a container has both layout rules and a JavaScript mark, both badges render side-by-side automatically.
 - **Grid tracks** — Visualized column and row lines for CSS Grid containers.
 - **Alignment guides** — Snap lines that appear when dragging nodes near alignment edges.
 
@@ -84,4 +84,21 @@ const ws = new Workspace(container, {
     font: '12px Inter, sans-serif', // Overlay font
   },
 })
+```
+
+## Script Flagging Example
+
+To render a JS badge for a node, call `markNodeHasJS` on the workspace:
+
+```typescript
+// Explicitly flag the node as having JS behavior
+ws.markNodeHasJS('element-id')
+
+// Check if a node is flagged
+if (ws.hasJSMark('element-id')) {
+  console.log('Node is marked with JS')
+}
+
+// Remove the flag
+ws.unmarkNodeHasJS('element-id')
 ```

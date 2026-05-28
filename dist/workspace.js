@@ -136,6 +136,8 @@ export class Workspace {
     disposed = false;
     renderRequested = false;
     previewMode = false;
+    /** Set of node IDs explicitly marked as containing JavaScript behavior. */
+    jsMarkedNodes = new Set();
     // ── Bound Event Handlers (for cleanup) ──────────
     onWheel;
     onPointerDown;
@@ -471,6 +473,30 @@ export class Workspace {
         }
         this.remeasureSubtree(nodeId);
         this.render();
+    }
+    // ── Public API: JS Badge Marking ────────────────
+    /**
+     * Explicitly marks a node as containing JavaScript behavior.
+     * Renders the ⚡️ JS badge on the canvas overlay when the node is selected.
+     * The host application calls this based on its own analysis (static analysis,
+     * CDP, source maps, etc.) rather than the SDK auto-detecting scripts.
+     */
+    markNodeHasJS(nodeId) {
+        this.jsMarkedNodes.add(nodeId);
+        this.render();
+    }
+    /**
+     * Clears the JS badge from a node.
+     */
+    unmarkNodeHasJS(nodeId) {
+        this.jsMarkedNodes.delete(nodeId);
+        this.render();
+    }
+    /**
+     * Returns whether a node is marked as containing JavaScript behavior.
+     */
+    hasJSMark(nodeId) {
+        return this.jsMarkedNodes.has(nodeId);
     }
     // ── Public API: Synthetic Interaction ───────────
     /** Dispatches a synthetic pointer/mouse event (e.g. mouseenter, mouseleave, click) to a node. */
@@ -1924,9 +1950,8 @@ export class Workspace {
             const contentRoot = wrapper.firstElementChild;
             if (!contentRoot)
                 continue;
-            // JS Badge (⚡️ JS)
-            const hasJS = contentRoot.hasAttribute("data-canvus-has-js") || contentRoot.querySelector("[data-canvus-has-js]") !== null;
-            if (hasJS) {
+            // JS Badge (⚡️ JS) — uses explicit markNodeHasJS() tracking
+            if (this.jsMarkedNodes.has(selId)) {
                 layoutBadges.push({
                     rect: node.currentRect,
                     label: "⚡️ JS",

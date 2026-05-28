@@ -82,6 +82,16 @@ The core engine orchestrating events, DOM mounting, and overlay drawing.
   Returns the wrapper element of the specified node.
 - **`extractHTML(id: string): string | null`**  
   **Flat String Bridge**. Exports clean, unpolluted HTML strings of target subtrees (stripping wrapper elements).
+- **`injectCSS(css: string): HTMLStyleElement`**  
+  Injects custom styling inside the Shadow DOM, performing minimal `:root`/`html`/`body` → `:host` rewritten adjustments.
+- **`injectCSSLink(href: string): Promise<HTMLLinkElement>`**  
+  Injects an external link stylesheet reference into the Shadow DOM.
+- **`markNodeHasJS(nodeId: string): void`**  
+  Explicitly flags a node as containing guest interactive scripting or JavaScript behaviors.
+- **`unmarkNodeHasJS(nodeId: string): void`**  
+  Removes the guest JavaScript flag from the node.
+- **`hasJSMark(nodeId: string): boolean`**  
+  Returns whether the node has been flagged as containing guest interactive scripting.
 - **`measureAll(): Map<string, Rect>`**  
   Forces a synchronous layout read of all elements.
 - **`dispose(): void`**  
@@ -90,6 +100,8 @@ The core engine orchestrating events, DOM mounting, and overlay drawing.
 ### `ShadowMount`
 Controls the isolated browser `ShadowRoot` and executes layout reflow measurement logic.
 - Constructor takes the host container element and a `RectChangeCallback` handler.
+- **`executeScopedScript(code: string, context?: HTMLElement | ShadowRoot): void`**  
+  Executes custom/guest script behaviors in the scoped environment of the Shadow DOM workspace.
 
 ### `OverlayRenderer`
 Directly paints vectors onto the 2D canvas overlay.
@@ -206,9 +218,6 @@ export interface Operation {
 ### Drag and Drop Placement (`src/drop-zone.ts`)
 *   **`findDropTarget(pt: Vec2, draggedId: string, nodes: ReadonlyArray<ResolvedNode>, ws: Workspace): DropTarget | null`**: Calculates target drop indices and placement guides.
 
-### HTML/CSS Document Importer (`src/importer.ts`)
-*   **`importHTMLDocument(workspace: Workspace, htmlString: string, options?: ImportHTMLOptions): void`**: Parses a complete HTML document or fragment, resolves relative URLs, wraps workspace nodes in-place, extracts and mounts styles, and populates them into the workspace shadow root.
-
 ---
 
 ## 5. Type and Callback Definitions
@@ -226,4 +235,3 @@ export interface Operation {
 *   `Guide` = `{ type: "h" \| "v"; coord: number; start: number; end: number; }`
 *   `DropTarget` = `{ parentId: string \| null; index: number; indicator: InsertionIndicator; }`
 *   `InsertionIndicator` = `{ type: "h" \| "v"; coord: number; start: number; end: number; }`
-*   `ImportHTMLOptions` = `{ baseUrl?: string; nodeSelector?: string; clearWorkspace?: boolean; defaultPageWidth?: number; }`

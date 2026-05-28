@@ -196,6 +196,15 @@ layout editing workspaces (page builders, A/B testing editors, visual IDEs).
 
 ---
 
+## SDK Boundary
+
+The Canvus SDK enforces a strict **dumb canvas** architecture.
+
+*   **SDK Responsibility**: Isolates and mounts HTML nodes in a Shadow DOM, measures layout bounds, draws selection outlines, snap guides, and layout/script badges on a 2D canvas, handles visual interactions (dragging, resizing, panning, zooming), and exports clean HTML.
+*   **Host Responsibility**: Parses raw HTML templates to nodes, preprocesses/compiles CSS styles (Sass, Tailwind, etc.), executes and sandboxes custom/guest scripts, manages file storage, AST databases, and the global transaction undo/redo history.
+
+---
+
 ## Architecture Overview
 
 \`\`\`
@@ -208,10 +217,10 @@ layout editing workspaces (page builders, A/B testing editors, visual IDEs).
 ├─────────────────────────────────────────────┤
 │            Workspace Orchestrator           │  ← Event binding, state machine
 │  pointer, key, wheel handlers              │     (workspace.ts)
-├──────────┬──────────┬──────────┬────────────┤
-│ NodeTree │ Layout   │ DropZone │ Importer   │
-│ tree.ts  │ layout.ts│drop-zone │ importer.ts│
-├──────────┴──────────┴──────────┴────────────┤
+├──────────────┬──────────────┬───────────────┤
+│   NodeTree   │    Layout    │   DropZone    │
+│   tree.ts    │  layout.ts   │  drop-zone.ts │
+├──────────────┴──────────────┴───────────────┤
 │ types.ts (data models) │ matrix.ts (math)   │
 └─────────────────────────────────────────────┘
 \`\`\`
@@ -231,7 +240,6 @@ layout editing workspaces (page builders, A/B testing editors, visual IDEs).
 | **Layout** | \`layout.ts\` | CSS display detection, flex/grid analysis, child slot measurement |
 | **Renderer** | \`renderer.ts\` | Canvas 2D overlay: selections, handles, guides, badges, spacing adjusters |
 | **DropZone** | \`drop-zone.ts\` | Drag-and-drop placement: flex/grid/block-aware insertion calculation |
-| **Importer** | \`importer.ts\` | HTML document → WebHTMLNode[] converter |
 | **Workspace** | \`workspace.ts\` | Central orchestrator: events, state machine, public API |
 | **Index** | \`index.ts\` | Public API barrel exports |
 
@@ -300,6 +308,11 @@ layout editing workspaces (page builders, A/B testing editors, visual IDEs).
 | \`selectNode(id)\` | Set selection |
 | \`deselectAll()\` | Clear selection |
 | \`extractHTML(id)\` | Flat String Bridge: clean HTML export |
+| \`injectCSS(css)\` | Inject style string with minimal :root/:html/:body rewrites to :host |
+| \`injectCSSLink(href)\` | Inject external stylesheet link element |
+| \`markNodeHasJS(nodeId)\` | Explicitly flag a node as containing/using JavaScript |
+| \`unmarkNodeHasJS(nodeId)\` | Remove the JavaScript flag from a node |
+| \`hasJSMark(nodeId)\` | Check if a node is flagged as containing JavaScript |
 | \`dispose()\` | Cleanup event listeners |
 
 ---

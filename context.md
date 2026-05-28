@@ -48,6 +48,12 @@ _Avoid_: Third-party editor, WYSIWYG connector
 A `<style>` block injected directly into the Projection Mutation Layer to apply custom styling without polluting the host editor shell.
 _Avoid_: Global style, global stylesheet
 
+## SDK Boundary
+
+The Canvus SDK enforces a strict **dumb canvas** boundary:
+- **SDK Responsibility**: Isolated Shadow DOM mounting, layout measurements, 2D Canvas drawing (selections, guides, badges), pointer gesture interaction management, clean HTML serialization via Flat String Bridge.
+- **Host Responsibility**: File system storage, HTML template parsing, CSS preprocessing/compilation (e.g. Sass/Tailwind), guest script execution/sandboxing, guest script presence detection, and global undo/redo history.
+
 ## Rules
 
 - **Strict Isolation**: No SDK styles or wrappers may leak out of the Projection Mutation Layer or remain in the output of the Flat String Bridge.
@@ -63,9 +69,13 @@ _Avoid_: Global style, global stylesheet
 
 **Developer**: Understood. And how do we handle undo/redo when they drag spacing adjusters or move elements around? Does the Workspace have its own history stack?
 
-**Product Manager**: We want to avoid separate undo/redo stacks since the marketer might also edit text in Monaco or change page metadata. Instead, the Workspace emits fine-grained Operations. We'll listen for those events and push them onto our global CMS transaction queue. If the user hits undo, we'll pop the operation and replay it back using the Workspace's API.
+**Product Manager**: We want to avoid separate undo/redo stacks since the marketer might also edit text in Monaco or change page metadata. Instead, the Workspace emits fine-grained Operations. We'll listen for those events and push them onto our CMS transaction queue. If the user hits undo, we'll pop the operation and replay it back using the Workspace's API.
 
-**Developer**: Got it. What about editing text? Some components just need simple text edits, but others need rich markdown and formatting.
+**Developer**: Got it. What about custom CSS and guest scripts inside the imported templates?
+
+**Product Manager**: The host handles those too. The CMS shell extracts style blocks and external stylesheets and calls `ws.injectCSS(css)`. For scripts, we extract their code, execute them using `ws.getShadowMount().executeScopedScript()`, and flag those nodes by calling `ws.markNodeHasJS()`.
+
+**Developer**: That makes sense. What about editing text? Some components just need simple text edits, but others need rich markdown and formatting.
 
 **Product Manager**: For simple items, we can rely on the default Plain-Text Inline Editor. But for rich text, we'll hook into the Custom Editor Mount. When they double-click, we'll mount TipTap over the content node. When they save, we'll get the clean HTML via the Flat String Bridge, save it to the AST, and commit the update.
 

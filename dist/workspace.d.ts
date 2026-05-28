@@ -114,6 +114,8 @@ export declare class Workspace {
     private disposed;
     private renderRequested;
     private previewMode;
+    /** Set of node IDs explicitly marked as containing JavaScript behavior. */
+    private readonly jsMarkedNodes;
     private readonly onWheel;
     private readonly onPointerDown;
     private readonly onPointerMove;
@@ -183,6 +185,21 @@ export declare class Workspace {
     isPreviewMode(): boolean;
     /** Forces a pseudo-class state (hover, active, focus) on the specified node element. */
     forceNodeState(nodeId: string, state: "hover" | "active" | "focus", enabled: boolean): void;
+    /**
+     * Explicitly marks a node as containing JavaScript behavior.
+     * Renders the ⚡️ JS badge on the canvas overlay when the node is selected.
+     * The host application calls this based on its own analysis (static analysis,
+     * CDP, source maps, etc.) rather than the SDK auto-detecting scripts.
+     */
+    markNodeHasJS(nodeId: string): void;
+    /**
+     * Clears the JS badge from a node.
+     */
+    unmarkNodeHasJS(nodeId: string): void;
+    /**
+     * Returns whether a node is marked as containing JavaScript behavior.
+     */
+    hasJSMark(nodeId: string): boolean;
     /** Dispatches a synthetic pointer/mouse event (e.g. mouseenter, mouseleave, click) to a node. */
     dispatchInteractionEvent(nodeId: string, eventName: string): void;
     /** Returns a snapshot of all tracked nodes (depth-first order). */

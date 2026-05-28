@@ -1,0 +1,28 @@
+{
+  "name": "demo-electron",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "electron": "electron main.cjs",
+    "start": "concurrently -k -s first \"npm run dev\" \"wait-on http://localhost:5174 && electron main.cjs\"",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "electron": "^30.0.9",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "wait-on": "latest"
+  }
+}

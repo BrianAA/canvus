@@ -9,6 +9,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "demo": "npx -y serve . -l 3000 --no-clipboard",
+    "demo:electron": "npm start --prefix demo-electron",
+    "test:electron": "npm test --prefix demo-electron",
     "docs:validate": "node scripts/validate-docs.js",
     "docs:dev": "npm run dev --prefix docs-site",
     "docs:build": "npm run build --prefix docs-site",

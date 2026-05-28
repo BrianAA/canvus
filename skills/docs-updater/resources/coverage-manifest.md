@@ -110,15 +110,6 @@ This manifest tracks documentation coverage for every public export in the Canvu
 
 ---
 
-## HTML/CSS Document Importer (`src/importer.ts`)
-
-| Export | Kind | Docs Page | Status |
-|--------|------|-----------|--------|
-| `ImportHTMLOptions` | type | `guides/importing.mdx` | ✅ |
-| `importHTMLDocument` | function | `guides/importing.mdx` | ✅ |
-
----
-
 ## Drop Zone & DnD (`src/drop-zone.ts`)
 
 | Export | Kind | Docs Page | Status |
@@ -140,9 +131,8 @@ This manifest tracks documentation coverage for every public export in the Canvu
 | `layout.ts` | 11 | 11 | 0 | 0 |
 | `renderer.ts` | 9 | 9 | 0 | 0 |
 | `workspace.ts` | 3 | 3 | 0 | 0 |
-| `importer.ts` | 2 | 2 | 0 | 0 |
 | `drop-zone.ts` | 3 | 3 | 0 | 0 |
-| **TOTAL** | **57** | **56** | **0** | **1** |
+| **TOTAL** | **55** | **54** | **0** | **1** |
 
 ### Missing Coverage
 

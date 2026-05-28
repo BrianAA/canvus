@@ -9,10 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- JavaScript presence detection: Automatically intercepts event registrations (`addEventListener`) and selector queries (`querySelector` etc.) in the Shadow DOM to tag elements containing guest scripts.
-- Visual script badges: Renders a specialized amber `⚡️ JS` badge next to the selection boundary for selected nodes containing guest script behavior.
+- Explicit JavaScript flagging: Added `markNodeHasJS()`, `unmarkNodeHasJS()`, and `hasJSMark()` APIs on `Workspace` to flag content nodes with JS behavior.
+- Visual script badges: Renders a specialized amber `⚡️ JS` badge next to the selection boundary for selected nodes containing guest script behavior (read from host JS marks).
 - Side-by-side badge layout rendering: Draws multiple layout/script badges side-by-side with automatic horizontal offset accumulation.
-- HTML/CSS document importer (`importHTMLDocument`) for parsing complete HTML documents into workspace nodes
 - CSS Grid track parsing and visualization (`parseGridTracks`, grid overlay rendering)
 - Grid controls in the demo workbench for defining `grid-template-columns` and other grid properties
 - Spacing adjusters with live numeric tooltips for real-time margin/padding editing
@@ -20,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Marquee selection for multi-node selection via drag rectangle
 
 ### Changed
+- Transitioned script execution and stylesheet extraction to a host-driven architecture, removing automatic execution/parsing from the SDK core.
+- Streamlined CSS Isolation: Replaced the 300-line CSS parser/rewriter in `injectCSS()` with a lightweight regex performing minimal `:root`/`html`/`body` → `:host` rewriting.
 - Upgraded `isEditableTarget` to a robust, duck-typed check to prevent cross-document prototype check failures for shadow DOM target nodes.
 - Upgraded overlay renderer to support grid track visualization alongside flex layout badges
 
@@ -27,6 +28,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Overlap hit-test interception on small elements: Double-clicking leaf/nested nodes bypasses resize handle / spacing adjuster hit-tests on the second click, allowing text editing mode to successfully activate.
 - Spacebar input on `<button>` elements: Intercepts the Spacebar key inside the inline editor, preventing default button click activation (which would toggle Preview Mode) and programmatically inserting spaces at the caret.
 - Interval-driven reset during text editing: Prevented background intervals (like `updateToggleBtn` in `test-page.html`) from resetting the text and cursor of an active button while the user is actively editing it.
+
+### Removed
+- Removed `importHTMLDocument` and `ImportHTMLOptions` from public exports and core SDK codebase.
+- Removed automatic JS detection via global `EventTarget.prototype.addEventListener` monkey-patching.
 
 ### Documented
 - Updated `docs-site/pages/sdk/renderer.mdx` with `LayoutBadgeInfo` changes.

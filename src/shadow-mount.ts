@@ -12,29 +12,6 @@
 
 import type { Rect, ViewportMatrix, WebHTMLNode } from "./types.js";
 
-// Globally hook addEventListener to detect elements inside any shadow root that get listeners attached.
-if (typeof EventTarget !== "undefined" && !(EventTarget.prototype as any).__canvus_hooked) {
-  (EventTarget.prototype as any).__canvus_hooked = true;
-  const originalAdd = EventTarget.prototype.addEventListener;
-  EventTarget.prototype.addEventListener = function() {
-    if (this instanceof HTMLElement) {
-      // Traverse up to see if we are in a canvus-node-wrapper
-      let curr: HTMLElement | null = this;
-      let isCanvus = false;
-      while (curr) {
-        if (curr.classList && curr.classList.contains("canvus-node-wrapper")) {
-          isCanvus = true;
-          break;
-        }
-        curr = curr.parentElement || (curr.getRootNode && (curr.getRootNode() as any).host);
-      }
-      if (isCanvus) {
-        this.setAttribute("data-canvus-has-js", "true");
-      }
-    }
-    return originalAdd.apply(this, arguments as any);
-  };
-}
 
 // ── Callback Contracts ──────────────────────────────────────
 
@@ -110,7 +87,7 @@ const SHADOW_RESET_CSS = `
 
 .canvus-node-wrapper > * {
   flex: 1 0 auto;
-  width: 100%;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -297,8 +274,6 @@ export class ShadowMount {
       }
     }
 
-    // Execute scripts inside wrapper
-    this.executeScripts(wrapper, node.id);
 
     // ── Register Tracking ───────────────────────────────
     const mounted: MountedNode = { wrapper, canvasX: cx, canvasY: cy };
@@ -428,8 +403,6 @@ export class ShadowMount {
     mounted.canvasX = rect.x;
     mounted.canvasY = rect.y;
 
-    // Execute scripts inside wrapper
-    this.executeScripts(wrapper, node.id);
 
     return rect;
   }
@@ -540,9 +513,6 @@ export class ShadowMount {
     // a redundant callback before we've finished measuring.
     this.suppressObserver = true;
     mounted.wrapper.innerHTML = markup;
-
-    // Execute scripts inside wrapper
-    this.executeScripts(mounted.wrapper, id);
 
     this.suppressObserver = false;
 
@@ -943,7 +913,7 @@ export class ShadowMount {
   injectStylesheet(css: string): HTMLStyleElement {
     this.assertNotDisposed();
     const el = document.createElement("style");
-    el.textContent = rewriteCSS(css);
+    el.textContent = rewriteForShadowDOM(css);
     this.shadow.appendChild(el);
     return el;
   }
@@ -980,21 +950,7 @@ export class ShadowMount {
     this.assertNotDisposed();
     const shadowRoot = this.shadow;
     const callContext = context ?? shadowRoot.firstElementChild ?? shadowRoot;
-    const markElement = (el: any) => {
-      if (el && typeof el.setAttribute === "function") {
-        el.setAttribute("data-canvus-has-js", "true");
-      }
-    };
 
-    const wrapQueryResult = (result: any) => {
-      if (!result) return result;
-      if (result instanceof NodeList || result instanceof HTMLCollection || Array.isArray(result)) {
-        Array.from(result).forEach(el => markElement(el));
-      } else {
-        markElement(result);
-      }
-      return result;
-    };
 
     const documentProxy = new Proxy(document, {
       get(target, prop, receiver) {
@@ -1008,8 +964,7 @@ export class ShadowMount {
           const shadowMethod = shadowRoot[prop as keyof ShadowRoot];
           if (typeof shadowMethod === "function") {
             return (...args: any[]) => {
-              const res = (shadowMethod as Function).apply(shadowRoot, args);
-              return wrapQueryResult(res);
+              return (shadowMethod as Function).apply(shadowRoot, args);
             };
           }
         }
@@ -1099,39 +1054,7 @@ export class ShadowMount {
     }
   }
 
-  /** Extracts and executes scripts inside the mounted node. */
-  private executeScripts(container: HTMLElement, nodeId: string): void {
-    const scripts = container.querySelectorAll("script");
 
-    for (const script of Array.from(scripts)) {
-      const src = script.getAttribute("src");
-      if (src) {
-        // External script
-        const scriptKey = `${nodeId}:${src}`;
-        // Prevent loading duplicates of the same script for the same node
-        if (!this.shadow.querySelector(`script[data-canvus-script-id="${scriptKey}"]`)) {
-          const newScript = document.createElement("script");
-          for (const attr of Array.from(script.attributes)) {
-            newScript.setAttribute(attr.name, attr.value);
-          }
-          newScript.setAttribute("data-canvus-script-id", scriptKey);
-          this.shadow.appendChild(newScript);
-        }
-      } else {
-        // Inline script
-        try {
-          const code = script.textContent || "";
-          const callContext = container.firstElementChild as HTMLElement | null ?? container;
-          this.executeScopedScript(code, callContext);
-        } catch (err) {
-          console.error(`[ShadowMount] Error executing inline script in node "${nodeId}":`, err);
-        }
-      }
-
-      // Remove the original script element so it doesn't clutter user HTML
-      script.remove();
-    }
-  }
 
   /** Throws if `dispose()` has been called. */
   private assertNotDisposed(): void {
@@ -1144,81 +1067,20 @@ export class ShadowMount {
   }
 }
 
-// ── CSS Selector Rewriting for Forced States ───────────────
-
-function rewriteSelectorList(selectorListStr: string): string {
-  const selectors = selectorListStr.split(",");
-  const result: string[] = [];
-  for (let sel of selectors) {
-    sel = sel.trim();
-    if (!sel) continue;
-
-    // Map body and html to :host for scoped styling inheritance in Shadow DOM
-    let mapped = sel
-      .replace(/\bbody\b/g, ":host")
-      .replace(/\bhtml\b/g, ":host");
-
-    result.push(mapped);
-
-    let hasPseudo = false;
-    let rewritten = mapped;
-
-    if (rewritten.includes(":hover")) {
-      rewritten = rewritten.replace(/:hover/g, ".canvus-state-hover");
-      hasPseudo = true;
-    }
-    if (rewritten.includes(":active")) {
-      rewritten = rewritten.replace(/:active/g, ".canvus-state-active");
-      hasPseudo = true;
-    }
-    if (rewritten.includes(":focus")) {
-      rewritten = rewritten.replace(/:focus/g, ".canvus-state-focus");
-      hasPseudo = true;
-    }
-
-    if (hasPseudo) {
-      result.push(rewritten);
-    }
-  }
-  return result.join(", ");
-}
+// ── Minimal CSS Rewriting for Shadow DOM ───────────────────
 
 /**
- * Rewrites a CSS stylesheet string, duplicating selectors with pseudo-classes
- * (:hover, :active, :focus) to also match their equivalent utility classes
- * (.canvus-state-hover, .canvus-state-active, .canvus-state-focus).
+ * Performs minimal CSS rewriting for Shadow DOM compatibility.
+ * Only rewrites `body`, `html`, and `:root` selectors to `:host`
+ * so that page-level styles work correctly inside the shadow tree.
+ *
+ * This is intentionally minimal — forced-state duplication,
+ * @-rule handling, and advanced CSS transforms are the
+ * host application's responsibility.
  */
-export function rewriteCSS(css: string): string {
-  let output = "";
-  let buffer = "";
-  const stack: string[] = [];
-
-  for (let i = 0; i < css.length; i++) {
-    const char = css[i];
-    if (char === "{") {
-      const selector = buffer.trim();
-      buffer = "";
-
-      if (selector.startsWith("@media") || selector.startsWith("@support") || selector.startsWith("@container")) {
-        stack.push("query");
-        output += selector + " {";
-      } else if (selector.startsWith("@keyframes")) {
-        stack.push("keyframes");
-        output += selector + " {";
-      } else {
-        stack.push("rule");
-        const isInsideKeyframes = stack.includes("keyframes");
-        const rewritten = isInsideKeyframes ? selector : rewriteSelectorList(selector);
-        output += rewritten + " {";
-      }
-    } else if (char === "}") {
-      output += buffer + "}";
-      buffer = "";
-      stack.pop();
-    } else {
-      buffer += char;
-    }
-  }
-  output += buffer;
-  return output;
+function rewriteForShadowDOM(css: string): string {
+  return css
+    .replace(/(?<![.\-\w])body(?![.\-\w])/g, ":host")
+    .replace(/(?<![.\-\w])html(?![.\-\w])/g, ":host")
+    .replace(/(^|[\s,]):root\b/gm, "$1:host");
 }

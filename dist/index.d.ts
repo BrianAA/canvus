@@ -10,8 +10,6 @@ export type { OverlayStyle, OverlayFrame, LayoutBadgeInfo, GridOverlayInfo, Guid
 export { OverlayRenderer, anchorCursor, computeAlignmentGuides, computeSnappedPosition, } from "./renderer.js";
 export type { WorkspaceConfig, WorkspaceCallbacks, } from "./workspace.js";
 export { Workspace } from "./workspace.js";
-export type { ImportHTMLOptions } from "./importer.js";
-export { importHTMLDocument } from "./importer.js";
 export type { DropTarget, InsertionIndicator, } from "./drop-zone.js";
 export { findDropTarget } from "./drop-zone.js";
 //# sourceMappingURL=index.d.ts.map

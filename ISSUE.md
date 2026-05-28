@@ -1,24 +1,27 @@
-# Project Issues: Active JavaScript & Dynamic States
+# Project Issues: SDK Slimming — "Dumb Canvas" Architecture
+
+> These issues track the outstanding work from the grill-me session that established
+> the SDK's new boundary: a **dumb canvas** that renders HTML, provides interactive
+> overlays, and emits clean signals. Parsing, script execution, CSS preprocessing,
+> and JS detection are the **host IDE's responsibility**.
 
 ---
 
-## Issue #1: Viewport Preview Mode & Event Passthrough
+## Issue #1: Update `AI_CONTEXT.md` for "Dumb Canvas" Architecture
 
 ### What to build
 
-Introduce a "Preview Mode" to the Workspace. When Preview Mode is enabled:
-- The Viewport Surface Layer (Canvas) is set to `pointer-events: none` and all selection outlines, grid tracks, badging, and drag-guides are hidden.
-- Mouse/pointer events pass directly through to the underlying Shadow DOM content nodes, letting users naturally hover, click, and interact with normal HTML page behaviors.
-- Expose `workspace.setPreviewMode(enabled: boolean)` and `workspace.isPreviewMode(): boolean`.
-- Add a toggle button in the `demo/index.html` dashboard to test switching modes.
+Update `AI_CONTEXT.md` — the first file AI agents read — to reflect the SDK's new architecture. Remove references to the old auto-detection behavior and importer-as-core, and document the new explicit APIs and host-driven philosophy.
 
 ### Acceptance criteria
 
-- [ ] `Workspace` class has a public `setPreviewMode(enabled: boolean)` method.
-- [ ] `Workspace` class has a public `isPreviewMode(): boolean` method.
-- [ ] When Preview Mode is enabled, selection, hover, resize, and spacing adjuster guides are hidden on the canvas.
-- [ ] When Preview Mode is enabled, the overlay canvas has `pointer-events: none` style, allowing click and hover events to go through to Shadow DOM.
-- [ ] The demo workspace contains a "Preview Mode" toggle button that functions as expected.
+- [ ] Remove `importHTMLDocument` from the public API surface listing (~line 133).
+- [ ] Remove description of auto JS detection via `addEventListener` interception (~lines 496-498).
+- [ ] Remove `importHTMLDocument` from the features list (~line 499).
+- [ ] Add `markNodeHasJS(nodeId)`, `unmarkNodeHasJS(nodeId)`, `hasJSMark(nodeId)` to the API surface.
+- [ ] Document that `injectCSS()` now performs minimal `:root`/`body`/`html` → `:host` rewriting only.
+- [ ] Document that `executeScopedScript()` is available as an opt-in public API but is NOT auto-invoked.
+- [ ] Add a "SDK Boundary" section clarifying what the SDK handles vs what the host handles.
 
 ### Blocked by
 
@@ -26,21 +29,21 @@ None - can start immediately
 
 ---
 
-## Issue #2: Shadow DOM Script Evaluator Wrapper
+## Issue #2: Add `[Unreleased]` Breaking Changes to `CHANGELOG.md`
 
 ### What to build
 
-Implement the safe script execution wrapper outlined in ADR 0005. When adding/updating markup, parse and extract `<script>` tags from the raw HTML and execute/evaluate them scoped to the Shadow DOM boundary:
-- When `ShadowMount.addNode()` or `ShadowMount.updateMarkup()` are called, scan the raw HTML for `<script>` tags.
-- Extract their inline code or fetch their `src` sources, wrap them to prevent bleeding into the global window, and evaluate/execute them within the context of the Shadow Root.
-- Ensure any dynamically created scripts are cleaned up on `removeNode()`.
+Add a new `[Unreleased]` section to `CHANGELOG.md` documenting all breaking changes from the SDK slimming work. This ensures consumers upgrading understand what moved, what was removed, and what replaced it.
 
 ### Acceptance criteria
 
-- [ ] Scripts in `rawMarkup` are parsed, extracted, and executed inside the Shadow DOM container.
-- [ ] Executed scripts are evaluated in a closed/scoped context to minimize global scope leakage.
-- [ ] Dynamic event listeners or elements added by these scripts are cleaned up when the corresponding node is removed.
-- [ ] Verify script execution in the demo with a mock active component (e.g., a simple counter button script).
+- [ ] New `[Unreleased]` section added at the top of the changelog.
+- [ ] Documents removal of `importHTMLDocument` and `ImportHTMLOptions` from public API.
+- [ ] Documents removal of `rewriteCSS()` (300-line CSS parser replaced with 3-line `:host` regex).
+- [ ] Documents removal of auto script detection from `addNode()`/`addChildNode()`/`updateMarkup()`.
+- [ ] Documents removal of global `EventTarget.prototype.addEventListener` monkey-patch.
+- [ ] Documents new `markNodeHasJS()` / `unmarkNodeHasJS()` / `hasJSMark()` API.
+- [ ] Documents that `executeScopedScript()` is kept as explicit opt-in API.
 
 ### Blocked by
 
@@ -48,21 +51,18 @@ None - can start immediately
 
 ---
 
-## Issue #3: Edit Mode State Forcing via CSS Pseudo-Class Utility Classes
+## Issue #3: Remove `importer.ts` Dead Code from SDK `src/`
 
 ### What to build
 
-Expose an API allowing designers to style hover/active states (like tooltips or dropdowns) inside Edit Mode without leaving it by injecting custom state utility classes:
-- Expose `workspace.forceNodeState(nodeId, state: 'hover' | 'active' | 'focus', enabled: boolean): void`.
-- When enabled, inject corresponding wrapper classes (e.g. `.canvus-state-hover`) directly onto the node's wrapper.
-- Add controls to toggle these forced states in the selected node styling panel in the demo app.
+`src/importer.ts` (412 lines) is no longer exported from `index.ts` but still exists on disk and gets compiled to `dist/importer.js`. Remove it from the SDK source tree so it doesn't ship as dead code. The file should be preserved in version control history and will be re-introduced in the Electron demo project (Issue #9).
 
 ### Acceptance criteria
 
-- [ ] `Workspace` class exposes `forceNodeState(nodeId, state, enabled)`.
-- [ ] Activating a forced state adds the corresponding utility class (e.g., `.canvus-state-hover`) to the target node's Shadow DOM wrapper.
-- [ ] The CSS within `ShadowMount` handles these forced classes appropriately.
-- [ ] The demo app features controls to easily toggle forced states for the active selection.
+- [ ] `src/importer.ts` is deleted from the SDK source tree.
+- [ ] `dist/importer.js` and `dist/importer.d.ts` are no longer generated on `npm run build`.
+- [ ] No remaining imports or references to `importer.ts` in any `src/` file.
+- [ ] The SDK builds clean after removal.
 
 ### Blocked by
 
@@ -70,76 +70,157 @@ None - can start immediately
 
 ---
 
-## Issue #4: Simulated Interactivity via Synthetic DOM Event Dispatcher
+## Issue #4: Rewrite Importing Guide for Host-Driven Workflow
 
 ### What to build
 
-Build a mechanism to trigger JS-based dynamic behaviors (like tooltips or dropdowns that require JavaScript execution) while in Edit Mode by dispatching synthetic events directly to elements:
-- Expose `workspace.dispatchInteractionEvent(nodeId, eventName: string): void`.
-- Internally dispatch synthetic events (e.g. `element.dispatchEvent(new MouseEvent(eventName))`) to the target element inside the Shadow DOM wrapper.
-- Test this in the demo by adding a "Simulate Event" section to trigger hover-based tooltips while editing.
+Rewrite `docs-site/pages/guides/importing.mdx` to reflect the new architecture where HTML parsing and CSS preprocessing are the host application's responsibility. The guide should teach consumers the core SDK APIs they use instead: `ws.injectCSS(css)`, `ws.addNode(node, parentId)`, and `ws.getShadowMount().executeScopedScript(code)`.
 
 ### Acceptance criteria
 
-- [ ] `Workspace` class exposes `dispatchInteractionEvent(nodeId, eventName)`.
-- [ ] Calling the API dispatches the correct synthetic event to the element inside the Shadow DOM wrapper.
-- [ ] Verify that a simulated event successfully triggers script-bound listeners in the demo.
+- [ ] The guide no longer references `importHTMLDocument` as a core SDK export.
+- [ ] Documents the host-driven workflow: host parses HTML → host extracts CSS → host calls `injectCSS` → host calls `addNode`.
+- [ ] Includes a code example showing the new workflow end-to-end.
+- [ ] Explains the minimal `:root`/`body`/`html` → `:host` rewriting that `injectCSS` performs automatically.
+- [ ] Notes that `executeScopedScript()` is available for hosts that need to run scoped JS.
 
 ### Blocked by
 
-- Blocked by Issue #2
+- Blocked by Issue #1
 
 ---
 
-## Issue #5: HTML Page Parser & Stylesheet Extractor
+## Issue #5: Update Canvas Overlay Docs for Explicit `markNodeHasJS()`
 
 ### What to build
 
-Build a parser utility that takes a full HTML string (`<html>...</html>`), uses `DOMParser` to parse it, extracts stylesheet `<link>` and `<style>` nodes, and injects them scoped to the workspace's Shadow DOM using the existing `injectCSS()` and `injectCSSLink()` APIs.
+Update `docs-site/pages/concepts/canvas-overlay.mdx` to reflect that JS badges are no longer auto-detected via global `addEventListener` interception. They are now triggered explicitly by the host calling `ws.markNodeHasJS(nodeId)`.
 
 ### Acceptance criteria
 
-- [ ] A document importer module `src/importer.ts` exposes `importHTMLDocument(workspace, htmlString, options)`.
-- [ ] Style elements (`<style>`) and absolute/CDN stylesheet link elements are successfully extracted from `<head>` and injected into the Shadow DOM.
-- [ ] Extracted styles do not leak into the host editor page.
+- [ ] Lines 41-42 updated: script badges described as host-triggered via `markNodeHasJS()`, not auto-detected.
+- [ ] Side-by-side badge rendering description remains accurate (layout + JS badge).
+- [ ] Example code snippet shows `ws.markNodeHasJS(nodeId)` usage.
 
 ### Blocked by
 
-None - can start immediately
+- Blocked by Issue #1
 
 ---
 
-## Issue #6: Recursive Node Tree Builder
+## Issue #6: Update `docs/api.md` — Remove Importer, Add New APIs
 
 ### What to build
 
-Recursively traverse the parsed `<body>` tree, generate wrapper schemas (`WebHTMLNode`), detect hierarchy structures, and load them into the workspace via `workspace.addNode()`, so that the page mounts inside the Shadow DOM and is registered in the workspace `NodeTree`.
+Update the API reference documentation to remove the `importHTMLDocument` function and add the new `markNodeHasJS()` / `unmarkNodeHasJS()` / `hasJSMark()` methods.
 
 ### Acceptance criteria
 
-- [ ] The importer walks the entire DOM body and identifies interactive nodes (either tagging all elements or filtering based on options).
-- [ ] All elements are registered inside the workspace with accurate hierarchy structures and parent IDs.
-- [ ] Bounding rect measurements compile properly for all registered nodes.
+- [ ] `importHTMLDocument` entry removed from the API reference (~line 210).
+- [ ] `markNodeHasJS(nodeId: string): void` documented with description.
+- [ ] `unmarkNodeHasJS(nodeId: string): void` documented with description.
+- [ ] `hasJSMark(nodeId: string): boolean` documented with description.
+- [ ] `injectCSS` entry updated to note the minimal `:host` rewriting behavior.
+- [ ] `executeScopedScript` documented as a public opt-in API on `ShadowMount`.
 
 ### Blocked by
 
+- Blocked by Issue #1
+
+---
+
+## Issue #7: Update `context.md` with SDK Boundary Definition
+
+### What to build
+
+Add a clear "SDK Boundary" section to `context.md` that defines what the Canvus SDK handles versus what the host application is responsible for. This prevents future AI agents and contributors from re-introducing features that belong in the host.
+
+### Acceptance criteria
+
+- [ ] New section added defining the SDK boundary: renders HTML, provides overlays, emits signals.
+- [ ] Explicitly lists what the **host** handles: HTML parsing, CSS preprocessing, script sandboxing, JS detection.
+- [ ] The "Day in the Life" example dialogue remains accurate or is updated to reference the new APIs.
+
+### Blocked by
+
+- Blocked by Issue #1
+
+---
+
+## Issue #8: Update Docs-Updater Coverage Manifest
+
+### What to build
+
+Update `skills/docs-updater/resources/coverage-manifest.md` to reflect that `importHTMLDocument` is no longer a core SDK export and that new APIs (`markNodeHasJS`, `unmarkNodeHasJS`, `hasJSMark`) need coverage.
+
+### Acceptance criteria
+
+- [ ] `importHTMLDocument` entry removed or marked as deprecated/external (~line 118).
+- [ ] New entries added for `markNodeHasJS`, `unmarkNodeHasJS`, `hasJSMark`.
+- [ ] Mapping from `src/importer.ts` to `guides/importing.mdx` removed or updated (~line 57 of `SKILL.md`).
+
+### Blocked by
+
+- Blocked by Issue #4
 - Blocked by Issue #5
 
 ---
 
-## Issue #7: Base URL & Asset Path Resolver
+## Issue #9: Scaffold Electron Demo Project with File-Based Import
 
 ### What to build
 
-Support resolving relative asset URLs (`src`, `href`, `background-image`) by taking an optional `baseUrl` option and rewriting relative paths to absolute URLs (so images, fonts, and stylesheets render correctly even when the editor runs on a separate localhost origin).
+Create a separate Electron application for full workflow testing of the Canvus SDK. This app replaces the removed import UI from `demo/index.html` and serves as the real-world integration test for the host-driven architecture. It should load HTML files from disk, preprocess CSS, sandbox scripts, and mount content into the Canvus workspace.
 
 ### Acceptance criteria
 
-- [ ] The importer accepts a `baseUrl` string option.
-- [ ] Relative `href` stylesheet links are resolved into absolute URLs before being injected.
-- [ ] Relative `src` attributes on images inside the body are resolved into absolute URLs.
-- [ ] Relative URL paths inside CSS text (like `background-image: url(...)`) are resolved.
+- [ ] New Electron project created (separate repo or monorepo workspace — decision needed).
+- [ ] Electron app loads HTML files from the filesystem via native file dialog.
+- [ ] App extracts `<style>` and `<link>` tags from loaded HTML and injects via `ws.injectCSS()`.
+- [ ] App extracts `<script>` tags and executes them via `ws.getShadowMount().executeScopedScript()`.
+- [ ] App calls `ws.markNodeHasJS()` for nodes containing detected scripts.
+- [ ] `pressure-test.html` and `test-page.html` load and render correctly in the Electron app.
+- [ ] The `importHTMLDocument` utility (from git history or reimplemented) is available in the Electron project.
 
 ### Blocked by
 
-- Blocked by Issue #6
+- Blocked by Issue #3
+
+---
+
+## Issue #10: Move CSS Forced-State Rewriter into Electron Demo
+
+### What to build
+
+Reintroduce the CSS forced-state selector duplication logic (`:hover` → `.canvus-state-hover`) as a utility inside the Electron demo project. Optionally, also explore using Chrome DevTools Protocol `CSS.forcePseudoState` as a native alternative available in Electron's Chromium runtime.
+
+### Acceptance criteria
+
+- [ ] The Electron demo includes a CSS rewriting utility that duplicates `:hover`/`:active`/`:focus` selectors as `.canvus-state-*` class equivalents.
+- [ ] When the user toggles forced states in the Electron UI, the rewritten CSS activates the correct styles.
+- [ ] Document the CDP `CSS.forcePseudoState` approach as an alternative for future consideration.
+
+### Blocked by
+
+- Blocked by Issue #9
+
+---
+
+## Issue #11: Slim `demo/index.html` to Minimal SDK Validation Demo
+
+### What to build
+
+Reduce the SDK's in-repo demo from ~711 lines to a minimal validation page (~200-400 lines) that proves the core SDK works: mount nodes, drag, resize, export. The full workflow testing (style panels, forced states, event simulation, undo) moves to the Electron demo (Issue #9). A decision is needed on how much to strip.
+
+### Acceptance criteria
+
+- [ ] Demo mounts 2-3 seed nodes (root + nested children) to validate core mounting.
+- [ ] Drag, resize, and snap guides work correctly.
+- [ ] Flat String Bridge commit log still shows clean HTML on interaction.
+- [ ] Viewport controls (zoom, pan, reset) remain functional.
+- [ ] Demo is ≤ 400 lines of HTML.
+- [ ] All removed features (style panel, forced states, event simulation, undo) are documented as "moved to Electron demo" in a comment at the top of the file.
+
+### Blocked by
+
+None - can start immediately
