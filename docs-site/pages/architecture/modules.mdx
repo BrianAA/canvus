@@ -13,7 +13,6 @@ src/
 ├── layout.ts       → CSS Introspective Analyzer
 ├── renderer.ts     → 2D Canvas Painter
 ├── drop-zone.ts    → DnD Slot Detector
-├── importer.ts     → HTML/CSS Document Importer
 ├── workspace.ts    → Central Orchestrator
 └── index.ts        → Public API Barrel Exports
 ```
@@ -50,10 +49,6 @@ Draws selection frames, resize anchors, spacing adjusters, alignment snap guidel
 
 Calculates placement indices inside Flex/Grid layout tracks and Block flows based on current pointer locations, returning insertion coordinates for drag-and-drop operations.
 
-### `importer.ts` — HTML/CSS Document Importer
-
-Parses complete HTML documents and converts them into `WebHTMLNode` objects for mounting in the workspace. Handles stylesheet extraction and node ID generation.
-
 ### `workspace.ts` — Central Orchestrator
 
 Integrates all subsystems, binds event handlers (pointer, key, wheel, window), runs the main state machine, and triggers throttled repaints. This is the **public entry point** for consumer integrations.
@@ -79,9 +74,7 @@ workspace.ts (orchestrator)
 ├── drop-zone.ts (DnD logic)
 │   ├── layout.ts
 │   └── types.ts
-├── matrix.ts (coordinate math)
-│   └── types.ts
-└── importer.ts (HTML parsing)
+└── matrix.ts (coordinate math)
     └── types.ts
 ```
 

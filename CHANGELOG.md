@@ -48,6 +48,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Migrated content from `docs/`, `agent.md`, `context.md`, and `PRD.md` into structured docs site
 - Created documentation coverage manifest tracking all 57 public exports
 - Created `docs-updater` skill for documentation maintenance workflows
+- Added 8 missing Workspace methods to `workspace-api.mdx`: `setPreviewMode`, `isPreviewMode`, `forceNodeState`, `markNodeHasJS`, `unmarkNodeHasJS`, `hasJSMark`, `dispatchInteractionEvent`, `getContentRoot`
+- Added `injectCSS`, `injectCSSLink` sections to `workspace-api.mdx`
+- Added `computeAggregateBounds` utility documentation to `workspace-api.mdx`
+- Added `onForcePseudoState` callback to `configuration.mdx`
+- Replaced stale 10-field `OverlayStyle` with full 30-field interface in `configuration.mdx` and `canvas-overlay.mdx`
+- Rewrote `renderer.mdx` with correct `Guide`, `OverlayFrame`, `SpacingAdjusterType`, `SpacingAdjusterInfo` types and fixed function signatures
+- Removed ghost `importer.ts` module from `modules.mdx` (module was deleted from SDK)
+- Fixed `shadow-dom.mdx` `injectCSS` method reference to use Workspace-level API
+- Added 5 new glossary terms to `context.md`: Preview Mode, Lazy Child Registration, Dynamic Forced Hover, Marquee Selection, Middle Mouse Pan
+- Updated `AI_CONTEXT.md` with all missing Workspace methods and `onForcePseudoState` callback
+- Created new `docs-site/pages/guides/electron-integration.mdx` covering Electron demo architecture, CDP integration, and E2E testing
 
 ---
 

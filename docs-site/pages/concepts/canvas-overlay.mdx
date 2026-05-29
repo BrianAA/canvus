@@ -72,16 +72,16 @@ The visual appearance of the overlay is configurable via `OverlayStyle`:
 ```typescript
 const ws = new Workspace(container, {
   overlayStyle: {
-    selectionColor: '#6366f1',    // Selection border color
-    hoverColor: '#94a3b8',        // Hover border color
-    guideColor: '#ef4444',        // Snap guide line color
-    handleColor: '#ffffff',       // Resize handle fill
-    handleSize: 8,                // Handle square size in pixels
-    badgeBg: '#1e293b',           // Layout badge background
-    badgeColor: '#f8fafc',        // Layout badge text color
-    tooltipBg: '#1e293b',        // Tooltip background
-    tooltipColor: '#f8fafc',     // Tooltip text color
-    font: '12px Inter, sans-serif', // Overlay font
+    selectionStroke: '#6366f1',     // Selection border color
+    selectionGlow: 'rgba(99, 102, 241, 0.4)',  // Glow effect
+    hoverStroke: 'rgba(99, 102, 241, 0.6)',    // Hover border
+    guideStroke: '#f43f5e',         // Snap guide line color
+    handleFill: '#ffffff',          // Resize handle fill
+    handleStroke: '#6366f1',        // Resize handle border
+    handleSize: 8,                  // Handle square size
+    layoutBadgeBg: 'rgba(99, 102, 241, 0.85)', // Layout badge background
+    layoutBadgeText: '#ffffff',     // Layout badge text
+    dropZoneStroke: '#3b82f6',      // Drop zone border
   },
 })
 ```

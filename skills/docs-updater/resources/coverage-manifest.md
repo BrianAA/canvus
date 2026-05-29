@@ -1,6 +1,6 @@
 # Documentation Coverage Manifest
 
-> **Last Updated**: 2026-05-27
+> **Last Updated**: 2026-05-29
 > **Source of Truth**: `src/index.ts`
 
 This manifest tracks documentation coverage for every public export in the Canvus SDK. Compare this against `src/index.ts` after any code change.
@@ -62,7 +62,7 @@ This manifest tracks documentation coverage for every public export in the Canvu
 | Export | Kind | Docs Page | Status |
 |--------|------|-----------|--------|
 | `NodeTree` | class | `concepts/workspace.mdx` | ✅ |
-| `computeAggregateBounds` | function | — | ❌ |
+| `computeAggregateBounds` | function | `sdk/workspace-api.mdx` | ✅ |
 
 ---
 
@@ -97,6 +97,8 @@ This manifest tracks documentation coverage for every public export in the Canvu
 | `anchorCursor` | function | `sdk/renderer.mdx` | ✅ |
 | `computeAlignmentGuides` | function | `sdk/renderer.mdx` | ✅ |
 | `computeSnappedPosition` | function | `sdk/renderer.mdx` | ✅ |
+| `SpacingAdjusterType` | type | `sdk/renderer.mdx` | ✅ |
+| `SpacingAdjusterInfo` | type | `sdk/renderer.mdx` | ✅ |
 
 ---
 
@@ -123,20 +125,20 @@ This manifest tracks documentation coverage for every public export in the Canvu
 ## Coverage Summary
 
 | Module | Total Exports | ✅ Documented | ⚠️ Needs Review | ❌ Missing |
-|--------|--------------|---------------|-----------------|-----------|
+|--------|--------------|---------------|-----------------|----------|
 | `types.ts` | 14 | 14 | 0 | 0 |
 | `matrix.ts` | 11 | 11 | 0 | 0 |
 | `shadow-mount.ts` | 2 | 2 | 0 | 0 |
-| `tree.ts` | 2 | 1 | 0 | **1** |
+| `tree.ts` | 2 | 2 | 0 | 0 |
 | `layout.ts` | 11 | 11 | 0 | 0 |
-| `renderer.ts` | 9 | 9 | 0 | 0 |
+| `renderer.ts` | 11 | 11 | 0 | 0 |
 | `workspace.ts` | 3 | 3 | 0 | 0 |
 | `drop-zone.ts` | 3 | 3 | 0 | 0 |
-| **TOTAL** | **55** | **54** | **0** | **1** |
+| **TOTAL** | **57** | **57** | **0** | **0** |
 
-### Missing Coverage
+### All Exports Covered ✅
 
-1. **`computeAggregateBounds`** (from `tree.ts`) — Utility function for computing the bounding box of multiple nodes. Needs to be added to `sdk/types.mdx` or a new `sdk/tree.mdx` page.
+As of 2026-05-29, every public export in `src/index.ts` has documentation coverage.
 
 ---
 
@@ -177,3 +179,4 @@ This manifest tracks documentation coverage for every public export in the Canvu
 | `pages/architecture/adr/0005-stylesheets.mdx` | ADR | ✅ Complete |
 | `pages/contributing/development.mdx` | Contributing | ✅ Complete |
 | `pages/contributing/glossary.mdx` | Contributing | ✅ Complete |
+| `pages/guides/electron-integration.mdx` | Guides | ✅ Complete |

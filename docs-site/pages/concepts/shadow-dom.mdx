@@ -44,16 +44,17 @@ import { Callout } from 'nextra/components'
 To apply custom styling (e.g., Tailwind CSS, brand fonts) to the content inside the Shadow DOM:
 
 ```typescript
-const shadowMount = ws.getShadowMount()
-
-// Inject CSS that's scoped to the Shadow Root
-shadowMount.injectCSS(`
+// Inject CSS that's scoped to the Shadow Root via the Workspace API
+ws.injectCSS(`
   .card { padding: 24px; border-radius: 12px; }
   .btn { background: #6366f1; color: white; }
 `)
+
+// Or load an external stylesheet
+await ws.injectCSSLink('https://cdn.example.com/tailwind.css')
 ```
 
-These styles are mounted as `<style>` blocks inside the Shadow Root, never polluting the host application.
+These styles are mounted as `<style>` or `<link>` blocks inside the Shadow Root, never polluting the host application.
 
 ## Node Wrappers
 

@@ -106,3 +106,55 @@ ws.reparentNode('child-1', 'new-parent-id')
 // Reorder a child within its parent
 ws.reorderChild('child-1', 0)  // Move to first position
 ```
+
+## Preview Mode
+
+The Workspace supports a **Preview Mode** toggle that disables all editing overlays and lets pointer events pass through to the Shadow DOM content. This allows native interaction testing — links, buttons, and forms behave as they would in a live browser.
+
+```typescript
+// Enter preview mode
+ws.setPreviewMode(true)
+
+// Check if preview is active
+if (ws.isPreviewMode()) {
+  console.log('Editing is disabled')
+}
+
+// Return to edit mode
+ws.setPreviewMode(false)
+```
+
+<Callout type="info">
+  Entering Preview Mode automatically clears selection, hover state, and any active interaction gesture.
+</Callout>
+
+## Stylesheet Injection
+
+Custom CSS (Tailwind, brand fonts, imported template styles) is injected directly into the Shadow DOM so it's fully scoped and never pollutes the host application:
+
+```typescript
+// Inject inline CSS — :root, html, body selectors are rewritten to :host
+ws.injectCSS(`
+  .card { padding: 24px; border-radius: 12px; }
+  .btn { background: #6366f1; color: white; }
+`)
+
+// Load an external stylesheet
+await ws.injectCSSLink('https://cdn.example.com/tailwind.css')
+```
+
+## JS Badge Marking
+
+The SDK draws a visual `⚡️ JS` badge on the canvas when a node is flagged as containing JavaScript. The host application is responsible for detection — the SDK never auto-detects scripts.
+
+```typescript
+// Flag a node as having interactive JS behavior
+ws.markNodeHasJS('interactive-widget')
+
+// Check and remove
+if (ws.hasJSMark('interactive-widget')) {
+  ws.unmarkNodeHasJS('interactive-widget')
+}
+```
+
+See the full [Workspace API Reference](/sdk/workspace-api) for all available methods including [State Forcing](/sdk/workspace-api#state-forcing) and [Synthetic Interaction](/sdk/workspace-api#synthetic-interaction).

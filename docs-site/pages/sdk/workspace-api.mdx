@@ -244,6 +244,180 @@ Forces a synchronous layout read of all elements.
 measureAll(): Map<string, Rect>
 ```
 
+### `getContentRoot(id)`
+
+Returns the user's content root element (the first child inside the SDK wrapper) for a given node ID. Useful for advanced DOM inspection or custom editor mounting.
+
+```typescript
+getContentRoot(id: string): HTMLElement | null
+```
+
+### `computeAggregateBounds(nodes)`
+
+Utility function (exported from `tree.ts`) that computes a single bounding rectangle encompassing all provided nodes. Returns `null` if no nodes have measured rects.
+
+```typescript
+import { computeAggregateBounds } from 'canvus'
+
+const bounds = computeAggregateBounds(ws.getNodes())
+// { x, y, width, height } or null
+```
+
+---
+
+## Preview Mode
+
+### `setPreviewMode(enabled)`
+
+Toggles the workspace between Edit Mode and Preview Mode. In Preview Mode, all editing overlays (selection, handles, spacing adjusters) are hidden, pointer events pass through to the Shadow DOM content, and interactive elements behave normally (links, buttons, forms).
+
+```typescript
+setPreviewMode(enabled: boolean): void
+```
+
+```typescript
+// Enter preview mode — user can interact with content natively
+ws.setPreviewMode(true)
+
+// Return to edit mode — selection and resize handles re-appear
+ws.setPreviewMode(false)
+```
+
+<Callout type="info">
+  Entering Preview Mode automatically clears the current selection, hover state, and any active interaction gesture.
+</Callout>
+
+### `isPreviewMode()`
+
+Returns whether the workspace is currently in Preview Mode.
+
+```typescript
+isPreviewMode(): boolean
+```
+
+---
+
+## State Forcing
+
+### `forceNodeState(nodeId, state, enabled)`
+
+Forces a CSS pseudo-class state (`hover`, `active`, or `focus`) on the specified node element. This injects/removes a `.canvus-state-hover`, `.canvus-state-active`, or `.canvus-state-focus` class on the content root.
+
+Useful in Electron environments where the SDK overlay blocks native `:hover` from reaching content elements.
+
+```typescript
+forceNodeState(nodeId: string, state: "hover" | "active" | "focus", enabled: boolean): void
+```
+
+```typescript
+// Force hover state on a button for visual preview
+ws.forceNodeState('btn-1', 'hover', true)
+
+// Remove forced hover
+ws.forceNodeState('btn-1', 'hover', false)
+```
+
+<Callout type="info">
+  To delegate pseudo-class forcing to the host (e.g., via Chrome DevTools Protocol in Electron), use the `onForcePseudoState` callback. See [Configuration](/sdk/configuration).
+</Callout>
+
+---
+
+## JS Badge Marking
+
+### `markNodeHasJS(nodeId)`
+
+Explicitly marks a node as containing JavaScript behavior. When the node is selected, the canvas overlay renders a specialized amber `⚡️ JS` badge next to the layout badge.
+
+The host application calls this based on its own analysis (static analysis, CDP, source maps) rather than the SDK auto-detecting scripts.
+
+```typescript
+markNodeHasJS(nodeId: string): void
+```
+
+### `unmarkNodeHasJS(nodeId)`
+
+Removes the JavaScript badge from a node.
+
+```typescript
+unmarkNodeHasJS(nodeId: string): void
+```
+
+### `hasJSMark(nodeId)`
+
+Returns whether a node is flagged as containing JavaScript behavior.
+
+```typescript
+hasJSMark(nodeId: string): boolean
+```
+
+```typescript
+// Flag node as having JS after executing its scripts
+ws.markNodeHasJS('interactive-widget')
+
+// Check status
+if (ws.hasJSMark('interactive-widget')) {
+  console.log('Node has JS badge')
+}
+
+// Remove the flag
+ws.unmarkNodeHasJS('interactive-widget')
+```
+
+---
+
+## Synthetic Interaction
+
+### `dispatchInteractionEvent(nodeId, eventName)`
+
+Dispatches a synthetic pointer/mouse event (e.g., `mouseenter`, `mouseleave`, `click`, `dblclick`) to a node's content root element inside the Shadow DOM.
+
+Useful for programmatically triggering element behaviors without requiring actual user pointer gestures.
+
+```typescript
+dispatchInteractionEvent(nodeId: string, eventName: string): void
+```
+
+```typescript
+// Simulate a click on an interactive element
+ws.dispatchInteractionEvent('btn-1', 'click')
+
+// Simulate hover entry/exit
+ws.dispatchInteractionEvent('card-1', 'mouseenter')
+ws.dispatchInteractionEvent('card-1', 'mouseleave')
+```
+
+---
+
+## Stylesheet Injection
+
+### `injectCSS(css)`
+
+Injects a CSS string into the Shadow DOM as a scoped `<style>` block. Automatically rewrites `:root`, `html`, and `body` selectors to `:host` for proper Shadow DOM scoping.
+
+```typescript
+injectCSS(css: string): HTMLStyleElement
+```
+
+```typescript
+ws.injectCSS(`
+  .card { padding: 24px; border-radius: 12px; }
+  .btn { background: #6366f1; color: white; }
+`)
+```
+
+### `injectCSSLink(href)`
+
+Loads an external stylesheet into the Shadow DOM as a `<link>` element. Returns a promise that resolves when the stylesheet has loaded.
+
+```typescript
+injectCSSLink(href: string): Promise<HTMLLinkElement>
+```
+
+```typescript
+await ws.injectCSSLink('https://cdn.example.com/styles.css')
+```
+
 ---
 
 ## Subsystem Access

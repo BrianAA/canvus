@@ -12,13 +12,15 @@ const renderer = new OverlayRenderer(canvas: HTMLCanvasElement, style?: Partial<
 
 The renderer operates on the HTML5 Canvas 2D Context. It draws:
 
-- Primary/secondary element borders
+- Primary/secondary element borders with glow effects
 - Grab handles (8-directional resize anchors)
 - Margin/padding spacer handles with coordinate value tooltips
-- Layout mode badges (flex, grid, block)
+- Layout mode badges (flex, grid, block) and JS badges
 - Grid track visualization
 - Alignment snap guides
 - Marquee selection boundaries
+- Drop zone highlights and insertion indicators
+- Drag/resize coordinate tooltips
 
 ---
 
@@ -29,32 +31,35 @@ The renderer operates on the HTML5 Canvas 2D Context. It draws:
 Returns the appropriate CSS cursor indicator for a resize handle direction.
 
 ```typescript
-function anchorCursor(anchor: ResizeAnchor): string
+function anchorCursor(anchor: ResizeAnchor | null): string
 // e.g., anchorCursor('nw') → 'nwse-resize'
+// anchorCursor(null) → 'default'
 ```
 
-### `computeAlignmentGuides(draggedId, currentRect, nodes, snapThreshold)`
+### `computeAlignmentGuides(movingRect, otherRects, threshold?)`
 
-Generates alignment snap guidelines by comparing the dragged element's edges against all other nodes.
+Generates alignment snap guides by comparing a moving element's edges (left, center, right, top, middle, bottom) against all other element rects.
 
 ```typescript
 function computeAlignmentGuides(
-  draggedId: string,
-  currentRect: Rect,
-  nodes: ReadonlyArray<ResolvedNode>,
-  snapThreshold: number
-): {
-  guides: Guide[]
-  snapped: Vec2
-}
+  movingRect: Readonly<Rect>,
+  otherRects: ReadonlyArray<Readonly<Rect>>,
+  threshold?: number,    // Default: 5 canvas-space px
+): Guide[]
 ```
 
-### `computeSnappedPosition(currentRect, guides)`
+Returns an array of `Guide` objects representing alignment lines where snapping should occur.
 
-Computes the final snapped position based on active alignment guides.
+### `computeSnappedPosition(movingRect, otherRects, threshold?)`
+
+Computes the final snapped position based on alignment targets. If any edge or center of the moving rect is within `threshold` of an alignment target, the returned position snaps exactly onto that target.
 
 ```typescript
-function computeSnappedPosition(currentRect: Rect, guides: Guide[]): Vec2
+function computeSnappedPosition(
+  movingRect: Readonly<Rect>,
+  otherRects: ReadonlyArray<Readonly<Rect>>,
+  threshold?: number,    // Default: 5 canvas-space px
+): Vec2
 ```
 
 ---
@@ -63,39 +68,74 @@ function computeSnappedPosition(currentRect: Rect, guides: Guide[]): Vec2
 
 ### `Guide`
 
-A horizontal or vertical alignment snap line.
+An alignment snap guide line in canvas-space.
 
 ```typescript
 interface Guide {
-  type: "h" | "v"     // Horizontal or vertical
-  coord: number        // The coordinate value of the line
-  start: number        // Start extent of the line
-  end: number          // End extent of the line
+  /** Which axis the guide runs along. "x" = vertical line, "y" = horizontal line. */
+  axis: "x" | "y"
+  /** Canvas-space coordinate on the perpendicular axis. */
+  position: number
 }
 ```
 
 ### `OverlayFrame`
 
-The complete render state for a single canvas frame.
+The complete description of a single overlay frame. Passed to `OverlayRenderer.render()` each time the workspace state changes.
 
 ```typescript
 interface OverlayFrame {
-  selection: Set<string>
-  hover: string | null
-  guides: Guide[]
-  marginAdjusters: Record<string, Rect>
-  paddingAdjusters: Record<string, Rect>
+  /** Current viewport transform. */
+  viewport: ViewportMatrix
+  /** All mounted nodes with their canvas-space rects and hierarchy data. */
+  nodes: ReadonlyArray<Readonly<{
+    id: string
+    currentRect: Rect | null
+    parentId?: string | null
+    childIds?: readonly string[]
+  }>>
+  /** Set of currently selected node IDs. */
+  selectedIds: ReadonlySet<string>
+  /** ID of the node under the cursor (hover), or null. */
+  hoveredId: string | null
+  /** The resize anchor currently being dragged, or null. */
+  activeAnchor: ResizeAnchor | null
+  /** Alignment guides to render. */
+  guides: ReadonlyArray<Guide>
+  /** ID of the node currently being dragged, or null. */
+  draggedNodeId?: string | null
+  /** ID of the node currently being resized, or null. */
+  resizedNodeId?: string | null
+
+  // Layout overlays
+  /** Layout mode badges to render on selected containers. */
+  layoutBadges?: ReadonlyArray<LayoutBadgeInfo>
+  /** Grid track overlays to render on selected grid containers. */
+  gridOverlays?: ReadonlyArray<GridOverlayInfo>
+
+  // Drag & Drop overlays
+  /** Active drop zone target container and index. */
+  activeDropTarget?: DropTarget | null
+
+  // UX Controls
+  /** Active marquee selection rect in canvas-space. */
+  marqueeRect?: Rect | null
+  /** Active spacing adjusters to render. */
+  spacingAdjusters?: ReadonlyArray<SpacingAdjusterInfo>
 }
 ```
 
 ### `LayoutBadgeInfo`
 
-Badge label and position for a layout container or a guest javascript interactive element.
+Badge label and position for a layout container or a guest JavaScript interactive element.
 
 ```typescript
 interface LayoutBadgeInfo {
-  label: string
+  /** Canvas-space rect of the container. */
   rect: Rect
+  /** Short label like "FLEX →", "GRID", "BLOCK". */
+  label: string
+  /** True if this is a script/JS badge (renders in amber). */
   isJS?: boolean
 }
 ```
@@ -106,8 +146,52 @@ Grid track overlay data for CSS Grid containers.
 
 ```typescript
 interface GridOverlayInfo {
-  columns: GridTrack[]
-  rows: GridTrack[]
+  /** Canvas-space rect of the container. */
   rect: Rect
+  /** Column tracks (offsets relative to container padding edge). */
+  columns: ReadonlyArray<GridTrack>
+  /** Row tracks. */
+  rows: ReadonlyArray<GridTrack>
 }
 ```
+
+### `SpacingAdjusterType`
+
+The type of spacing adjuster being rendered or interacted with.
+
+```typescript
+type SpacingAdjusterType =
+  | "padding-top"
+  | "padding-right"
+  | "padding-bottom"
+  | "padding-left"
+  | "margin-top"
+  | "margin-right"
+  | "margin-bottom"
+  | "margin-left"
+```
+
+### `SpacingAdjusterInfo`
+
+Data for rendering a single spacing adjuster handle.
+
+```typescript
+interface SpacingAdjusterInfo {
+  /** Which spacing property this adjuster controls. */
+  type: SpacingAdjusterType
+  /** Bounding box of the handle bar in canvas-space. */
+  rect: Rect
+  /** Spacing value in pixels. */
+  value: number
+  /** Whether the adjuster is currently hovered. */
+  isHovered: boolean
+  /** Whether the adjuster is actively being dragged. */
+  isActive: boolean
+}
+```
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  Padding adjusters are drawn in green (`rgba(34, 197, 94, ...)`), margin adjusters in orange (`rgba(249, 115, 22, ...)`). Active adjusters show a live numeric tooltip with the current pixel value.
+</Callout>

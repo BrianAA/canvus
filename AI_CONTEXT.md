@@ -390,6 +390,11 @@ export interface Operation {
 | `markNodeHasJS(nodeId)` | Explicitly flag a node as containing/using JavaScript |
 | `unmarkNodeHasJS(nodeId)` | Remove the JavaScript flag from a node |
 | `hasJSMark(nodeId)` | Check if a node is flagged as containing JavaScript |
+| `setPreviewMode(enabled)` | Toggle Preview Mode (disables editing overlays, enables content interaction) |
+| `isPreviewMode()` | Returns whether the workspace is currently in Preview Mode |
+| `forceNodeState(nodeId, state, enabled)` | Force a CSS pseudo-class state (hover/active/focus) on a node |
+| `dispatchInteractionEvent(nodeId, eventName)` | Dispatch synthetic pointer/mouse events to a node |
+| `getContentRoot(id)` | Returns the user's content root element for a node |
 | `dispose()` | Cleanup event listeners |
 
 ---
@@ -406,6 +411,7 @@ export interface Operation {
 | `onInteractionChange(mode)` | Drag state changes (pan, resize, etc.) |
 | `onOperationsGenerated(ops)` | Undoable operations produced |
 | `onTextEditRequest(nodeId, el, commit)` | Custom editor escape hatch |
+| `onForcePseudoState(nodeId, state, enabled)` | Pseudo-class state change delegate (for CDP integration) |
 
 ---
 

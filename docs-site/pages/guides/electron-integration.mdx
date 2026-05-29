@@ -1,0 +1,164 @@
+# Electron Integration Guide
+
+This guide covers building a desktop visual editor using Canvus SDK inside an Electron application. The `demo-electron/` directory provides a complete reference implementation.
+
+---
+
+## Architecture Overview
+
+The Electron demo implements a three-layer architecture:
+
+```
+┌────────────────────────────────────────────────┐
+│           Main Process (main.cjs)              │
+│  - File I/O (open/read HTML files from disk)   │
+│  - CDP debugger attachment (DOM.enable,         │
+│    CSS.enable, CSS.forcePseudoState)            │
+├────────────────────────────────────────────────┤
+│         Preload Script (preload.cjs)           │
+│  - contextBridge exposes ipcRenderer channels  │
+│  - open-file, read-file, force-pseudo-state    │
+├────────────────────────────────────────────────┤
+│         Renderer Process (Vite + React)        │
+│  - Canvus Workspace + SDK interactions         │
+│  - Host-driven HTML importing                  │
+│  - UI controls (file open, preview toggle)     │
+└────────────────────────────────────────────────┘
+```
+
+---
+
+## Key Concepts
+
+### File-Based HTML Importing
+
+Unlike the web demo which uses hardcoded HTML strings, the Electron demo reads real HTML files from disk:
+
+```typescript
+// Main process: IPC handler for file dialog
+ipcMain.handle('open-file', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'HTML Files', extensions: ['html', 'htm'] }]
+  })
+  if (result.canceled) return null
+  return {
+    filePath: result.filePaths[0],
+    fileContent: fs.readFileSync(result.filePaths[0], 'utf8')
+  }
+})
+```
+
+### Host-Driven Importing Workflow
+
+The `demo-electron/src/importer.ts` module implements the full host-driven importing workflow described in the [HTML/CSS Importing Guide](/guides/importing):
+
+1. **Parse** the HTML string using `DOMParser`
+2. **Extract & inject CSS** — inline `<style>` blocks and external `<link>` stylesheets
+3. **Handle `@property` rules** — extracted to `document.head` (Chromium Shadow DOM limitation)
+4. **Resolve relative URLs** — rewrites `src`, `href`, `srcset`, and CSS `url()` references
+5. **Register nodes** — each top-level `<body>` child becomes a root-level workspace node
+6. **Extract & execute scripts** — runs via `executeScopedScript()` and flags nodes with `markNodeHasJS()`
+
+```typescript
+import { importHTMLDocument } from './importer'
+
+const result = await importHTMLDocument(workspace, htmlString, {
+  baseUrl: filePath,        // Resolves relative paths
+  clearWorkspace: true,     // Clear existing nodes first
+  defaultPageWidth: 1200,   // Initial node width
+})
+
+console.log(`Imported ${result.styleTagsCount} style blocks`)
+console.log(`External stylesheets:`, result.externalStylesheets)
+console.log(`Scripts executed:`, result.scriptsExecuted)
+```
+
+### CDP-Based Pseudo-State Forcing
+
+The Electron main process attaches the Chrome DevTools Protocol debugger to force CSS pseudo-states (`:hover`, `:active`, `:focus`) on elements inside the Shadow DOM:
+
+```javascript
+// Main process: Attach CDP debugger on window creation
+win.webContents.debugger.attach('1.3')
+await win.webContents.debugger.sendCommand('DOM.enable')
+await win.webContents.debugger.sendCommand('CSS.enable')
+```
+
+The renderer process hooks into the SDK's `onForcePseudoState` callback:
+
+```typescript
+const ws = new Workspace(container, {
+  onForcePseudoState(nodeId, state, enabled) {
+    // Forward to Electron main process via IPC
+    window.electronAPI.forcePseudoState({ nodeId, stateName: state, enabled })
+  },
+})
+```
+
+The main process then resolves the CDP node ID and forces the pseudo-class:
+
+```javascript
+ipcMain.handle('force-pseudo-state', async (event, { nodeId, stateName, enabled }) => {
+  const dbg = mainWindow.webContents.debugger
+  
+  // Evaluate to get the DOM element reference
+  const evalResult = await dbg.sendCommand('Runtime.evaluate', {
+    expression: `window.ws.getContentRoot('${nodeId}')`,
+    returnByValue: false
+  })
+  
+  // Get the CDP nodeId
+  const { nodeId: cdpNodeId } = await dbg.sendCommand('DOM.requestNode', {
+    objectId: evalResult.result.objectId
+  })
+  
+  // Force the pseudo-class state
+  await dbg.sendCommand('CSS.forcePseudoState', {
+    nodeId: cdpNodeId,
+    forcedPseudoClasses: enabled ? [`:${stateName}`] : [],
+  })
+})
+```
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+  CDP pseudo-state forcing applies **real** CSS pseudo-classes, unlike the SDK's `.canvus-state-hover` class approach which only works with custom CSS. CDP forcing works with all existing stylesheets.
+</Callout>
+
+---
+
+## Running the Electron Demo
+
+```bash
+# From the project root
+npm run demo:electron
+```
+
+This starts the Vite dev server and launches the Electron window. The demo includes:
+
+- **File → Open HTML** dialog for importing real HTML documents
+- **Preview Mode** toggle for testing interactive content
+- **CSS properties panel** for editing styles
+- **Selection inspector** showing node tree and breadcrumbs
+
+---
+
+## E2E Testing
+
+The Electron demo includes Playwright E2E tests:
+
+```bash
+cd demo-electron
+npx playwright test
+```
+
+Tests verify:
+- Workspace mounting and node rendering
+- Drill-down selection and direct node class assertions
+- Node interaction behaviors inside the Shadow DOM
+
+<Callout type="warning">
+  The Electron demo's `importer.ts` is a **host application module**, not part of the SDK. It demonstrates the importing pattern described in the [HTML/CSS Importing Guide](/guides/importing) but lives outside the SDK boundary.
+</Callout>

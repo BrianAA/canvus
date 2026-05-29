@@ -22,18 +22,61 @@ const ws = new Workspace(container, callbacks, {
 
 ### OverlayStyle
 
+The full set of visual tokens controlling every aspect of the canvas overlay. All properties are optional when passed via `Partial<OverlayStyle>`.
+
 ```typescript
 interface OverlayStyle {
-  selectionColor: string    // Selection border color (default: '#3b82f6')
-  hoverColor: string        // Hover border color (default: '#94a3b8')
-  guideColor: string        // Snap guide line color (default: '#ef4444')
-  handleColor: string       // Resize handle fill (default: '#ffffff')
-  handleSize: number        // Handle square size in pixels (default: 8)
-  badgeBg: string           // Layout badge background (default: '#1e293b')
-  badgeColor: string        // Layout badge text color (default: '#f8fafc')
-  tooltipBg: string         // Tooltip background (default: '#1e293b')
-  tooltipColor: string      // Tooltip text color (default: '#f8fafc')
-  font: string              // Overlay font (default: '12px Inter, sans-serif')
+  // ── Selection ───────────────────────────
+  selectionStroke: string          // Selection border color (default: '#6366f1')
+  selectionWidth: number           // Selection stroke width in px (default: 2)
+  selectionGlow: string            // Glow shadow color (default: 'rgba(99,102,241,0.4)')
+  selectionGlowRadius: number      // Glow blur radius (default: 12)
+
+  // ── Hover ───────────────────────────────
+  hoverStroke: string              // Hover outline color (default: 'rgba(99,102,241,0.6)')
+  hoverWidth: number               // Hover stroke width (default: 1.5)
+  hoverDash: number[]              // Hover dash pattern (default: [5, 5])
+
+  // ── Resize Handles ──────────────────────
+  handleSize: number               // Handle square size in px (default: 8)
+  handleFill: string               // Handle fill color (default: '#ffffff')
+  handleStroke: string             // Handle border color (default: '#6366f1')
+  handleStrokeWidth: number        // Handle border width (default: 1.5)
+  handleRadius: number             // Handle corner radius, 0 = square (default: 2)
+  handleHitRadius: number          // Hit-test radius around handle center (default: 8)
+  handleActiveFill: string         // Fill when actively dragging (default: '#6366f1')
+
+  // ── Alignment Guides ────────────────────
+  guideStroke: string              // Snap guide color (default: '#f43f5e')
+  guideWidth: number               // Snap guide width (default: 1)
+  guideDash: number[]              // Snap guide dash pattern (default: [4, 4])
+
+  // ── Origin Crosshair ────────────────────
+  originStroke: string             // Origin line color (default: 'rgba(99,102,241,0.12)')
+  originDash: number[]             // Origin dash pattern (default: [6, 6])
+
+  // ── Multi-Select ────────────────────────
+  multiSelectStroke: string        // Aggregate bounding box color (default: 'rgba(99,102,241,0.5)')
+  multiSelectDash: number[]        // Aggregate box dash pattern (default: [6, 4])
+
+  // ── Layout Badges ───────────────────────
+  layoutBadgeBg: string            // Badge background (default: 'rgba(99,102,241,0.85)')
+  layoutBadgeText: string          // Badge text color (default: '#ffffff')
+  layoutBadgeFont: string          // Badge font (default: "600 9px 'Inter', system-ui")
+
+  // ── Grid Tracks ─────────────────────────
+  gridTrackStroke: string          // Grid track overlay color (default: 'rgba(99,102,241,0.2)')
+  gridTrackDash: number[]          // Grid track dash pattern (default: [3, 3])
+
+  // ── Scoped Selection ────────────────────
+  parentHighlightStroke: string    // Parent outline when child is selected (default: 'rgba(99,102,241,0.35)')
+  childOutlineStroke: string       // Available children outlines (default: 'rgba(99,102,241,0.18)')
+
+  // ── Drag & Drop ─────────────────────────
+  dropZoneStroke: string           // Drop container border (default: '#3b82f6')
+  dropZoneWidth: number            // Drop zone stroke width (default: 2)
+  insertionLineStroke: string      // Insertion line color (default: '#3b82f6')
+  insertionLineWidth: number       // Insertion line width (default: 3)
 }
 ```
 
@@ -139,3 +182,29 @@ onTextEditRequest?: (
 ```
 
 Double-click escape hatch callback to mount custom rich text editor overlays. See the [Custom Editor Guide](/guides/custom-editor) for implementation examples.
+
+---
+
+#### `onForcePseudoState`
+
+```typescript
+onForcePseudoState?: (
+  nodeId: string,
+  state: "hover" | "active" | "focus",
+  enabled: boolean
+) => void
+```
+
+Fired when a node's pseudo-class state is modified via `forceNodeState()`. Use this to delegate pseudo-class forcing to the host — for example, via Chrome DevTools Protocol (`CSS.forcePseudoState`) in an Electron environment.
+
+```typescript
+const ws = new Workspace(container, {
+  onForcePseudoState(nodeId, state, enabled) {
+    // e.g., Forward to CDP in Electron
+    cdp.send('CSS.forcePseudoState', {
+      nodeId: getDOMNodeId(nodeId),
+      forcedPseudoClasses: enabled ? [`:${state}`] : [],
+    })
+  },
+})
+```

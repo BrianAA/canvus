@@ -48,6 +48,26 @@ _Avoid_: Third-party editor, WYSIWYG connector
 A `<style>` block injected directly into the Projection Mutation Layer to apply custom styling without polluting the host editor shell.
 _Avoid_: Global style, global stylesheet
 
+**Preview Mode**:
+A workspace toggle that disables all editing overlays (selection, handles, spacing adjusters) and allows pointer events to pass through to Shadow DOM content for native interaction testing.
+_Avoid_: Live mode, play mode
+
+**Lazy Child Registration**:
+The deferred discovery and registration of child nodes, triggered only when their parent container is selected. Prevents layout distortion and improves startup performance by avoiding premature child measurement.
+_Avoid_: Eager registration, pre-scan
+
+**Dynamic Forced Hover**:
+The automatic injection and removal of `.canvus-state-hover` classes on canvas elements under the cursor, ensuring CSS `:hover` styles render correctly despite the pointer-event-blocking overlay.
+_Avoid_: Hover simulation, fake hover
+
+**Marquee Selection**:
+Multi-node selection via a drag rectangle drawn on the Viewport Surface Layer. Nodes whose bounds intersect the marquee rectangle are added to the active selection set.
+_Avoid_: Lasso, rubber band
+
+**Middle Mouse Pan**:
+Workspace panning initiated by middle-mouse-button drag, aligning with standard design application UX (Figma, Sketch). Alternative to Space+drag panning.
+_Avoid_: Scroll pan, drag pan
+
 ## SDK Boundary
 
 The Canvus SDK enforces a strict **dumb canvas** boundary:
