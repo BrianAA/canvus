@@ -19,7 +19,7 @@ import { ShadowMount } from "./shadow-mount.js";
 import { NodeTree } from "./tree.js";
 import { findDropTarget } from "./drop-zone.js";
 import { OverlayRenderer, anchorCursor, computeAlignmentGuides, computeSnappedPosition, } from "./renderer.js";
-import { detectLayout, getLayoutLabel, parseGridTracks } from "./layout.js";
+import { detectLayout, getLayoutLabel, parseGridTracks, getFlowAxis } from "./layout.js";
 // ── Resize Math ─────────────────────────────────────────────
 /**
  * Computes a new bounding rect after applying a resize delta
@@ -1791,6 +1791,111 @@ export class Workspace {
         else if (e.key === "Meta" || e.key === "Control") {
             this.updateHover(true);
         }
+        else if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+            if (this.selectedIds.size === 1) {
+                const nodeId = this.selectedIds.values().next().value;
+                const node = this.tree.get(nodeId);
+                if (node) {
+                    e.preventDefault();
+                    this.nudgeOrReorderNode(node, e.key, e.shiftKey);
+                }
+            }
+        }
+    }
+    nudgeOrReorderNode(node, key, shiftKey) {
+        if (node.parentId !== null) {
+            // ── Flow Child Reordering ──────────────────────
+            const parentId = node.parentId;
+            const parentContent = this.mount.getContentRoot(parentId);
+            if (!parentContent)
+                return;
+            const layoutInfo = detectLayout(parentContent);
+            const flowAxis = getFlowAxis(layoutInfo); // "x" or "y"
+            const currentIndex = this.tree.getChildIndex(node.id);
+            const siblings = this.tree.getChildren(parentId);
+            const maxIndex = siblings.length - 1;
+            let newIndex = currentIndex;
+            if (layoutInfo.mode === "grid" || layoutInfo.mode === "inline-grid") {
+                // Grid: 2D flow. Let ArrowLeft/ArrowUp move left/up (index - 1),
+                // and ArrowRight/ArrowDown move right/down (index + 1).
+                if (key === "ArrowLeft" || key === "ArrowUp") {
+                    newIndex = Math.max(0, currentIndex - 1);
+                }
+                else if (key === "ArrowRight" || key === "ArrowDown") {
+                    newIndex = Math.min(maxIndex, currentIndex + 1);
+                }
+            }
+            else if (flowAxis === "x") {
+                // Horizontal (row) flex/inline: Left/Right arrows reorder
+                if (key === "ArrowLeft") {
+                    newIndex = Math.max(0, currentIndex - 1);
+                }
+                else if (key === "ArrowRight") {
+                    newIndex = Math.min(maxIndex, currentIndex + 1);
+                }
+            }
+            else {
+                // Vertical (column) flex/block: Up/Down arrows reorder
+                if (key === "ArrowUp") {
+                    newIndex = Math.max(0, currentIndex - 1);
+                }
+                else if (key === "ArrowDown") {
+                    newIndex = Math.min(maxIndex, currentIndex + 1);
+                }
+            }
+            if (newIndex !== currentIndex) {
+                const oldIndex = currentIndex;
+                // Temporarily disable transitions during key reordering to prevent layout lag
+                this.mount.setTransitionsEnabled(false);
+                // Perform reorder
+                this.reorderChild(node.id, newIndex);
+                this.mount.setTransitionsEnabled(true);
+                // Commit HTML change
+                const html = this.mount.extractHTML(parentId);
+                if (html) {
+                    this.callbacks.onHTMLCommit?.(parentId, html);
+                }
+                this.callbacks.onOperationsGenerated?.([{
+                        type: "reorder",
+                        nodeId: node.id,
+                        payload: { index: newIndex },
+                        undoPayload: { index: oldIndex }
+                    }]);
+            }
+        }
+        else {
+            // ── Absolute Nudging (Root Nodes) ─────────────
+            const nudgeAmount = shiftKey ? 10 : 1;
+            const currentX = node.currentRect ? node.currentRect.x : 0;
+            const currentY = node.currentRect ? node.currentRect.y : 0;
+            let newX = currentX;
+            let newY = currentY;
+            if (key === "ArrowLeft")
+                newX -= nudgeAmount;
+            if (key === "ArrowRight")
+                newX += nudgeAmount;
+            if (key === "ArrowUp")
+                newY -= nudgeAmount;
+            if (key === "ArrowDown")
+                newY += nudgeAmount;
+            if (newX !== currentX || newY !== currentY) {
+                const payload = { left: `${newX}px`, top: `${newY}px` };
+                const undoPayload = { left: `${currentX}px`, top: `${currentY}px` };
+                // Temporarily disable transitions during nudging to prevent visual lag
+                this.mount.setTransitionsEnabled(false);
+                this.setNodeStyles(node.id, payload);
+                this.mount.setTransitionsEnabled(true);
+                this.callbacks.onOperationsGenerated?.([{
+                        type: "update-style",
+                        nodeId: node.id,
+                        payload,
+                        undoPayload
+                    }]);
+                if (node.currentRect) {
+                    this.callbacks.onNodeRectChange?.(node.id, node.currentRect);
+                }
+            }
+        }
     }
     handleKeyUp(e) {
         const target = e.composedPath()[0] || null;
@@ -2382,11 +2487,11 @@ export class Workspace {
                 });
             }
         };
-        // Calculate content bounds (inset by margins, since the wrapper includes the margins)
-        const cx = x + marLeft;
-        const cy = y + marTop;
-        const cw = Math.max(0, width - marLeft - marRight);
-        const ch = Math.max(0, height - marTop - marBottom);
+        // Calculate content bounds (use direct border box bounds as currentRect doesn't include margins)
+        const cx = x;
+        const cy = y;
+        const cw = width;
+        const ch = height;
         // Padding adjusters (drawn inside the content bounds)
         // Pad top
         const pth = Math.max(thickness, padTop);

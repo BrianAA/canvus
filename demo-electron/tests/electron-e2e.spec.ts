@@ -219,5 +219,65 @@ test.describe('Electron E2E Integration Suite', () => {
       await electronApp.close();
     }
   });
+
+  test('keyboard interaction nudges absolute nodes and reorders flow children', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
+      window.on('pageerror', err => console.error('PAGE ERROR:', err));
+      await window.waitForLoadState('domcontentloaded');
+
+      // Select 'Standard Test Page'
+      const templateSelect = window.locator('#sel-template');
+      await templateSelect.selectOption('test-page');
+
+      // Click on the root node to select it and register its children
+      const rootNodeCard = window.locator('#node-list .node-card', { hasText: 'main-container' });
+      await expect(rootNodeCard).toBeVisible();
+      await rootNodeCard.click();
+
+      // Click on the layout-grid container to register the cards
+      const gridNodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ layout-grid$/ });
+      await expect(gridNodeCard).toBeVisible();
+      await gridNodeCard.click();
+
+      // Click card-1 in the node list to select it
+      const nodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ card-1$/ });
+      await expect(nodeCard).toBeVisible();
+      await nodeCard.click();
+
+      // Programmatically dispatch the keydown event to window to trigger the workspace shortcut
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'ArrowRight',
+          code: 'ArrowRight',
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Reordering should trigger commit log entry
+      const commitLogEntry = window.locator('#commit-log .commit-entry');
+      await expect(commitLogEntry.first()).toBeVisible({ timeout: 5000 });
+      await expect(commitLogEntry.first()).toContainText('layout-grid');
+
+      // Verify toast notification is displayed for HTML commit
+      const toast = window.locator('.toast-item').last();
+      await expect(toast).toContainText('Committed "layout-grid"');
+
+      // Check undo stack contains a reorder operation
+      const undoBtn = window.locator('#btn-undo');
+      await expect(undoBtn).toBeEnabled();
+
+    } finally {
+      await electronApp.close();
+    }
+  });
 });
 

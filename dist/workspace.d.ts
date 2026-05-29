@@ -270,6 +270,7 @@ export declare class Workspace {
     private handlePointerUp;
     /** Spacebar tracking for pan mode. */
     private handleKeyDown;
+    private nudgeOrReorderNode;
     private handleKeyUp;
     /** Resize canvas to match container dimensions. */
     private handleResize;
