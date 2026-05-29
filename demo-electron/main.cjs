@@ -32,6 +32,8 @@ function createWindow() {
     try {
       await win.webContents.debugger.sendCommand('DOM.enable');
       await win.webContents.debugger.sendCommand('CSS.enable');
+      // Initialize the DOM agent's tracking cache
+      await win.webContents.debugger.sendCommand('DOM.getDocument', { depth: -1, pierce: true });
     } catch (err) {
       console.error('[main.cjs] CDP initialization failed:', err);
     }
@@ -105,23 +107,35 @@ ipcMain.handle('force-pseudo-state', async (event, { nodeId, stateName, enabled 
     const dbg = mainWindow.webContents.debugger;
 
     // 1. Retrieve the element objectId inside Shadow DOM
-    const expr = `window.ws && window.ws.getWrapper('${nodeId}') ? window.ws.getWrapper('${nodeId}').firstElementChild : null`;
+    const expr = `window.ws ? window.ws.getContentRoot('${nodeId}') : null`;
     const evalResult = await dbg.sendCommand('Runtime.evaluate', {
       expression: expr,
       returnByValue: false
     });
 
     if (!evalResult || !evalResult.result || !evalResult.result.objectId) {
-      console.warn(`[main.cjs] Element not found for nodeId: ${nodeId}`);
+      // Node might be untracked (e.g. lazy children after selection change). Silence warning.
       return false;
     }
 
     const objectId = evalResult.result.objectId;
 
-    // 2. Request the CDP nodeId for this object
-    const { nodeId: cdpNodeId } = await dbg.sendCommand('DOM.requestNode', {
-      objectId
-    });
+    // 2. Request the CDP nodeId for this object, with self-healing retry on cache miss
+    let cdpNodeId;
+    try {
+      const res = await dbg.sendCommand('DOM.requestNode', { objectId });
+      cdpNodeId = res.nodeId;
+    } catch (err) {
+      try {
+        // If it failed, the DOM agent cache might be stale. Refresh document and retry once.
+        await dbg.sendCommand('DOM.getDocument', { depth: -1, pierce: true });
+        const res = await dbg.sendCommand('DOM.requestNode', { objectId });
+        cdpNodeId = res.nodeId;
+      } catch (retryErr) {
+        console.warn(`[main.cjs] Failed to request node for ${nodeId} after retry:`, retryErr);
+        return false;
+      }
+    }
 
     // 3. Keep track of active forced states for this node
     if (!forcedStatesMap.has(nodeId)) {

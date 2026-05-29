@@ -36,6 +36,11 @@ export interface WorkspaceCallbacks {
     onOperationsGenerated?: (operations: Operation[]) => void;
     /** Fired when double-clicking a text node to delegate rich-text editing to the host. */
     onTextEditRequest?: (nodeId: string, element: HTMLElement, commit: (newHTML: string) => void) => void;
+    /**
+     * Optional custom handler to delegate pseudo-class forcing.
+     * Fired when a node's pseudo-class state (hover, active, focus) is modified.
+     */
+    onForcePseudoState?: (nodeId: string, state: "hover" | "active" | "focus", enabled: boolean) => void;
 }
 /**
  * The top-level orchestration engine for a Canvus workspace.

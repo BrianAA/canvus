@@ -131,6 +131,14 @@ export default function App() {
         console.log('⚡ Operations Generated:', ops);
         localUndoStack.push(ops);
         setUndoStack([...localUndoStack]);
+      },
+
+      onForcePseudoState(nodeId, state, enabled) {
+        if (window.electronAPI && window.electronAPI.forcePseudoState) {
+          window.electronAPI.forcePseudoState(nodeId, state, enabled).catch(err => {
+            console.error('[App.tsx] Failed to force pseudo state via Electron CDP:', err);
+          });
+        }
       }
     });
 
@@ -325,21 +333,13 @@ export default function App() {
     triggerNodeRefresh(ws);
   };
 
-  const toggleForcedState = async (stateName: 'hover' | 'active' | 'focus', val: boolean) => {
+  const toggleForcedState = (stateName: 'hover' | 'active' | 'focus', val: boolean) => {
     if (!ws || selectedIds.length !== 1) return;
     const id = selectedIds[0]!;
     ws.forceNodeState(id, stateName, val);
     if (stateName === 'hover') setForceHover(val);
     if (stateName === 'active') setForceActive(val);
     if (stateName === 'focus') setForceFocus(val);
-
-    if (window.electronAPI && window.electronAPI.forcePseudoState) {
-      try {
-        await window.electronAPI.forcePseudoState(id, stateName, val);
-      } catch (err) {
-        console.error('[App.tsx] Failed to force pseudo state via Electron CDP:', err);
-      }
-    }
 
     triggerNodeRefresh(ws);
   };

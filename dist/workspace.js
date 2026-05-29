@@ -517,10 +517,7 @@ export class Workspace {
     // ── Public API: Synthetic Interaction ───────────
     /** Dispatches a synthetic pointer/mouse event (e.g. mouseenter, mouseleave, click) to a node. */
     dispatchInteractionEvent(nodeId, eventName) {
-        const wrapper = this.mount.getWrapper(nodeId);
-        if (!wrapper)
-            return;
-        const contentRoot = wrapper.firstElementChild;
+        const contentRoot = this.mount.getContentRoot(nodeId);
         if (!contentRoot)
             return;
         let event;
@@ -582,9 +579,8 @@ export class Workspace {
             }
             case "update-style": {
                 const styles = op.payload;
-                const wrapper = this.mount.getWrapper(op.nodeId);
-                const contentRoot = wrapper?.firstElementChild;
-                if (!wrapper || !contentRoot)
+                const contentRoot = this.mount.getContentRoot(op.nodeId);
+                if (!contentRoot)
                     break;
                 const stylesToApply = {};
                 for (const [prop, val] of Object.entries(styles)) {
@@ -623,8 +619,7 @@ export class Workspace {
             }
             case "update-classes": {
                 const { add, remove } = op.payload;
-                const wrapper = this.mount.getWrapper(op.nodeId);
-                const contentRoot = wrapper?.firstElementChild;
+                const contentRoot = this.mount.getContentRoot(op.nodeId);
                 if (!contentRoot)
                     break;
                 if (Array.isArray(remove)) {
@@ -646,8 +641,7 @@ export class Workspace {
             }
             case "update-text": {
                 const { path, html } = op.payload;
-                const wrapper = this.mount.getWrapper(op.nodeId);
-                const contentRoot = wrapper?.firstElementChild;
+                const contentRoot = this.mount.getContentRoot(op.nodeId);
                 if (!contentRoot)
                     break;
                 const targetEl = getDOMElementByPath(contentRoot, path);
@@ -668,8 +662,7 @@ export class Workspace {
         const node = this.tree.get(id);
         if (!node)
             return;
-        const wrapper = this.mount.getWrapper(id);
-        const contentRoot = wrapper?.firstElementChild;
+        const contentRoot = this.mount.getContentRoot(id);
         if (!contentRoot)
             return;
         if (contentRoot.classList.contains(className))
@@ -697,8 +690,7 @@ export class Workspace {
         const node = this.tree.get(id);
         if (!node)
             return;
-        const wrapper = this.mount.getWrapper(id);
-        const contentRoot = wrapper?.firstElementChild;
+        const contentRoot = this.mount.getContentRoot(id);
         if (!contentRoot)
             return;
         if (!contentRoot.classList.contains(className))
@@ -726,8 +718,7 @@ export class Workspace {
         const node = this.tree.get(id);
         if (!node)
             return;
-        const wrapper = this.mount.getWrapper(id);
-        const contentRoot = wrapper?.firstElementChild;
+        const contentRoot = this.mount.getContentRoot(id);
         if (!contentRoot)
             return;
         const hasClass = contentRoot.classList.contains(className);
@@ -854,8 +845,7 @@ export class Workspace {
                     this.activeAnchor = anchor;
                     this.dragStartCanvas = canvasPos;
                     this.resizeStartRect = { ...selNode.currentRect };
-                    const wrapper = this.mount.getWrapper(selId);
-                    const contentRoot = wrapper?.firstElementChild;
+                    const contentRoot = this.mount.getContentRoot(selId);
                     if (contentRoot) {
                         this.dragStartStyles = {
                             "grid-column-start": contentRoot.style.gridColumnStart || null,
@@ -885,8 +875,7 @@ export class Workspace {
             if (hitAdjuster) {
                 this.activeAdjusterType = hitAdjuster.type;
                 this.adjusterStartValue = hitAdjuster.value;
-                const wrapper = this.mount.getWrapper(selId);
-                const contentRoot = wrapper?.firstElementChild;
+                const contentRoot = this.mount.getContentRoot(selId);
                 this.adjusterStartValueStr = contentRoot ? (contentRoot.style.getPropertyValue(hitAdjuster.type) || null) : null;
                 this.dragStartCanvas = canvasPos;
                 this.render();
@@ -1002,8 +991,7 @@ export class Workspace {
             };
             this.dragStartParentId = hitNode.parentId;
             this.dragStartIndex = this.tree.getChildIndex(targetSelectId);
-            const wrapper = this.mount.getWrapper(targetSelectId);
-            const contentRoot = wrapper?.firstElementChild;
+            const contentRoot = this.mount.getContentRoot(targetSelectId);
             if (contentRoot) {
                 this.dragStartStyles = {
                     "grid-column-start": contentRoot.style.gridColumnStart || null,
@@ -1102,7 +1090,7 @@ export class Workspace {
                     delta = -dx;
                     break;
                 case "margin-right":
-                    delta = dx;
+                    delta = -dx;
                     break;
             }
             const newValue = Math.max(0, Math.round(this.adjusterStartValue + delta));
@@ -1435,8 +1423,7 @@ export class Workspace {
         if (this.activeAdjusterType) {
             if (this.selectedIds.size === 1) {
                 const selId = this.selectedIds.values().next().value;
-                const wrapper = this.mount.getWrapper(selId);
-                const contentRoot = wrapper?.firstElementChild;
+                const contentRoot = this.mount.getContentRoot(selId);
                 if (contentRoot && this.activeAdjusterType) {
                     const finalValueStr = contentRoot.style.getPropertyValue(this.activeAdjusterType) || null;
                     if (finalValueStr !== this.adjusterStartValueStr) {
@@ -1930,6 +1917,23 @@ export class Workspace {
         const targetEl = e.composedPath()[0];
         if (!targetEl)
             return;
+        // Ensure we only edit text-like or leaf elements, rather than entire layout containers
+        const textTags = new Set([
+            "h1", "h2", "h3", "h4", "h5", "h6",
+            "p", "span", "strong", "em", "b", "i", "u",
+            "a", "button", "label", "li", "code", "pre", "td", "th"
+        ]);
+        const ignoredTags = new Set([
+            "img", "svg", "canvas", "video", "audio",
+            "iframe", "input", "select", "textarea", "br", "hr",
+            "object", "embed", "path", "g", "rect", "circle"
+        ]);
+        const tag = targetEl.tagName?.toLowerCase() || "";
+        const isTextLike = textTags.has(tag) || (targetEl.children.length === 0 && !ignoredTags.has(tag));
+        if (!isTextLike) {
+            this.editAllowedOnDblClick = false;
+            return;
+        }
         // Find the enclosing node wrapper (both wrapper-based and direct nodes have data-canvus-id)
         let curr = targetEl;
         let nodeId = null;
@@ -2206,12 +2210,7 @@ export class Workspace {
         const wrapper = this.mount.getWrapper(parentId);
         if (!wrapper)
             return;
-        // For root nodes: content root is wrapper's first child.
-        // For direct nodes: content root is the wrapper itself.
-        const isDirectNode = this.lazyRegisteredIds.has(parentId);
-        const contentRoot = isDirectNode
-            ? wrapper
-            : wrapper.firstElementChild;
+        const contentRoot = this.mount.getContentRoot(parentId);
         if (!contentRoot)
             return;
         const children = Array.from(contentRoot.children);
@@ -2422,17 +2421,30 @@ export class Workspace {
         const wrapper = this.mount.getWrapper(nodeId);
         if (!wrapper)
             return;
-        const contentRoot = wrapper.firstElementChild;
+        const contentRoot = this.mount.getContentRoot(nodeId);
         const className = `canvus-state-${state}`;
         if (enabled) {
             wrapper.classList.add(className);
-            contentRoot?.classList.add(className);
+            if (contentRoot && contentRoot !== wrapper) {
+                contentRoot.classList.add(className);
+            }
         }
         else {
             wrapper.classList.remove(className);
-            contentRoot?.classList.remove(className);
+            if (contentRoot && contentRoot !== wrapper) {
+                contentRoot.classList.remove(className);
+            }
         }
         this.remeasureSubtree(nodeId);
+        // Delegate pseudo-state forcing if callback or electronAPI is available
+        if (this.callbacks.onForcePseudoState) {
+            this.callbacks.onForcePseudoState(nodeId, state, enabled);
+        }
+        else if (typeof window !== "undefined" && window.electronAPI?.forcePseudoState) {
+            window.electronAPI.forcePseudoState(nodeId, state, enabled).catch((err) => {
+                console.error(`[Workspace] Failed to force pseudo state ${state} on ${nodeId} via electronAPI:`, err);
+            });
+        }
     }
     /** Updates the active breadcrumbs and calls external callback. */
     updateBreadcrumb() {
@@ -2466,12 +2478,10 @@ export class Workspace {
         const node = this.tree.get(id);
         if (!node || !node.currentRect)
             return [];
-        const wrapper = this.mount.getWrapper(id);
-        if (!wrapper)
+        const contentRoot = this.mount.getContentRoot(id);
+        if (!contentRoot)
             return [];
-        const contentRoot = wrapper.firstElementChild;
-        const element = contentRoot ?? wrapper;
-        const cs = getComputedStyle(element);
+        const cs = getComputedStyle(contentRoot);
         const padTop = parseFloat(cs.paddingTop) || 0;
         const padRight = parseFloat(cs.paddingRight) || 0;
         const padBottom = parseFloat(cs.paddingBottom) || 0;
