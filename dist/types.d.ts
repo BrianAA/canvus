@@ -108,7 +108,7 @@ export declare function resolveNode(node: Readonly<WebHTMLNode>): ResolvedNode;
 /** Cardinal + intercardinal anchor positions on a selection frame. */
 export type ResizeAnchor = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 /** Discriminated active interaction modes. */
-export type InteractionMode = "pan" | "drag-node" | "resize-node" | "reparent" | "reorder" | "select-marquee" | "adjust-spacing" | null;
+export type InteractionMode = "pan" | "drag-node" | "resize-node" | "reparent" | "reorder" | "select-marquee" | "adjust-spacing" | "draw-node" | null;
 /**
  * Transient drag/resize interaction descriptor.
  * Captures the pointer-down origin and the specific handle or node
@@ -134,8 +134,10 @@ export interface DragHandleState {
 export declare function createIdleDragState(): DragHandleState;
 /** Returns a default viewport at 1:1 scale with zero pan offset. */
 export declare function createDefaultViewport(): ViewportMatrix;
+/** Supported tool types for drawing. */
+export type CanvusTool = "box" | "text" | null;
 /** Supported operation types for visual editor changes. */
-export type OperationType = "update-style" | "update-classes" | "reparent" | "reorder" | "update-text";
+export type OperationType = "update-style" | "update-classes" | "reparent" | "reorder" | "update-text" | "create-node" | "delete-node";
 /** Serialized atomic modification block for undo/redo & collaborative synchronization. */
 export interface Operation {
     /** The action type class name. */

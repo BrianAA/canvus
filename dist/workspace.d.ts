@@ -1,4 +1,4 @@
-import type { Rect, ResolvedNode, ViewportMatrix, WebHTMLNode, Operation } from "./types.js";
+import type { Rect, ResolvedNode, ViewportMatrix, WebHTMLNode, Operation, CanvusTool } from "./types.js";
 import { ShadowMount } from "./shadow-mount.js";
 import { NodeTree } from "./tree.js";
 import type { OverlayStyle } from "./renderer.js";
@@ -127,6 +127,17 @@ export declare class Workspace {
     /** Set of node IDs that were lazily registered (children discovered on selection). */
     private readonly lazyRegisteredIds;
     private lazyChildCounter;
+    private activeTool;
+    private drawingTag;
+    private drawingTextTag;
+    private isDrawingNode;
+    private drawStartCanvas;
+    private drawCurrentCanvas;
+    private newElementCounter;
+    private clipboardNodeMarkup;
+    private clipboardNodeRect;
+    private isDragCopy;
+    private dragCopyMarkup;
     private readonly onWheel;
     private readonly onPointerDown;
     private readonly onPointerMove;
@@ -197,6 +208,22 @@ export declare class Workspace {
     setPreviewMode(enabled: boolean): void;
     /** Returns whether the workspace is currently in Preview Mode. */
     isPreviewMode(): boolean;
+    /** Sets the active drawing tool (box, text, or null to return to selection/idle mode). */
+    setActiveTool(tool: CanvusTool): void;
+    /** Returns the currently active drawing tool. */
+    getActiveTool(): CanvusTool;
+    /** Customizes the HTML tag type for box or text drawing. */
+    setDrawingTag(tag: string): void;
+    /** Returns the active drawing tag based on the selected tool. */
+    getDrawingTag(): string;
+    /** Deletes the currently selected node from the workspace. */
+    deleteSelectedNode(): void;
+    /** Copies the selected node to the internal clipboard. */
+    copySelectedNode(): void;
+    /** Cuts the selected node to the clipboard, removing it from the canvas. */
+    cutSelectedNode(): void;
+    /** Pastes the node currently in the clipboard into the canvas. */
+    pasteNode(): void;
     /** Forces a pseudo-class state (hover, active, focus) on the specified node element. */
     forceNodeState(nodeId: string, state: "hover" | "active" | "focus", enabled: boolean): void;
     /**
@@ -327,6 +354,7 @@ export declare class Workspace {
     private setNodeStateClass;
     /** Updates the active breadcrumbs and calls external callback. */
     private updateBreadcrumb;
+    private getDrawingRect;
     private getMarqueeRect;
     private computeSpacingAdjusters;
     private assertNotDisposed;

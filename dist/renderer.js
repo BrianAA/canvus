@@ -333,24 +333,29 @@ export class OverlayRenderer {
             let activeAdjuster = null;
             let activeProjectedRect = null;
             for (const adj of frame.spacingAdjusters) {
-                const p = {
-                    sx: adj.rect.x * viewport.scale + viewport.offsetX,
-                    sy: adj.rect.y * viewport.scale + viewport.offsetY,
-                    sw: adj.rect.width * viewport.scale,
-                    sh: adj.rect.height * viewport.scale,
+                const pVisual = {
+                    sx: adj.visualRect.x * viewport.scale + viewport.offsetX,
+                    sy: adj.visualRect.y * viewport.scale + viewport.offsetY,
+                    sw: adj.visualRect.width * viewport.scale,
+                    sh: adj.visualRect.height * viewport.scale,
                 };
                 if (adj.isActive) {
                     activeAdjuster = adj;
-                    activeProjectedRect = p;
+                    activeProjectedRect = {
+                        sx: adj.rect.x * viewport.scale + viewport.offsetX,
+                        sy: adj.rect.y * viewport.scale + viewport.offsetY,
+                        sw: adj.rect.width * viewport.scale,
+                        sh: adj.rect.height * viewport.scale,
+                    };
                 }
                 const isPadding = adj.type.startsWith("padding");
                 const baseColor = isPadding ? "34, 197, 94" : "249, 115, 22"; // Green vs Orange
                 if (adj.isHovered || adj.isActive) {
                     ctx.fillStyle = `rgba(${baseColor}, 0.25)`;
-                    ctx.fillRect(p.sx, p.sy, p.sw, p.sh);
+                    ctx.fillRect(pVisual.sx, pVisual.sy, pVisual.sw, pVisual.sh);
                     ctx.strokeStyle = `rgba(${baseColor}, 0.85)`;
                     ctx.lineWidth = 1.5;
-                    ctx.strokeRect(p.sx, p.sy, p.sw, p.sh);
+                    ctx.strokeRect(pVisual.sx, pVisual.sy, pVisual.sw, pVisual.sh);
                 }
             }
             // Draw tooltip for the active adjuster on top
@@ -416,6 +421,47 @@ export class OverlayRenderer {
                 ctx.fillStyle = "#ffffff";
                 ctx.fillText(label, tooltipX, by + th / 2);
             }
+        }
+        // 15. Active node drawing preview
+        if (frame.drawingRect) {
+            const p = {
+                sx: frame.drawingRect.x * viewport.scale + viewport.offsetX,
+                sy: frame.drawingRect.y * viewport.scale + viewport.offsetY,
+                sw: frame.drawingRect.width * viewport.scale,
+                sh: frame.drawingRect.height * viewport.scale,
+            };
+            ctx.strokeStyle = "rgba(99, 102, 241, 0.8)";
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 3]);
+            ctx.strokeRect(p.sx, p.sy, p.sw, p.sh);
+            ctx.setLineDash([]);
+            ctx.fillStyle = "rgba(99, 102, 241, 0.06)";
+            ctx.fillRect(p.sx, p.sy, p.sw, p.sh);
+            const tag = frame.drawingTag || "div";
+            const label = `${tag}: ${Math.round(frame.drawingRect.width)} x ${Math.round(frame.drawingRect.height)}`;
+            ctx.font = "600 10px 'JetBrains Mono', monospace";
+            ctx.textBaseline = "middle";
+            ctx.textAlign = "center";
+            const tm = ctx.measureText(label);
+            const tw = tm.width;
+            const th = 16;
+            const pad = 6;
+            const gap = 8;
+            const tooltipX = p.sx + p.sw / 2;
+            let by = p.sy + p.sh + gap;
+            if (by + th > height) {
+                by = p.sy - gap - th;
+            }
+            const bx = tooltipX - tw / 2 - pad;
+            ctx.fillStyle = "rgba(10, 10, 15, 0.95)";
+            ctx.strokeStyle = "rgba(99, 102, 241, 0.85)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(bx, by, tw + pad * 2, th, 4);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(label, tooltipX, by + th / 2);
         }
     }
     // ── Handle Hit-Testing ──────────────────────────

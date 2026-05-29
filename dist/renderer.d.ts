@@ -115,12 +115,18 @@ export interface OverlayFrame {
     marqueeRect?: Rect | null;
     /** Active spacing adjusters to render on screen. */
     spacingAdjusters?: ReadonlyArray<SpacingAdjusterInfo>;
+    /** Active drawing element bounds in canvas-space. */
+    drawingRect?: Rect | null;
+    /** Active drawing element HTML tag name. */
+    drawingTag?: string | null;
 }
 export type SpacingAdjusterType = "padding-top" | "padding-right" | "padding-bottom" | "padding-left" | "margin-top" | "margin-right" | "margin-bottom" | "margin-left";
 export interface SpacingAdjusterInfo {
     type: SpacingAdjusterType;
     /** Bounding box of the handle bar in canvas-space. */
     rect: Rect;
+    /** Visual bounding box representing the actual spacing dimensions exactly. */
+    visualRect: Rect;
     /** Spacing value in pixels. */
     value: number;
     /** Hover state. */

@@ -126,6 +126,7 @@
     .actions { padding: 12px 20px; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 6px; }
     .btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-elevated); color: var(--text-primary); font-family: var(--font-sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
     .btn:hover { background: var(--bg-hover); border-color: var(--border-accent); box-shadow: 0 0 12px var(--accent-glow); }
+    .btn.active { background: var(--accent-glow); border-color: var(--border-accent); color: var(--text-primary); box-shadow: 0 0 8px var(--accent-glow); }
     .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
     .btn.primary:hover { background: #818cf8; border-color: #818cf8; }
     .btn.danger:hover { border-color: var(--danger); color: var(--danger); }
@@ -186,7 +187,26 @@
     </div>
 
     <div class="actions">
-      <button class="btn primary" id="btn-add">＋ Add Node</button>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+        <button class="btn" id="btn-draw-box">▢ Draw Box</button>
+        <button class="btn" id="btn-draw-text">T Draw Text</button>
+      </div>
+      <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between; margin-bottom: 4px; padding: 2px 4px;">
+        <span style="font-size: 11px; color: var(--text-secondary);">Drawing Tag:</span>
+        <select id="draw-tag-select" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-primary); border-radius: 4px; padding: 4px 8px; font-size: 11px; outline: none; font-family: var(--font-sans); flex: 1; max-width: 140px; cursor: pointer;">
+          <option value="div">div (default box)</option>
+          <option value="section">section</option>
+          <option value="article">article</option>
+          <option value="main">main</option>
+          <option value="p">p (default text)</option>
+          <option value="h1">h1</option>
+          <option value="h2">h2</option>
+          <option value="h3">h3</option>
+          <option value="span">span</option>
+        </select>
+      </div>
+      <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 4px 0;" />
+      <button class="btn primary" id="btn-add">＋ Add Node (Seed)</button>
       <button class="btn" id="btn-measure">📐 Measure All</button>
       <button class="btn" id="btn-reset">↺ Reset Viewport</button>
     </div>
@@ -248,6 +268,18 @@
 
         onInteractionChange(mode) {
           document.getElementById('i-mode').textContent = mode ?? 'idle';
+
+          const boxBtn = document.getElementById('btn-draw-box');
+          const textBtn = document.getElementById('btn-draw-text');
+          boxBtn.classList.remove('active');
+          textBtn.classList.remove('active');
+
+          const activeTool = ws.getActiveTool();
+          if (activeTool === 'box') {
+            boxBtn.classList.add('active');
+          } else if (activeTool === 'text') {
+            textBtn.classList.add('active');
+          }
         }
       }
     );
@@ -333,6 +365,24 @@
       ws.resetViewport();
       syncGrid(ws.getViewport());
       toast('Viewport reset');
+    });
+
+    // ── Drawing Tool Event Handlers ──────────────
+    document.getElementById('btn-draw-box').addEventListener('click', () => {
+      const isCurrentlyBox = ws.getActiveTool() === 'box';
+      ws.setActiveTool(isCurrentlyBox ? null : 'box');
+      toast(isCurrentlyBox ? 'Draw Box disabled' : 'Draw Box active');
+    });
+
+    document.getElementById('btn-draw-text').addEventListener('click', () => {
+      const isCurrentlyText = ws.getActiveTool() === 'text';
+      ws.setActiveTool(isCurrentlyText ? null : 'text');
+      toast(isCurrentlyText ? 'Draw Text disabled' : 'Draw Text active');
+    });
+
+    document.getElementById('draw-tag-select').addEventListener('change', (e) => {
+      ws.setDrawingTag(e.target.value);
+      toast(`Drawing tag set to: ${e.target.value}`);
     });
 
     function toast(msg) {

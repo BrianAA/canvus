@@ -328,11 +328,25 @@ export class NodeTree {
         const node = this.nodes.get(id);
         if (!node)
             return false;
-        return (node.childIds.length > 0 ||
+        if (node.childIds.length > 0 ||
             node.layoutMode === "flex" ||
             node.layoutMode === "grid" ||
             node.layoutMode === "inline-flex" ||
-            node.layoutMode === "inline-grid");
+            node.layoutMode === "inline-grid") {
+            return true;
+        }
+        if (node.rawMarkup) {
+            const match = node.rawMarkup.trim().match(/^<([a-zA-Z0-9-]+)/);
+            if (match && match[1]) {
+                const tag = match[1].toLowerCase();
+                const nonContainerTags = new Set([
+                    "p", "h1", "h2", "h3", "h4", "h5", "h6", "span", "img", "br", "hr",
+                    "input", "button", "textarea", "select", "a", "strong", "em", "code", "pre"
+                ]);
+                return !nonContainerTags.has(tag);
+            }
+        }
+        return false;
     }
     /** Returns whether a node is a leaf (no children). */
     isLeaf(id) {

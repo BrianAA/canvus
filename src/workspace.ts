@@ -22,6 +22,7 @@ import type {
   ViewportMatrix,
   WebHTMLNode,
   Operation,
+  CanvusTool,
 } from "./types.js";
 
 import { createDefaultViewport, resolveNode } from "./types.js";
@@ -262,6 +263,21 @@ export class Workspace {
   /** Set of node IDs that were lazily registered (children discovered on selection). */
   private readonly lazyRegisteredIds = new Set<string>();
   private lazyChildCounter = 0;
+
+  // ── Drawing Tool State ──────────────────────────
+  private activeTool: CanvusTool = null;
+  private drawingTag: string = "div";
+  private drawingTextTag: string = "p";
+  private isDrawingNode: boolean = false;
+  private drawStartCanvas: Vec2 | null = null;
+  private drawCurrentCanvas: Vec2 | null = null;
+  private newElementCounter: number = 0;
+
+  // ── Clipboard State ─────────────────────────────
+  private clipboardNodeMarkup: string | null = null;
+  private clipboardNodeRect: Rect | null = null;
+  private isDragCopy: boolean = false;
+  private dragCopyMarkup: string | null = null;
 
   // ── Bound Event Handlers (for cleanup) ──────────
 
@@ -672,6 +688,183 @@ export class Workspace {
     return this.previewMode;
   }
 
+  // ── Public API: Drawing Tools ───────────────────
+
+  /** Sets the active drawing tool (box, text, or null to return to selection/idle mode). */
+  setActiveTool(tool: CanvusTool): void {
+    this.activeTool = tool;
+    this.container.style.cursor = tool ? "crosshair" : "default";
+
+    if (tool !== null) {
+      this.deselectAll();
+    }
+
+    this.callbacks.onInteractionChange?.(tool ? `draw-${tool}` : null);
+    this.render();
+  }
+
+  /** Returns the currently active drawing tool. */
+  getActiveTool(): CanvusTool {
+    return this.activeTool;
+  }
+
+  /** Customizes the HTML tag type for box or text drawing. */
+  setDrawingTag(tag: string): void {
+    const lower = tag.toLowerCase().trim();
+    const textTags = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "span", "a", "strong", "em", "li", "ul", "ol"];
+    if (textTags.includes(lower)) {
+      this.drawingTextTag = lower;
+    } else {
+      this.drawingTag = lower;
+    }
+  }
+
+  /** Returns the active drawing tag based on the selected tool. */
+  getDrawingTag(): string {
+    return this.activeTool === "text" ? this.drawingTextTag : this.drawingTag;
+  }
+
+  // ── Public API: Clipboard Operations ────────────
+
+  /** Deletes the currently selected node from the workspace. */
+  deleteSelectedNode(): void {
+    if (this.selectedIds.size !== 1) return;
+    const id = this.selectedIds.values().next().value as string;
+    const node = this.tree.get(id);
+    if (!node) return;
+
+    const parentId = node.parentId;
+    const rawMarkup = node.rawMarkup;
+    const rect = node.currentRect;
+
+    // Suppress observer feedback loops
+    this.mount.setTransitionsEnabled(false);
+
+    const removed = this.removeNode(id);
+    if (removed) {
+      // Generate operation
+      this.callbacks.onOperationsGenerated?.([{
+        type: "delete-node" as any,
+        nodeId: id,
+        payload: { parentId },
+        undoPayload: { parentId, rawMarkup, rect }
+      }]);
+
+      // Commit HTML
+      if (parentId) {
+        this.remeasureSubtree(parentId);
+        const html = this.mount.extractHTML(parentId);
+        if (html) {
+          this.callbacks.onHTMLCommit?.(parentId, html);
+        }
+      } else {
+        this.callbacks.onHTMLCommit?.(id, "");
+      }
+      this.deselectAll();
+    }
+
+    this.mount.setTransitionsEnabled(true);
+  }
+
+  /** Copies the selected node to the internal clipboard. */
+  copySelectedNode(): void {
+    if (this.selectedIds.size !== 1) return;
+    const id = this.selectedIds.values().next().value as string;
+    const node = this.tree.get(id);
+    const markup = this.mount.extractHTML(id);
+
+    if (node && markup) {
+      this.clipboardNodeMarkup = markup;
+      this.clipboardNodeRect = node.currentRect ? { ...node.currentRect } : null;
+    }
+  }
+
+  /** Cuts the selected node to the clipboard, removing it from the canvas. */
+  cutSelectedNode(): void {
+    if (this.selectedIds.size !== 1) return;
+    this.copySelectedNode();
+    this.deleteSelectedNode();
+  }
+
+  /** Pastes the node currently in the clipboard into the canvas. */
+  pasteNode(): void {
+    if (!this.clipboardNodeMarkup) return;
+
+    this.newElementCounter++;
+    const id = `pasted-${this.newElementCounter}-${Date.now().toString(36)}`;
+
+    let parentId: string | null = null;
+    let index: number | undefined;
+
+    // Resolve location: paste inside selected container, or as sibling to selected leaf
+    if (this.selectedIds.size === 1) {
+      const selId = this.selectedIds.values().next().value as string;
+      const selNode = this.tree.get(selId);
+      if (selNode) {
+        if (this.tree.isContainer(selId)) {
+          parentId = selId;
+          index = 0; // Paste as first child
+        } else {
+          parentId = selNode.parentId;
+          index = this.tree.getChildIndex(selId) + 1; // Sibling right after
+        }
+      }
+    }
+
+    // Resolve bounds: offset by 20px if root node to show stacking duplication
+    let rect: Rect;
+    if (parentId === null) {
+      if (this.clipboardNodeRect) {
+        rect = {
+          x: this.clipboardNodeRect.x + 20,
+          y: this.clipboardNodeRect.y + 20,
+          width: this.clipboardNodeRect.width,
+          height: this.clipboardNodeRect.height,
+        };
+        // Update clipboard rect reference for subsequent cascading pastes
+        this.clipboardNodeRect = rect;
+      } else {
+        rect = { x: 100, y: 100, width: 120, height: 120 };
+      }
+    } else {
+      if (this.clipboardNodeRect) {
+        rect = {
+          x: 0,
+          y: 0,
+          width: this.clipboardNodeRect.width,
+          height: this.clipboardNodeRect.height,
+        };
+      } else {
+        rect = { x: 0, y: 0, width: 120, height: 120 };
+      }
+    }
+
+    const nodeDescriptor: WebHTMLNode = {
+      id,
+      rawMarkup: this.clipboardNodeMarkup,
+      currentRect: rect,
+    };
+
+    // Add node
+    this.addNode(nodeDescriptor, parentId, index);
+    this.selectNode(id);
+
+    // Operations
+    this.callbacks.onOperationsGenerated?.([{
+      type: "create-node" as any,
+      nodeId: id,
+      payload: { parentId, index, rawMarkup: this.clipboardNodeMarkup, rect },
+      undoPayload: { parentId }
+    }]);
+
+    // Flat String Bridge commit
+    const commitTarget = parentId ?? id;
+    const html = this.mount.extractHTML(commitTarget);
+    if (html) {
+      this.callbacks.onHTMLCommit?.(commitTarget, html);
+    }
+  }
+
   // ── Public API: State Forcing ───────────────────
 
   /** Forces a pseudo-class state (hover, active, focus) on the specified node element. */
@@ -769,6 +962,19 @@ export class Workspace {
    */
   applyOperation(op: Operation): void {
     this.assertNotDisposed();
+
+    if (op.type === "create-node" || op.type === "delete-node") {
+      const payload = op.payload as any;
+      if (payload && typeof payload.rawMarkup === "string") {
+        const { parentId, index, rawMarkup, rect } = payload;
+        this.addNode({ id: op.nodeId, rawMarkup, currentRect: rect }, parentId, index);
+      } else {
+        this.removeNode(op.nodeId);
+        this.deselectAll();
+      }
+      this.render();
+      return;
+    }
 
     const node = this.tree.get(op.nodeId);
     if (!node) return;
@@ -1045,6 +1251,19 @@ export class Workspace {
 
     this.pointerDownInsideSelection = null;
 
+    // ── Drawing Tool Interception ─────────────────
+    if (this.activeTool !== null && e.button === 0) {
+      this.isDrawingNode = true;
+      this.drawStartCanvas = canvasPos;
+      this.drawCurrentCanvas = canvasPos;
+      this.activeDropTarget = null;
+      this.guides = [];
+      this.safeSetPointerCapture(e.pointerId);
+      this.callbacks.onInteractionChange?.("draw-node");
+      this.render();
+      return;
+    }
+
     // ── Space + pointer = Pan ─────────────────────
     if (this.spaceDown || e.button === 1) {
       if (e.button === 1) {
@@ -1314,6 +1533,23 @@ export class Workspace {
       return;
     }
 
+    // ── Drawing Tool Dragging ─────────────────────
+    if (this.isDrawingNode && this.drawStartCanvas) {
+      this.drawCurrentCanvas = canvasPos;
+
+      // Dynamically resolve target container and placement index to show guidelines preview
+      this.activeDropTarget = findDropTarget(
+        "__new_node__",
+        canvasPos,
+        this.tree,
+        (id) => this.mount.getWrapper(id),
+        (id) => this.mount.getContentRoot(id)
+      );
+
+      this.render();
+      return;
+    }
+
     // ── Spacing Adjusters Dragging ────────────────
     if (this.activeAdjusterType && this.dragStartCanvas) {
       const selId = this.selectedIds.values().next().value as string;
@@ -1359,7 +1595,11 @@ export class Workspace {
           break;
       }
 
-      const newValue = Math.max(0, Math.round(this.adjusterStartValue + delta));
+      const contentRoot = this.mount.getContentRoot(selId);
+      const internalScale = contentRoot ? this.mount.getElementScale(contentRoot) : 1;
+      const safeScale = internalScale && !isNaN(internalScale) ? internalScale : 1;
+
+      const newValue = Math.max(0, Math.round(this.adjusterStartValue + delta / safeScale));
 
       // Style surgery - direct DOM mutation
       this.mount.setNodeStyle(selId, this.activeAdjusterType, `${newValue}px`);
@@ -1423,6 +1663,62 @@ export class Workspace {
       const dy = canvasPos.y - this.dragStartCanvas.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist >= 3) {
+        if (e.altKey && this.selectedIds.size === 1) {
+          const originalId = this.selectedIds.values().next().value as string;
+          const originalNode = this.tree.get(originalId);
+          if (originalNode && originalNode.currentRect) {
+            const rawMarkup = this.mount.extractHTML(originalId);
+            if (rawMarkup) {
+              this.newElementCounter++;
+              const duplicateId = `cloned-${this.newElementCounter}-${Date.now().toString(36)}`;
+              const parentId = originalNode.parentId;
+              const index = parentId !== null ? this.tree.getChildIndex(originalId) + 1 : undefined;
+
+              this.mount.setTransitionsEnabled(false);
+
+              this.addNode({
+                id: duplicateId,
+                rawMarkup,
+                currentRect: { ...originalNode.currentRect }
+              }, parentId, index);
+
+              if (this.jsMarkedNodes.has(originalId)) {
+                this.markNodeHasJS(duplicateId);
+              }
+
+              this.selectedIds.clear();
+              this.selectedIds.add(duplicateId);
+              this.callbacks.onSelectionChange?.(this.selectedIds);
+              this.updateBreadcrumb();
+
+              this.dragStartNodePos = {
+                x: originalNode.currentRect.x,
+                y: originalNode.currentRect.y
+              };
+              this.dragStartParentId = parentId;
+              this.dragStartIndex = parentId !== null ? this.tree.getChildIndex(duplicateId) : -1;
+
+              const duplicateContentRoot = this.mount.getContentRoot(duplicateId);
+              if (duplicateContentRoot) {
+                this.dragStartStyles = {
+                  "grid-column-start": duplicateContentRoot.style.gridColumnStart || null,
+                  "grid-column-end": duplicateContentRoot.style.gridColumnEnd || null,
+                  "grid-row-start": duplicateContentRoot.style.gridRowStart || null,
+                  "grid-row-end": duplicateContentRoot.style.gridRowEnd || null,
+                  "position": duplicateContentRoot.style.position || null,
+                  "left": duplicateContentRoot.style.left || null,
+                  "top": duplicateContentRoot.style.top || null,
+                  "width": duplicateContentRoot.style.width || null,
+                  "height": duplicateContentRoot.style.height || null,
+                };
+              }
+
+              this.isDragCopy = true;
+              this.dragCopyMarkup = rawMarkup;
+            }
+          }
+        }
+
         this.isDragging = true;
         this.pointerDownReadyToDrag = false;
         this.callbacks.onInteractionChange?.("drag-node");
@@ -1731,6 +2027,111 @@ export class Workspace {
       return;
     }
 
+    // ── Drawing Tool Completion ──────────────────
+    if (this.isDrawingNode && this.drawStartCanvas && this.drawCurrentCanvas) {
+      this.isDrawingNode = false;
+      const start = this.drawStartCanvas;
+      const end = this.drawCurrentCanvas;
+      this.drawStartCanvas = null;
+      this.drawCurrentCanvas = null;
+
+      try {
+        this.container.releasePointerCapture(e.pointerId);
+      } catch {}
+
+      // Calculate drawn dimensions
+      let x = Math.min(start.x, end.x);
+      let y = Math.min(start.y, end.y);
+      let width = Math.abs(start.x - end.x);
+      let height = Math.abs(start.y - end.y);
+
+      // Apply defaults if users did a simple click-to-draw instead of drag-to-draw
+      if (width < 8 && height < 8) {
+        if (this.activeTool === "box") {
+          width = 120;
+          height = 120;
+        } else {
+          width = 180;
+          height = 40; // Let text height be auto/placeholder size
+        }
+      }
+
+      const parentTarget = this.activeDropTarget;
+      this.activeDropTarget = null;
+
+      // Determine final placement
+      let parentId = parentTarget?.parentId ?? null;
+      let index = parentTarget?.insertionIndex;
+
+      this.newElementCounter++;
+      const id = `${this.activeTool || "node"}-${this.newElementCounter}-${Date.now().toString(36)}`;
+
+      let rawMarkup = "";
+      if (this.activeTool === "box") {
+        const tag = this.drawingTag;
+        rawMarkup = `<${tag} style="background:rgba(99, 102, 241, 0.05);border:1.5px dashed #6366f1;border-radius:8px;box-sizing:border-box;width:100%;height:100%;min-width:40px;min-height:40px;"></${tag}>`;
+      } else {
+        const tag = this.drawingTextTag;
+        let fontSize = "16px";
+        let fontWeight = "400";
+        if (tag.match(/^h[1-6]$/)) {
+          fontWeight = "700";
+          if (tag === "h1") fontSize = "28px";
+          else if (tag === "h2") fontSize = "24px";
+          else if (tag === "h3") fontSize = "20px";
+          else fontSize = "18px";
+        }
+        rawMarkup = `<${tag} style="margin:0;font-family:sans-serif;font-size:${fontSize};font-weight:${fontWeight};color:#e8e8f0;line-height:1.5;outline:none;min-width:100px;">Double-click to edit text</${tag}>`;
+      }
+
+      let rect: Rect = { x, y, width, height };
+
+      // Temporary disable transitions during mount
+      this.mount.setTransitionsEnabled(false);
+
+      // Perform addition
+      if (parentId !== null && parentTarget?.gridPlacement) {
+        const gp = parentTarget.gridPlacement;
+        // Construct grid position styles directly
+        const gridStyles = {
+          "grid-column-start": `${gp.colStart}`,
+          "grid-column-end": `span ${gp.colSpan}`,
+          "grid-row-start": `${gp.rowStart}`,
+          "grid-row-end": `span ${gp.rowSpan}`,
+        };
+
+        this.addNode({ id, rawMarkup, currentRect: gp.rect }, parentId, 0);
+        this.setNodeStyles(id, gridStyles);
+        rect = gp.rect;
+      } else {
+        this.addNode({ id, rawMarkup, currentRect: rect }, parentId, index);
+      }
+
+      this.selectNode(id);
+
+      // Operations
+      this.callbacks.onOperationsGenerated?.([{
+        type: "create-node" as any,
+        nodeId: id,
+        payload: { parentId, index, rawMarkup, rect },
+        undoPayload: { parentId }
+      }]);
+
+      // HTML commit
+      const commitTarget = parentId ?? id;
+      const html = this.mount.extractHTML(commitTarget);
+      if (html) {
+        this.callbacks.onHTMLCommit?.(commitTarget, html);
+      }
+
+      // Clear active tool (resets back to selection/idle mode)
+      this.setActiveTool(null);
+      this.mount.setTransitionsEnabled(true);
+
+      this.render();
+      return;
+    }
+
     // Identify the node that was being manipulated.
     let commitId: string | null = null;
     const operations: Operation[] = [];
@@ -1798,6 +2199,69 @@ export class Workspace {
         const oldParentId = this.dragStartParentId;
         const oldIndex = this.dragStartIndex;
         const oldPos = this.dragStartNodePos;
+
+        if (this.isDragCopy) {
+          this.isDragCopy = false;
+          const rawMarkup = this.dragCopyMarkup || "";
+          const node = this.tree.get(commitId);
+          if (node && node.currentRect) {
+            let rect = { ...node.currentRect };
+
+            if (this.activeDropTarget) {
+              const { parentId, gridPlacement } = this.activeDropTarget;
+              if (gridPlacement) {
+                const gridStyles = {
+                  "grid-column-start": `${gridPlacement.colStart}`,
+                  "grid-column-end": `span ${gridPlacement.colSpan}`,
+                  "grid-row-start": `${gridPlacement.rowStart}`,
+                  "grid-row-end": `span ${gridPlacement.rowSpan}`,
+                };
+                this.setNodeStyles(commitId, gridStyles);
+                rect = gridPlacement.rect;
+              }
+
+              operations.push({
+                type: "create-node" as any,
+                nodeId: commitId,
+                payload: { parentId, index: this.tree.getChildIndex(commitId), rawMarkup, rect },
+                undoPayload: { parentId }
+              });
+
+              const html = this.mount.extractHTML(parentId);
+              if (html) {
+                this.callbacks.onHTMLCommit?.(parentId, html);
+              }
+            } else {
+              operations.push({
+                type: "create-node" as any,
+                nodeId: commitId,
+                payload: { parentId: null, index: -1, rawMarkup, rect },
+                undoPayload: { parentId: null }
+              });
+
+              const html = this.mount.extractHTML(commitId);
+              if (html) {
+                this.callbacks.onHTMLCommit?.(commitId, html);
+              }
+            }
+          }
+
+          this.activeDropTarget = null;
+          this.dragStartNodePos = null;
+          this.dragStartParentId = null;
+          this.dragStartIndex = -1;
+          this.dragStartStyles = null;
+          this.dragCopyMarkup = null;
+          this.mount.setTransitionsEnabled(true);
+
+          if (operations.length > 0) {
+            this.callbacks.onOperationsGenerated?.(operations);
+          }
+          this.canvas.style.pointerEvents = "none";
+          this.callbacks.onInteractionChange?.(null);
+          this.render();
+          return;
+        }
 
         if (this.activeDropTarget) {
           const { parentId, insertionIndex, gridPlacement } = this.activeDropTarget;
@@ -2134,6 +2598,14 @@ export class Workspace {
       this.handleEscapeKey();
     } else if (e.key === "Meta" || e.key === "Control") {
       this.updateHover(true);
+    } else if (e.key === "Delete" || e.key === "Backspace") {
+      this.deleteSelectedNode();
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+      this.copySelectedNode();
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "x") {
+      this.cutSelectedNode();
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
+      this.pasteNode();
     } else if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
       if (this.selectedIds.size === 1) {
         const nodeId = this.selectedIds.values().next().value as string;
@@ -2460,6 +2932,8 @@ export class Workspace {
         spacingAdjusters: undefined,
         draggedNodeId: null,
         resizedNodeId: null,
+        drawingRect: null,
+        drawingTag: null,
       });
       return;
     }
@@ -2553,6 +3027,8 @@ export class Workspace {
       spacingAdjusters,
       draggedNodeId: this.isDragging && this.selectedIds.size === 1 ? this.selectedIds.values().next().value : null,
       resizedNodeId: this.isResizing && this.selectedIds.size === 1 ? this.selectedIds.values().next().value : null,
+      drawingRect: this.getDrawingRect(),
+      drawingTag: this.isDrawingNode ? this.getDrawingTag() : null,
     });
   }
 
@@ -2876,6 +3352,18 @@ export class Workspace {
     }
   }
 
+  private getDrawingRect(): Rect | null {
+    if (!this.isDrawingNode || !this.drawStartCanvas || !this.drawCurrentCanvas) {
+      return null;
+    }
+    return {
+      x: Math.min(this.drawStartCanvas.x, this.drawCurrentCanvas.x),
+      y: Math.min(this.drawStartCanvas.y, this.drawCurrentCanvas.y),
+      width: Math.abs(this.drawStartCanvas.x - this.drawCurrentCanvas.x),
+      height: Math.abs(this.drawStartCanvas.y - this.drawCurrentCanvas.y),
+    };
+  }
+
   private getMarqueeRect(): Rect | null {
     if (!this.isMarqueeSelecting || !this.marqueeStartCanvas || !this.marqueeCurrentCanvas) {
       return null;
@@ -2897,26 +3385,31 @@ export class Workspace {
 
     const cs = getComputedStyle(contentRoot);
 
-    const padTop = parseFloat(cs.paddingTop) || 0;
-    const padRight = parseFloat(cs.paddingRight) || 0;
-    const padBottom = parseFloat(cs.paddingBottom) || 0;
-    const padLeft = parseFloat(cs.paddingLeft) || 0;
+    // Compute the accumulated internal CSS zoom/scale factor.
+    const internalScale = this.mount.getElementScale(contentRoot);
+    const safeScale = internalScale && !isNaN(internalScale) ? internalScale : 1;
 
-    const marTop = parseFloat(cs.marginTop) || 0;
-    const marRight = parseFloat(cs.marginRight) || 0;
-    const marBottom = parseFloat(cs.marginBottom) || 0;
-    const marLeft = parseFloat(cs.marginLeft) || 0;
+    const padTop = (parseFloat(cs.paddingTop) || 0) * safeScale;
+    const padRight = (parseFloat(cs.paddingRight) || 0) * safeScale;
+    const padBottom = (parseFloat(cs.paddingBottom) || 0) * safeScale;
+    const padLeft = (parseFloat(cs.paddingLeft) || 0) * safeScale;
+
+    const marTop = (parseFloat(cs.marginTop) || 0) * safeScale;
+    const marRight = (parseFloat(cs.marginRight) || 0) * safeScale;
+    const marBottom = (parseFloat(cs.marginBottom) || 0) * safeScale;
+    const marLeft = (parseFloat(cs.marginLeft) || 0) * safeScale;
 
     const { x, y, width, height } = node.currentRect;
     const thickness = 10;
 
     const adjusters: SpacingAdjusterInfo[] = [];
 
-    const addAdjuster = (type: SpacingAdjusterType, rect: Rect, value: number) => {
+    const addAdjuster = (type: SpacingAdjusterType, rect: Rect, visualRect: Rect, value: number) => {
       if (value > 0 || this.activeAdjusterType === type) {
         adjusters.push({
           type,
           rect,
+          visualRect,
           value,
           isHovered: this.hoveredAdjusterType === type,
           isActive: this.activeAdjusterType === type,
@@ -2938,7 +3431,12 @@ export class Workspace {
       y: cy,
       width: Math.max(10, cw - padLeft - padRight),
       height: pth,
-    }, padTop);
+    }, {
+      x: cx + padLeft,
+      y: cy,
+      width: Math.max(10, cw - padLeft - padRight),
+      height: padTop,
+    }, parseFloat(cs.paddingTop) || 0);
 
     // Pad bottom
     const pbh = Math.max(thickness, padBottom);
@@ -2947,7 +3445,12 @@ export class Workspace {
       y: cy + ch - pbh,
       width: Math.max(10, cw - padLeft - padRight),
       height: pbh,
-    }, padBottom);
+    }, {
+      x: cx + padLeft,
+      y: cy + ch - padBottom,
+      width: Math.max(10, cw - padLeft - padRight),
+      height: padBottom,
+    }, parseFloat(cs.paddingBottom) || 0);
 
     // Pad left
     const plw = Math.max(thickness, padLeft);
@@ -2956,7 +3459,12 @@ export class Workspace {
       y: cy + padTop,
       width: plw,
       height: Math.max(10, ch - padTop - padBottom),
-    }, padLeft);
+    }, {
+      x: cx,
+      y: cy + padTop,
+      width: padLeft,
+      height: Math.max(10, ch - padTop - padBottom),
+    }, parseFloat(cs.paddingLeft) || 0);
 
     // Pad right
     const prw = Math.max(thickness, padRight);
@@ -2965,7 +3473,12 @@ export class Workspace {
       y: cy + padTop,
       width: prw,
       height: Math.max(10, ch - padTop - padBottom),
-    }, padRight);
+    }, {
+      x: cx + cw - padRight,
+      y: cy + padTop,
+      width: padRight,
+      height: Math.max(10, ch - padTop - padBottom),
+    }, parseFloat(cs.paddingRight) || 0);
 
     // Margin adjusters (drawn inside the wrapper, outside/around the content bounds)
     // Mar top
@@ -2975,7 +3488,12 @@ export class Workspace {
       y: cy - mth,
       width: cw,
       height: mth,
-    }, marTop);
+    }, {
+      x: cx,
+      y: cy - marTop,
+      width: cw,
+      height: marTop,
+    }, parseFloat(cs.marginTop) || 0);
 
     // Mar bottom
     const mbh = Math.max(thickness, marBottom);
@@ -2984,7 +3502,12 @@ export class Workspace {
       y: cy + ch,
       width: cw,
       height: mbh,
-    }, marBottom);
+    }, {
+      x: cx,
+      y: cy + ch,
+      width: cw,
+      height: marBottom,
+    }, parseFloat(cs.marginBottom) || 0);
 
     // Mar left
     const mlw = Math.max(thickness, marLeft);
@@ -2993,7 +3516,12 @@ export class Workspace {
       y: cy,
       width: mlw,
       height: ch,
-    }, marLeft);
+    }, {
+      x: cx - marLeft,
+      y: cy,
+      width: marLeft,
+      height: ch,
+    }, parseFloat(cs.marginLeft) || 0);
 
     // Mar right
     const mrw = Math.max(thickness, marRight);
@@ -3002,7 +3530,12 @@ export class Workspace {
       y: cy,
       width: mrw,
       height: ch,
-    }, marRight);
+    }, {
+      x: cx + cw,
+      y: cy,
+      width: marRight,
+      height: ch,
+    }, parseFloat(cs.marginRight) || 0);
 
     return adjusters;
   }
