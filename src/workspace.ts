@@ -1061,7 +1061,7 @@ export class Workspace {
     const targetEl = e.composedPath()[0] as HTMLElement | null;
     const now = Date.now();
     const isSameTarget = targetEl !== null && this.lastPointerDownTarget !== null &&
-      (targetEl === this.lastPointerDownTarget || this.lastPointerDownTarget.contains(targetEl) || targetEl.contains(this.lastPointerDownTarget));
+      (targetEl === this.lastPointerDownTarget || (this.lastPointerDownTarget as Node).contains(targetEl) || targetEl.contains(this.lastPointerDownTarget as Node));
     const isDoubleClick = (now - this.lastPointerDownTime < 350) && (
       hitId !== null && 
       this.lastPointerDownId !== null && 

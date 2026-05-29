@@ -114,6 +114,7 @@ export class Workspace {
     enteredContainerId = null;
     lastPointerDownTime = 0;
     lastPointerDownId = null;
+    lastPointerDownTarget = null;
     editAllowedOnDblClick = false;
     // ── Drag & Drop State ───────────────────────────
     activeDropTarget = null;
@@ -830,10 +831,16 @@ export class Workspace {
         // Calculate isDoubleClick early to prevent handles/adjusters from intercepting double-clicks on small/nested nodes
         const nodeList = this.getOrderedNodeList();
         const hitId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
+        const targetEl = e.composedPath()[0];
         const now = Date.now();
-        const isDoubleClick = (now - this.lastPointerDownTime < 350) && (hitId !== null && hitId === this.lastPointerDownId);
+        const isSameTarget = targetEl !== null && this.lastPointerDownTarget !== null &&
+            (targetEl === this.lastPointerDownTarget || this.lastPointerDownTarget.contains(targetEl) || targetEl.contains(this.lastPointerDownTarget));
+        const isDoubleClick = (now - this.lastPointerDownTime < 350) && (hitId !== null &&
+            this.lastPointerDownId !== null &&
+            (hitId === this.lastPointerDownId || isSameTarget || this.tree.isAncestor(this.lastPointerDownId, hitId)));
         this.lastPointerDownTime = now;
         this.lastPointerDownId = hitId;
+        this.lastPointerDownTarget = targetEl;
         // ── Handle hit-test (resize) ──────────────────
         if (!isDoubleClick && this.selectedIds.size === 1) {
             const selId = this.selectedIds.values().next().value;
@@ -1923,11 +1930,11 @@ export class Workspace {
         const targetEl = e.composedPath()[0];
         if (!targetEl)
             return;
-        // Find the enclosing node wrapper
+        // Find the enclosing node wrapper (both wrapper-based and direct nodes have data-canvus-id)
         let curr = targetEl;
         let nodeId = null;
         while (curr && curr !== this.container) {
-            if (curr.classList.contains("canvus-node-wrapper")) {
+            if (curr.hasAttribute("data-canvus-id")) {
                 nodeId = curr.getAttribute("data-canvus-id");
                 break;
             }
@@ -1944,7 +1951,7 @@ export class Workspace {
         if (!node)
             return;
         const wrapper = this.mount.getWrapper(nodeId);
-        const contentRoot = wrapper?.firstElementChild;
+        const contentRoot = this.mount.getContentRoot(nodeId);
         if (!wrapper || !contentRoot)
             return;
         const path = getDOMPath(contentRoot, targetEl);

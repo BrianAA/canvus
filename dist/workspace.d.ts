@@ -90,6 +90,7 @@ export declare class Workspace {
     private enteredContainerId;
     private lastPointerDownTime;
     private lastPointerDownId;
+    private lastPointerDownTarget;
     private editAllowedOnDblClick;
     private activeDropTarget;
     private pointerDownInsideSelection;

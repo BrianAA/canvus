@@ -38,6 +38,23 @@ test.describe('Electron E2E Integration Suite', () => {
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
+      // Click on the child node in the node tree to select it
+      const welcomeHeadingNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card__child-1' });
+      await expect(welcomeHeadingNodeCard).toBeVisible();
+      await welcomeHeadingNodeCard.click();
+
+      // Verify double-click inline text editing triggers correctly
+      const welcomeHeading = window.locator('div[data-canvus-id="welcome-card"] h2');
+      await expect(welcomeHeading).toBeVisible();
+      await welcomeHeading.dblclick();
+      await expect(welcomeHeading).toHaveAttribute('contenteditable', 'plaintext-only');
+      await expect(welcomeHeading).toHaveClass(/canvus-editing/);
+
+      // Cancel edit mode by pressing Escape
+      await window.keyboard.press('Escape');
+      await expect(welcomeHeading).not.toHaveAttribute('contenteditable', 'plaintext-only');
+      await expect(welcomeHeading).not.toHaveClass(/canvus-editing/);
+
       // Verify that selecting the card opens the Styles Panel in the React sidebar
       const stylesPanel = window.locator('#sidebar-style-panel');
       await expect(stylesPanel).toBeVisible();
