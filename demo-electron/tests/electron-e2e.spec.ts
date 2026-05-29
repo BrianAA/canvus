@@ -557,6 +557,145 @@ test.describe('Electron E2E Integration Suite', () => {
       await electronApp.close();
     }
   });
+
+  test('Cmd+D duplicates the selected node immediately as a sibling', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Click on the welcome card card in the node list to select it
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      // Programmatically dispatch Cmd+D key down event
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'd',
+          code: 'KeyD',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Verify that a cloned card is created and visible in the node tree
+      const clonedCard = window.locator('#node-list .node-card', { hasText: 'cloned-' });
+      await expect(clonedCard).toBeVisible({ timeout: 5000 });
+
+      // Verify the new node is selected
+      const selectedId = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        return Array.from(wsInstance.getSelectedIds())[0];
+      });
+      expect(selectedId).toContain('cloned-');
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('Alt-key symmetrical resizing keeps center fixed and expands bounds symmetrically', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Click welcome-card
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      const welcomeCard = window.locator('[data-canvus-id="welcome-card"]');
+      await expect(welcomeCard).toBeVisible();
+      const startBox = await welcomeCard.boundingBox();
+      expect(startBox).not.toBeNull();
+
+      // The South-East resize handle is at (x + width, y + height)
+      const handleX = startBox!.x + startBox!.width;
+      const handleY = startBox!.y + startBox!.height;
+
+      // Start drag at handle with Alt key down
+      await window.mouse.move(handleX, handleY);
+      await window.keyboard.down('Alt');
+      await window.mouse.down();
+      // Drag outward by 50px right, 50px down
+      await window.mouse.move(handleX + 50, handleY + 50, { steps: 5 });
+      await window.mouse.up();
+      await window.keyboard.up('Alt');
+
+      const endBox = await welcomeCard.boundingBox();
+      expect(endBox).not.toBeNull();
+
+      // Symmetrical resize means the center coordinate remains constant
+      const startCenter = { x: startBox!.x + startBox!.width / 2, y: startBox!.y + startBox!.height / 2 };
+      const endCenter = { x: endBox!.x + endBox!.width / 2, y: endBox!.y + endBox!.height / 2 };
+
+      expect(endCenter.x).toBeCloseTo(startCenter.x, 1);
+      expect(endCenter.y).toBeCloseTo(startCenter.y, 1);
+      expect(endBox!.width).toBeGreaterThan(startBox!.width + 80);
+      expect(endBox!.height).toBeGreaterThan(startBox!.height + 80);
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('Figma-style corner radius drag handles allow dragging to adjust border-radius', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
+      window.on('pageerror', err => console.error('PAGE ERROR:', err));
+      await window.waitForLoadState('domcontentloaded');
+
+      // Click welcome-card
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      const welcomeCard = window.locator('[data-canvus-id="welcome-card"]');
+      await expect(welcomeCard).toBeVisible();
+      const box = await welcomeCard.boundingBox();
+      expect(box).not.toBeNull();
+
+      // The top-left corner radius handle is inset by 16px
+      const handleX = box!.x + 16;
+      const handleY = box!.y + 16;
+
+      await window.mouse.move(handleX, handleY);
+      await window.mouse.down();
+      // Drag inwards (down and right) to increase corner radius
+      await window.mouse.move(handleX + 30, handleY + 30, { steps: 5 });
+      await window.mouse.up();
+
+      // Verify style.borderRadius has been updated on the content root of welcome-card
+      const borderRadius = await welcomeCard.evaluate(el => {
+        const content = el.firstElementChild as HTMLElement;
+        return content ? content.style.borderRadius : el.style.borderRadius;
+      });
+      expect(borderRadius).toContain('px');
+      const radiusVal = parseInt(borderRadius, 10);
+      expect(radiusVal).toBeGreaterThan(30); // It was dragged by 30px, so it should be significantly increased
+
+    } finally {
+      await electronApp.close();
+    }
+  });
 });
 
 

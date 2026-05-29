@@ -100,6 +100,10 @@ export declare class Workspace {
     private activeDropTarget;
     private pointerDownInsideSelection;
     private spaceDown;
+    private isAdjustingRadius;
+    private activeRadiusCorner;
+    private hoveredRadiusCorner;
+    private radiusStartValue;
     private isPanning;
     private isDragging;
     private pointerDownReadyToDrag;
@@ -218,6 +222,8 @@ export declare class Workspace {
     getDrawingTag(): string;
     /** Deletes the currently selected node from the workspace. */
     deleteSelectedNode(): void;
+    /** Duplicates the selected node right next to it as a sibling. */
+    duplicateSelectedNode(): void;
     /** Copies the selected node to the internal clipboard. */
     copySelectedNode(): void;
     /** Cuts the selected node to the clipboard, removing it from the canvas. */
@@ -337,6 +343,7 @@ export declare class Workspace {
     private deregisterLazyChildren;
     /** Returns nodes in depth-first order for hit testing and rendering. */
     private getOrderedNodeList;
+    private hitTestRadiusHandle;
     /** Returns canvas-space rects of all nodes except the given ID. */
     private getOtherRects;
     /**

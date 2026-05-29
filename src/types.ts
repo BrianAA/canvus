@@ -178,6 +178,7 @@ export type InteractionMode =
   | "select-marquee"
   | "adjust-spacing"
   | "draw-node"
+  | "resize-radius"
   | null;
 
 /**

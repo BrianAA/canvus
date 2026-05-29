@@ -108,7 +108,7 @@ export declare function resolveNode(node: Readonly<WebHTMLNode>): ResolvedNode;
 /** Cardinal + intercardinal anchor positions on a selection frame. */
 export type ResizeAnchor = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 /** Discriminated active interaction modes. */
-export type InteractionMode = "pan" | "drag-node" | "resize-node" | "reparent" | "reorder" | "select-marquee" | "adjust-spacing" | "draw-node" | null;
+export type InteractionMode = "pan" | "drag-node" | "resize-node" | "reparent" | "reorder" | "select-marquee" | "adjust-spacing" | "draw-node" | "resize-radius" | null;
 /**
  * Transient drag/resize interaction descriptor.
  * Captures the pointer-down origin and the specific handle or node

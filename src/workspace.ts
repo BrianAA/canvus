@@ -47,6 +47,7 @@ import {
   anchorCursor,
   computeAlignmentGuides,
   computeSnappedPosition,
+  isContainerNode,
 } from "./renderer.js";
 
 import { detectLayout, getLayoutLabel, parseGridTracks, getFlowAxis } from "./layout.js";
@@ -124,16 +125,35 @@ function computeResizedRect(
   dx: number,
   dy: number,
   minSize: number,
+  symmetrical: boolean,
 ): Rect {
   let { x, y, width, height } = start;
 
-  // Each anchor affects different edges.
-  // Cardinal anchors constrain to one axis.
-  // Intercardinal anchors affect both axes.
   const affectsLeft = anchor === "nw" || anchor === "w" || anchor === "sw";
   const affectsRight = anchor === "ne" || anchor === "e" || anchor === "se";
   const affectsTop = anchor === "nw" || anchor === "n" || anchor === "ne";
   const affectsBottom = anchor === "sw" || anchor === "s" || anchor === "se";
+
+  if (symmetrical) {
+    const centerX = start.x + start.width / 2;
+    const centerY = start.y + start.height / 2;
+
+    if (affectsRight) {
+      width = Math.max(minSize, start.width + 2 * dx);
+    } else if (affectsLeft) {
+      width = Math.max(minSize, start.width - 2 * dx);
+    }
+
+    if (affectsBottom) {
+      height = Math.max(minSize, start.height + 2 * dy);
+    } else if (affectsTop) {
+      height = Math.max(minSize, start.height - 2 * dy);
+    }
+
+    x = centerX - width / 2;
+    y = centerY - height / 2;
+    return { x, y, width, height };
+  }
 
   if (affectsRight) {
     width = Math.max(minSize, width + dx);
@@ -234,6 +254,10 @@ export class Workspace {
   // ── Interaction State Machine ───────────────────
 
   private spaceDown = false;
+  private isAdjustingRadius = false;
+  private activeRadiusCorner: string | null = null;
+  private hoveredRadiusCorner: string | null = null;
+  private radiusStartValue = 0;
   private isPanning = false;
   private isDragging = false;
   private pointerDownReadyToDrag = false;
@@ -764,6 +788,62 @@ export class Workspace {
     }
 
     this.mount.setTransitionsEnabled(true);
+  }
+
+  /** Duplicates the selected node right next to it as a sibling. */
+  duplicateSelectedNode(): void {
+    if (this.selectedIds.size !== 1) return;
+    const originalId = this.selectedIds.values().next().value as string;
+    const originalNode = this.tree.get(originalId);
+    if (!originalNode) return;
+
+    const rawMarkup = this.mount.extractHTML(originalId);
+    if (!rawMarkup) return;
+
+    this.newElementCounter++;
+    const duplicateId = `cloned-${this.newElementCounter}-${Date.now().toString(36)}`;
+    const parentId = originalNode.parentId;
+    
+    let rect = originalNode.currentRect ? { ...originalNode.currentRect } : null;
+    let index: number | undefined;
+
+    if (parentId !== null) {
+      index = this.tree.getChildIndex(originalId) + 1;
+    } else if (rect) {
+      rect.x += 20;
+      rect.y += 20;
+    }
+
+    this.mount.setTransitionsEnabled(false);
+
+    this.addNode({
+      id: duplicateId,
+      rawMarkup,
+      currentRect: rect
+    }, parentId, index);
+
+    if (this.jsMarkedNodes.has(originalId)) {
+      this.markNodeHasJS(duplicateId);
+    }
+
+    this.selectNode(duplicateId);
+
+    const finalIndex = parentId !== null ? this.tree.getChildIndex(duplicateId) : -1;
+    this.callbacks.onOperationsGenerated?.([{
+      type: "create-node" as any,
+      nodeId: duplicateId,
+      payload: { parentId, index: finalIndex, rawMarkup, rect },
+      undoPayload: { parentId }
+    }]);
+
+    const commitTarget = parentId ?? duplicateId;
+    const html = this.mount.extractHTML(commitTarget);
+    if (html) {
+      this.callbacks.onHTMLCommit?.(commitTarget, html);
+    }
+
+    this.mount.setTransitionsEnabled(true);
+    this.render();
   }
 
   /** Copies the selected node to the internal clipboard. */
@@ -1329,6 +1409,42 @@ export class Workspace {
       }
     }
 
+    // ── Corner Radius handles hit-test ────────────
+    if (!isDoubleClick && this.selectedIds.size === 1) {
+      const selId = this.selectedIds.values().next().value as string;
+      const selNode = this.tree.get(selId);
+      if (selNode && isContainerNode(selNode) && selNode.currentRect) {
+        const localX = e.clientX - rect.x;
+        const localY = e.clientY - rect.y;
+        const hitRadiusCorner = this.hitTestRadiusHandle(
+          localX, localY, selNode.currentRect, this.viewport,
+        );
+        if (hitRadiusCorner) {
+          this.isAdjustingRadius = true;
+          this.activeRadiusCorner = hitRadiusCorner;
+          
+          const contentRoot = this.mount.getContentRoot(selId);
+          let initialRadius = 0;
+          if (contentRoot) {
+            const currentRadiusStr = contentRoot.style.borderRadius || 
+              window.getComputedStyle(contentRoot).borderRadius;
+            if (currentRadiusStr) {
+              const match = currentRadiusStr.match(/^(\d+)/);
+              if (match && match[1]) {
+                initialRadius = parseInt(match[1], 10);
+              }
+            }
+          }
+          this.radiusStartValue = initialRadius;
+          this.dragStartCanvas = canvasPos;
+          this.safeSetPointerCapture(e.pointerId);
+          this.callbacks.onInteractionChange?.("resize-radius");
+          this.render();
+          return;
+        }
+      }
+    }
+
     // ── Spacing Adjusters hit-test ────────────────
     if (!isDoubleClick && this.selectedIds.size === 1) {
       const selId = this.selectedIds.values().next().value as string;
@@ -1550,6 +1666,56 @@ export class Workspace {
       return;
     }
 
+    // ── Corner Radius Adjusting ───────────────────
+    if (this.isAdjustingRadius && this.dragStartCanvas) {
+      const selId = this.selectedIds.values().next().value as string;
+      const node = this.tree.get(selId);
+      if (node && node.currentRect) {
+        this.safeSetPointerCapture(e.pointerId);
+        this.container.style.cursor = "pointer";
+        this.canvas.style.pointerEvents = "auto";
+        this.callbacks.onInteractionChange?.("resize-radius");
+
+        const bounds = node.currentRect;
+        const s = this.viewport.scale;
+        const ox = this.viewport.offsetX;
+        const oy = this.viewport.offsetY;
+
+        const left = bounds.x * s + ox;
+        const top = bounds.y * s + oy;
+        const right = (bounds.x + bounds.width) * s + ox;
+        const bottom = (bounds.y + bounds.height) * s + oy;
+
+        let dragX = 0;
+        let dragY = 0;
+        if (this.activeRadiusCorner === "tl") {
+          dragX = e.clientX - rect.x - left;
+          dragY = e.clientY - rect.y - top;
+        } else if (this.activeRadiusCorner === "tr") {
+          dragX = right - (e.clientX - rect.x);
+          dragY = e.clientY - rect.y - top;
+        } else if (this.activeRadiusCorner === "bl") {
+          dragX = e.clientX - rect.x - left;
+          dragY = bottom - (e.clientY - rect.y);
+        } else if (this.activeRadiusCorner === "br") {
+          dragX = right - (e.clientX - rect.x);
+          dragY = bottom - (e.clientY - rect.y);
+        }
+
+        const dragDistScreen = (dragX + dragY) / 2;
+        const dragDistCanvas = dragDistScreen / s;
+
+        const maxRadius = Math.min(bounds.width, bounds.height) / 2;
+        const newRadius = Math.max(0, Math.min(maxRadius, Math.round(dragDistCanvas)));
+
+        this.mount.setNodeStyle(selId, "border-radius", `${newRadius}px`);
+
+        this.remeasureSubtree(selId);
+        this.render();
+      }
+      return;
+    }
+
     // ── Spacing Adjusters Dragging ────────────────
     if (this.activeAdjusterType && this.dragStartCanvas) {
       const selId = this.selectedIds.values().next().value as string;
@@ -1727,7 +1893,7 @@ export class Workspace {
     }
 
     // ── Hover tracking ────────────────────────────
-    if (!this.isPanning && !this.isDragging && !this.isResizing) {
+    if (!this.isPanning && !this.isDragging && !this.isResizing && !this.isAdjustingRadius) {
       this.updateHover(e.metaKey || e.ctrlKey);
 
       // Handle hover cursor.
@@ -1737,36 +1903,53 @@ export class Workspace {
         if (selNode?.currentRect) {
           const localX = e.clientX - rect.x;
           const localY = e.clientY - rect.y;
-          const anchor = this.renderer.hitTestHandle(
-            localX, localY, selNode.currentRect, this.viewport,
-          );
-          if (anchor) {
-            this.container.style.cursor = anchorCursor(anchor);
+          
+          let hitRadiusCorner: string | null = null;
+          if (isContainerNode(selNode)) {
+            hitRadiusCorner = this.hitTestRadiusHandle(
+              localX, localY, selNode.currentRect, this.viewport
+            );
+          }
+
+          if (hitRadiusCorner) {
+            this.hoveredRadiusCorner = hitRadiusCorner;
+            this.container.style.cursor = "pointer";
             this.hoveredAdjusterType = null;
           } else {
-            // Spacing adjusters check
-            const adjusters = this.computeSpacingAdjusters(selId);
-            const hoveredAdj = adjusters.find(adj =>
-              canvasPos.x >= adj.rect.x &&
-              canvasPos.x <= adj.rect.x + adj.rect.width &&
-              canvasPos.y >= adj.rect.y &&
-              canvasPos.y <= adj.rect.y + adj.rect.height
+            this.hoveredRadiusCorner = null;
+            const anchor = this.renderer.hitTestHandle(
+              localX, localY, selNode.currentRect, this.viewport,
             );
-
-            if (hoveredAdj) {
-              this.hoveredAdjusterType = hoveredAdj.type;
-              const isVertical = hoveredAdj.type.includes("top") || hoveredAdj.type.includes("bottom");
-              this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
-            } else {
+            if (anchor) {
+              this.container.style.cursor = anchorCursor(anchor);
               this.hoveredAdjusterType = null;
-              this.container.style.cursor = "default";
+            } else {
+              // Spacing adjusters check
+              const adjusters = this.computeSpacingAdjusters(selId);
+              const hoveredAdj = adjusters.find(adj =>
+                canvasPos.x >= adj.rect.x &&
+                canvasPos.x <= adj.rect.x + adj.rect.width &&
+                canvasPos.y >= adj.rect.y &&
+                canvasPos.y <= adj.rect.y + adj.rect.height
+              );
+
+              if (hoveredAdj) {
+                this.hoveredAdjusterType = hoveredAdj.type;
+                const isVertical = hoveredAdj.type.includes("top") || hoveredAdj.type.includes("bottom");
+                this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
+              } else {
+                this.hoveredAdjusterType = null;
+                this.container.style.cursor = "default";
+              }
             }
           }
         } else {
+          this.hoveredRadiusCorner = null;
           this.hoveredAdjusterType = null;
           this.container.style.cursor = "default";
         }
       } else {
+        this.hoveredRadiusCorner = null;
         this.hoveredAdjusterType = null;
         this.container.style.cursor = "default";
       }
@@ -1902,7 +2085,7 @@ export class Workspace {
       } else {
         // 1. Compute new rect from anchor delta.
         const newRect = computeResizedRect(
-          this.resizeStartRect, this.activeAnchor, dx, dy, this.minResizeSize,
+          this.resizeStartRect, this.activeAnchor, dx, dy, this.minResizeSize, e.altKey,
         );
 
         // 2. Style surgery — direct DOM mutation.
@@ -2136,7 +2319,7 @@ export class Workspace {
     let commitId: string | null = null;
     const operations: Operation[] = [];
 
-    if (this.isDragging || this.isResizing) {
+    if (this.isDragging || this.isResizing || this.isAdjustingRadius) {
       if (this.selectedIds.size === 1) {
         commitId = this.selectedIds.values().next().value as string;
       }
@@ -2164,6 +2347,29 @@ export class Workspace {
       this.dragStartCanvas = null;
       this.container.style.cursor = "default";
       this.adjusterStartValueStr = null;
+    }
+
+    if (this.isAdjustingRadius) {
+      if (this.selectedIds.size === 1) {
+        const selId = this.selectedIds.values().next().value as string;
+        const contentRoot = this.mount.getContentRoot(selId);
+        if (contentRoot) {
+          const finalRadiusStr = contentRoot.style.borderRadius || "";
+          const initialRadiusStr = `${this.radiusStartValue}px`;
+          if (finalRadiusStr !== initialRadiusStr) {
+            operations.push({
+              type: "update-style",
+              nodeId: selId,
+              payload: { "border-radius": finalRadiusStr },
+              undoPayload: { "border-radius": initialRadiusStr }
+            });
+          }
+        }
+      }
+      this.isAdjustingRadius = false;
+      this.activeRadiusCorner = null;
+      this.dragStartCanvas = null;
+      this.container.style.cursor = "default";
     }
 
     if (this.isMarqueeSelecting) {
@@ -2600,6 +2806,9 @@ export class Workspace {
       this.updateHover(true);
     } else if (e.key === "Delete" || e.key === "Backspace") {
       this.deleteSelectedNode();
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") {
+      e.preventDefault();
+      this.duplicateSelectedNode();
     } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
       this.copySelectedNode();
     } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "x") {
@@ -2934,6 +3143,7 @@ export class Workspace {
         resizedNodeId: null,
         drawingRect: null,
         drawingTag: null,
+        activeRadiusCorner: null,
       });
       return;
     }
@@ -3029,6 +3239,7 @@ export class Workspace {
       resizedNodeId: this.isResizing && this.selectedIds.size === 1 ? this.selectedIds.values().next().value : null,
       drawingRect: this.getDrawingRect(),
       drawingTag: this.isDrawingNode ? this.getDrawingTag() : null,
+      activeRadiusCorner: this.isAdjustingRadius ? this.activeRadiusCorner : this.hoveredRadiusCorner,
     });
   }
 
@@ -3160,8 +3371,49 @@ export class Workspace {
   }
 
   /** Returns nodes in depth-first order for hit testing and rendering. */
-  private getOrderedNodeList(): ReadonlyArray<Readonly<{ id: string; currentRect: Rect | null }>> {
+  private getOrderedNodeList(): ReadonlyArray<ResolvedNode> {
     return this.tree.flatten();
+  }
+
+  private hitTestRadiusHandle(
+    screenX: number,
+    screenY: number,
+    bounds: Readonly<Rect>,
+    viewport: Readonly<ViewportMatrix>,
+  ): string | null {
+    const s = viewport.scale;
+    const ox = viewport.offsetX;
+    const oy = viewport.offsetY;
+
+    const left = bounds.x * s + ox;
+    const top = bounds.y * s + oy;
+    const right = (bounds.x + bounds.width) * s + ox;
+    const bottom = (bounds.y + bounds.height) * s + oy;
+
+    const sw = right - left;
+    const sh = bottom - top;
+
+    if (sw < 64 || sh < 64) {
+      return null;
+    }
+
+    const inset = 16;
+    const handles = [
+      { type: "tl", hx: left + inset, hy: top + inset },
+      { type: "tr", hx: right - inset, hy: top + inset },
+      { type: "bl", hx: left + inset, hy: bottom - inset },
+      { type: "br", hx: right - inset, hy: bottom - inset },
+    ];
+
+    const r = 8;
+    for (const h of handles) {
+      const dx = screenX - h.hx;
+      const dy = screenY - h.hy;
+      if (dx * dx + dy * dy <= r * r) {
+        return h.type;
+      }
+    }
+    return null;
   }
 
   /** Returns canvas-space rects of all nodes except the given ID. */

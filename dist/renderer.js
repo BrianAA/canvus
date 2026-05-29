@@ -95,6 +95,27 @@ export function anchorCursor(anchor) {
  * - Canvas state changes are minimized by batching similar
  *   operations (hover pass → selection pass → handle pass).
  */
+export function isContainerNode(node) {
+    if (node.childIds.length > 0 ||
+        node.layoutMode === "flex" ||
+        node.layoutMode === "grid" ||
+        node.layoutMode === "inline-flex" ||
+        node.layoutMode === "inline-grid") {
+        return true;
+    }
+    if (node.rawMarkup) {
+        const match = node.rawMarkup.trim().match(/^<([a-zA-Z0-9-]+)/);
+        if (match && match[1]) {
+            const tag = match[1].toLowerCase();
+            const nonContainerTags = new Set([
+                "p", "h1", "h2", "h3", "h4", "h5", "h6", "span", "img", "br", "hr",
+                "input", "button", "textarea", "select", "a", "strong", "em", "code", "pre"
+            ]);
+            return !nonContainerTags.has(tag);
+        }
+    }
+    return false;
+}
 export class OverlayRenderer {
     canvas;
     ctx;
@@ -227,6 +248,33 @@ export class OverlayRenderer {
             if (!p)
                 continue;
             this.drawHandles(p.sx, p.sy, p.sw, p.sh, activeAnchor);
+        }
+        // 7b. Corner radius handles
+        if (selectedIds.size === 1) {
+            const selId = selectedIds.values().next().value;
+            const node = frame.nodes.find(n => n.id === selId);
+            if (node && isContainerNode(node)) {
+                const p = projected.get(selId);
+                if (p && p.sw >= 64 && p.sh >= 64) {
+                    const inset = 16;
+                    const handles = [
+                        { type: "tl", hx: p.sx + inset, hy: p.sy + inset },
+                        { type: "tr", hx: p.sx + p.sw - inset, hy: p.sy + inset },
+                        { type: "bl", hx: p.sx + inset, hy: p.sy + p.sh - inset },
+                        { type: "br", hx: p.sx + p.sw - inset, hy: p.sy + p.sh - inset },
+                    ];
+                    for (const handle of handles) {
+                        const isActive = handle.type === frame.activeRadiusCorner;
+                        ctx.beginPath();
+                        ctx.arc(handle.hx, handle.hy, isActive ? 5 : 3.5, 0, Math.PI * 2);
+                        ctx.fillStyle = isActive ? style.selectionStroke : "#ffffff";
+                        ctx.fill();
+                        ctx.strokeStyle = style.selectionStroke;
+                        ctx.lineWidth = isActive ? 2 : 1.5;
+                        ctx.stroke();
+                    }
+                }
+            }
         }
         // 8. Layout badges (M6)
         if (frame.layoutBadges) {

@@ -1,4 +1,4 @@
-import type { Rect, ResizeAnchor, Vec2, ViewportMatrix } from "./types.js";
+import type { Rect, ResizeAnchor, Vec2, ViewportMatrix, ResolvedNode } from "./types.js";
 import type { GridTrack } from "./layout.js";
 import type { DropTarget } from "./drop-zone.js";
 /** Visual styling tokens for the overlay renderer. */
@@ -87,12 +87,7 @@ export interface OverlayFrame {
     /** Current viewport transform. */
     viewport: ViewportMatrix;
     /** All mounted nodes with their canvas-space rects and hierarchy data. */
-    nodes: ReadonlyArray<Readonly<{
-        id: string;
-        currentRect: Rect | null;
-        parentId?: string | null;
-        childIds?: readonly string[];
-    }>>;
+    nodes: ReadonlyArray<ResolvedNode>;
     /** Set of currently selected node IDs. */
     selectedIds: ReadonlySet<string>;
     /** ID of the node under the cursor (hover), or `null`. */
@@ -119,6 +114,8 @@ export interface OverlayFrame {
     drawingRect?: Rect | null;
     /** Active drawing element HTML tag name. */
     drawingTag?: string | null;
+    /** Active or hovered corner radius handle name (tl, tr, bl, br). */
+    activeRadiusCorner?: string | null;
 }
 export type SpacingAdjusterType = "padding-top" | "padding-right" | "padding-bottom" | "padding-left" | "margin-top" | "margin-right" | "margin-bottom" | "margin-left";
 export interface SpacingAdjusterInfo {
@@ -182,6 +179,7 @@ export declare function anchorCursor(anchor: ResizeAnchor | null): string;
  * - Canvas state changes are minimized by batching similar
  *   operations (hover pass → selection pass → handle pass).
  */
+export declare function isContainerNode(node: ResolvedNode): boolean;
 export declare class OverlayRenderer {
     private readonly canvas;
     private readonly ctx;
