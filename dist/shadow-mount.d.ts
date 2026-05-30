@@ -276,6 +276,11 @@ export declare class ShadowMount {
      */
     measureNodeCanvasSpace(id: string): Rect | null;
     /**
+     * Computes the accumulated CSS zoom and transform scale factors of an element
+     * relative to the shadow root host.
+     */
+    getElementScale(element: HTMLElement): number;
+    /**
      * Extracts the pristine semantic HTML string from a mounted
      * node's wrapper. Returns the `.innerHTML` of the wrapper,
      * which is the user's manipulated HTML fragment without any

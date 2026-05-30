@@ -8,7 +8,7 @@
 // projecting canvas-space geometry through the viewport matrix.
 // ─────────────────────────────────────────────────────────────
 
-import type { Rect, ResizeAnchor, Vec2, ViewportMatrix } from "./types.js";
+import type { Rect, ResizeAnchor, Vec2, ViewportMatrix, ResolvedNode } from "./types.js";
 import type { GridTrack } from "./layout.js";
 import type { DropTarget } from "./drop-zone.js";
 
@@ -168,12 +168,7 @@ export interface OverlayFrame {
   /** Current viewport transform. */
   viewport: ViewportMatrix;
   /** All mounted nodes with their canvas-space rects and hierarchy data. */
-  nodes: ReadonlyArray<Readonly<{
-    id: string;
-    currentRect: Rect | null;
-    parentId?: string | null;
-    childIds?: readonly string[];
-  }>>;
+  nodes: ReadonlyArray<ResolvedNode>;
   /** Set of currently selected node IDs. */
   selectedIds: ReadonlySet<string>;
   /** ID of the node under the cursor (hover), or `null`. */
@@ -202,6 +197,12 @@ export interface OverlayFrame {
   marqueeRect?: Rect | null;
   /** Active spacing adjusters to render on screen. */
   spacingAdjusters?: ReadonlyArray<SpacingAdjusterInfo>;
+  /** Active drawing element bounds in canvas-space. */
+  drawingRect?: Rect | null;
+  /** Active drawing element HTML tag name. */
+  drawingTag?: string | null;
+  /** Active or hovered corner radius handle name (tl, tr, bl, br). */
+  activeRadiusCorner?: string | null;
 }
 
 export type SpacingAdjusterType =
@@ -218,6 +219,8 @@ export interface SpacingAdjusterInfo {
   type: SpacingAdjusterType;
   /** Bounding box of the handle bar in canvas-space. */
   rect: Rect;
+  /** Visual bounding box representing the actual spacing dimensions exactly. */
+  visualRect: Rect;
   /** Spacing value in pixels. */
   value: number;
   /** Hover state. */
@@ -305,6 +308,30 @@ export function anchorCursor(anchor: ResizeAnchor | null): string {
  * - Canvas state changes are minimized by batching similar
  *   operations (hover pass → selection pass → handle pass).
  */
+export function isContainerNode(node: ResolvedNode): boolean {
+  if (
+    node.childIds.length > 0 ||
+    node.layoutMode === "flex" ||
+    node.layoutMode === "grid" ||
+    node.layoutMode === "inline-flex" ||
+    node.layoutMode === "inline-grid"
+  ) {
+    return true;
+  }
+  if (node.rawMarkup) {
+    const match = node.rawMarkup.trim().match(/^<([a-zA-Z0-9-]+)/);
+    if (match && match[1]) {
+      const tag = match[1].toLowerCase();
+      const nonContainerTags = new Set([
+        "p", "h1", "h2", "h3", "h4", "h5", "h6", "span", "img", "br", "hr",
+        "input", "button", "textarea", "select", "a", "strong", "em", "code", "pre"
+      ]);
+      return !nonContainerTags.has(tag);
+    }
+  }
+  return false;
+}
+
 export class OverlayRenderer {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly style: OverlayStyle;
@@ -465,6 +492,35 @@ export class OverlayRenderer {
       this.drawHandles(p.sx, p.sy, p.sw, p.sh, activeAnchor);
     }
 
+    // 7b. Corner radius handles
+    if (selectedIds.size === 1) {
+      const selId = selectedIds.values().next().value as string;
+      const node = frame.nodes.find(n => n.id === selId);
+      if (node && isContainerNode(node)) {
+        const p = projected.get(selId);
+        if (p && p.sw >= 64 && p.sh >= 64) {
+          const inset = 16;
+          const handles = [
+            { type: "tl", hx: p.sx + inset, hy: p.sy + inset },
+            { type: "tr", hx: p.sx + p.sw - inset, hy: p.sy + inset },
+            { type: "bl", hx: p.sx + inset, hy: p.sy + p.sh - inset },
+            { type: "br", hx: p.sx + p.sw - inset, hy: p.sy + p.sh - inset },
+          ];
+
+          for (const handle of handles) {
+            const isActive = handle.type === frame.activeRadiusCorner;
+            ctx.beginPath();
+            ctx.arc(handle.hx, handle.hy, isActive ? 5 : 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = isActive ? style.selectionStroke : "#ffffff";
+            ctx.fill();
+            ctx.strokeStyle = style.selectionStroke;
+            ctx.lineWidth = isActive ? 2 : 1.5;
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
     // 8. Layout badges (M6)
     if (frame.layoutBadges) {
       const offsets = new Map<string, number>();
@@ -583,16 +639,21 @@ export class OverlayRenderer {
       let activeProjectedRect: { sx: number; sy: number; sw: number; sh: number } | null = null;
 
       for (const adj of frame.spacingAdjusters) {
-        const p = {
-          sx: adj.rect.x * viewport.scale + viewport.offsetX,
-          sy: adj.rect.y * viewport.scale + viewport.offsetY,
-          sw: adj.rect.width * viewport.scale,
-          sh: adj.rect.height * viewport.scale,
+        const pVisual = {
+          sx: adj.visualRect.x * viewport.scale + viewport.offsetX,
+          sy: adj.visualRect.y * viewport.scale + viewport.offsetY,
+          sw: adj.visualRect.width * viewport.scale,
+          sh: adj.visualRect.height * viewport.scale,
         };
 
         if (adj.isActive) {
           activeAdjuster = adj;
-          activeProjectedRect = p;
+          activeProjectedRect = {
+            sx: adj.rect.x * viewport.scale + viewport.offsetX,
+            sy: adj.rect.y * viewport.scale + viewport.offsetY,
+            sw: adj.rect.width * viewport.scale,
+            sh: adj.rect.height * viewport.scale,
+          };
         }
 
         const isPadding = adj.type.startsWith("padding");
@@ -600,10 +661,10 @@ export class OverlayRenderer {
         
         if (adj.isHovered || adj.isActive) {
           ctx.fillStyle = `rgba(${baseColor}, 0.25)`;
-          ctx.fillRect(p.sx, p.sy, p.sw, p.sh);
+          ctx.fillRect(pVisual.sx, pVisual.sy, pVisual.sw, pVisual.sh);
           ctx.strokeStyle = `rgba(${baseColor}, 0.85)`;
           ctx.lineWidth = 1.5;
-          ctx.strokeRect(p.sx, p.sy, p.sw, p.sh);
+          ctx.strokeRect(pVisual.sx, pVisual.sy, pVisual.sw, pVisual.sh);
         }
       }
 
@@ -677,6 +738,55 @@ export class OverlayRenderer {
         ctx.fillStyle = "#ffffff";
         ctx.fillText(label, tooltipX, by + th / 2);
       }
+    }
+
+    // 15. Active node drawing preview
+    if (frame.drawingRect) {
+      const p = {
+        sx: frame.drawingRect.x * viewport.scale + viewport.offsetX,
+        sy: frame.drawingRect.y * viewport.scale + viewport.offsetY,
+        sw: frame.drawingRect.width * viewport.scale,
+        sh: frame.drawingRect.height * viewport.scale,
+      };
+
+      ctx.strokeStyle = "rgba(99, 102, 241, 0.8)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(p.sx, p.sy, p.sw, p.sh);
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = "rgba(99, 102, 241, 0.06)";
+      ctx.fillRect(p.sx, p.sy, p.sw, p.sh);
+
+      const tag = frame.drawingTag || "div";
+      const label = `${tag}: ${Math.round(frame.drawingRect.width)} x ${Math.round(frame.drawingRect.height)}`;
+
+      ctx.font = "600 10px 'JetBrains Mono', monospace";
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      const tm = ctx.measureText(label);
+      const tw = tm.width;
+      const th = 16;
+      const pad = 6;
+
+      const gap = 8;
+      const tooltipX = p.sx + p.sw / 2;
+      let by = p.sy + p.sh + gap;
+      if (by + th > height) {
+        by = p.sy - gap - th;
+      }
+      const bx = tooltipX - tw / 2 - pad;
+
+      ctx.fillStyle = "rgba(10, 10, 15, 0.95)";
+      ctx.strokeStyle = "rgba(99, 102, 241, 0.85)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, tw + pad * 2, th, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(label, tooltipX, by + th / 2);
     }
   }
 

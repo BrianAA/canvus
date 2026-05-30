@@ -973,6 +973,44 @@ export class ShadowMount {
     return rect;
   }
 
+  /**
+   * Computes the accumulated CSS zoom and transform scale factors of an element
+   * relative to the shadow root host.
+   */
+  getElementScale(element: HTMLElement): number {
+    this.assertNotDisposed();
+    let scale = 1;
+    let curr: HTMLElement | null = element;
+    while (curr && curr !== this.host) {
+      const cs = getComputedStyle(curr);
+
+      // 1. Account for CSS zoom
+      const zoom = parseFloat(cs.zoom) || 1;
+      scale *= zoom;
+
+      // 2. Account for CSS transform scale (2D matrix)
+      const transform = cs.transform;
+      if (transform && transform !== "none") {
+        const match = transform.match(/^matrix\(([^,]+),\s*([^,]+),\s*([^,]+),\s*([^,]+)/);
+        if (match) {
+          const a = parseFloat(match[1]!);
+          const b = parseFloat(match[2]!);
+          const s = Math.sqrt(a * a + b * b);
+          scale *= s;
+        }
+      }
+
+      // Traverse up parent chain, crossing Shadow DOM boundaries if necessary.
+      let parent: any = curr.parentElement || curr.parentNode;
+      if (parent && parent.host) {
+        parent = parent.host;
+      }
+      if (parent === curr) break;
+      curr = parent as HTMLElement | null;
+    }
+    return scale;
+  }
+
   // ── Flat String Bridge ──────────────────────────────────
 
   /**

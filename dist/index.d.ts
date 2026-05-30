@@ -1,4 +1,4 @@
-export type { Vec2, Rect, ViewportMatrix, WebHTMLNode, ResolvedNode, LayoutMode, ResizeAnchor, InteractionMode, DragHandleState, } from "./types.js";
+export type { Vec2, Rect, ViewportMatrix, WebHTMLNode, ResolvedNode, LayoutMode, ResizeAnchor, InteractionMode, DragHandleState, CanvusTool, } from "./types.js";
 export { ZOOM_MIN, ZOOM_MAX, createIdleDragState, createDefaultViewport, resolveNode, } from "./types.js";
 export { screenToCanvas, canvasToScreen, calculateZoomAnchor, applyWheelZoom, applyPan, isPointInElement, hitTestElements, getAnchorPositions, clampScale, lerp, lerpViewport, } from "./matrix.js";
 export type { RectChangeCallback } from "./shadow-mount.js";

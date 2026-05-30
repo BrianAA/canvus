@@ -13,7 +13,14 @@ Every operation emitted or replayed adheres to the `Operation` interface:
 ```typescript
 interface Operation {
   /** The action type class name */
-  type: "update-style" | "update-classes" | "reparent" | "reorder" | "update-text"
+  type:
+    | "update-style"
+    | "update-classes"
+    | "reparent"
+    | "reorder"
+    | "update-text"
+    | "create-node"
+    | "delete-node"
   /** Unique selector ID of the target content node */
   nodeId: string
   /** Specific delta payload for applying this change */
@@ -112,6 +119,45 @@ Emitted when editing text content inline and blurring.
   "undoPayload": {
     "path": [0],
     "html": "Canvus SDK v1.1"
+  }
+}
+```
+
+### Create Node (`create-node`)
+
+Emitted when drawing a new node or pasting/duplicating an existing node.
+
+```json
+{
+  "type": "create-node",
+  "nodeId": "cloned-1-kxp82f",
+  "payload": {
+    "parentId": "flex-container",
+    "index": 3,
+    "rawMarkup": "<div class=\"card\">Cloned Content</div>",
+    "rect": { "x": 120, "y": 120, "width": 200, "height": 100 }
+  },
+  "undoPayload": {
+    "parentId": "flex-container"
+  }
+}
+```
+
+### Delete Node (`delete-node`)
+
+Emitted when deleting the selected node from the workspace.
+
+```json
+{
+  "type": "delete-node",
+  "nodeId": "cloned-1-kxp82f",
+  "payload": {
+    "parentId": "flex-container"
+  },
+  "undoPayload": {
+    "parentId": "flex-container",
+    "rawMarkup": "<div class=\"card\">Cloned Content</div>",
+    "rect": { "x": 120, "y": 120, "width": 200, "height": 100 }
   }
 }
 ```

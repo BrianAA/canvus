@@ -14,6 +14,7 @@ export type {
   ResizeAnchor,
   InteractionMode,
   DragHandleState,
+  CanvusTool,
 } from "./types.js";
 
 export {

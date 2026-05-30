@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Drawing Tools: Added new Box and Text drawing tools (`setActiveTool`, `getActiveTool`, `setDrawingTag`, `getDrawingTag`) with real-time dotted boundary preview, dimensions overlay tooltip, and direct tag customization.
+- Corner Radius Handles: Introduced corner radius adjustment handles on container elements with hit testing, hovering, and resizing capabilities.
+- Clipboard Operations: Added copy, cut, paste, and duplicate APIs (`copySelectedNode()`, `cutSelectedNode()`, `pasteNode()`, `duplicateSelectedNode()`, `deleteSelectedNode()`) with keyboard shortcut bindings.
+- New Operation Types: Added `"create-node"` and `"delete-node"` operations for transactional undo/redo tracking of tree insertions and removals.
 - Lazy Child Registration: Children of nodes are registered lazily on parent selection, significantly improving workspace startup performance and preventing layout distortion.
 - Sibling Selection/Hover Support: Enhanced selection resolution to allow selecting and hovering siblings and children at all depths of the active registry hierarchy.
 - Dynamic Forced Hover States: Automatically injects/removes `.canvus-state-hover` class on canvas elements under the cursor so CSS `:hover` styles render correctly despite pointer-event blocking overlays.
@@ -22,6 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Marquee selection for multi-node selection via drag rectangle
 
 ### Changed
+- Spacing Adjusters Separation: Decoupled spacing adjusters into separate `rect` bounds (for pointer hit-testing handle-bars) and `visualRect` bounds (for drawing exact padding/margin overlays).
+- Refined `NodeTree.isContainer` and `isContainerNode` to inspect tag names in `rawMarkup` to dynamically classify container elements.
 - Refined workspace renderer to remove static child outlines around selected elements to avoid visual clutter.
 - Increased hover stroke contrast (indigo color and `1.5`px width) to ensure maximum visibility on both light and dark canvas backgrounds.
 - Transitioned script execution and stylesheet extraction to a host-driven architecture, removing automatic execution/parsing from the SDK core.
@@ -30,17 +36,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Upgraded overlay renderer to support grid track visualization alongside flex layout badges
 
 ### Fixed
+- Zoomed Spacing Highlights: Fixed margin/padding highlight box over-calculation in zoomed/scaled layouts by introducing `ShadowMount.getElementScale()` to calculate accumulated internal element scale factors.
+- Restricted text editing on double-click to only trigger on actual text elements, avoiding accidental edit modes on outer layout wrappers.
 - Fixed JS flagging in lazy registration by scanning elements containing script tags prior to stripping them in the Electron importer.
 - Playwright E2E integration tests adapted to drill-down selection and direct node class assertions.
 - Overlap hit-test interception on small elements: Double-clicking leaf/nested nodes bypasses resize handle / spacing adjuster hit-tests on the second click, allowing text editing mode to successfully activate.
 - Spacebar input on `<button>` elements: Intercepts the Spacebar key inside the inline editor, preventing default button click activation (which would toggle Preview Mode) and programmatically inserting spaces at the caret.
 - Interval-driven reset during text editing: Prevented background intervals (like `updateToggleBtn` in `test-page.html`) from resetting the text and cursor of an active button while the user is actively editing it.
 
-### Removed
-- Removed `importHTMLDocument` and `ImportHTMLOptions` from public exports and core SDK codebase.
-- Removed automatic JS detection via global `EventTarget.prototype.addEventListener` monkey-patching.
-
 ### Documented
+- Updated `docs-site/pages/sdk/types.mdx` to cover `CanvusTool`, new interaction modes (`draw-node`, `resize-radius`), and new operations (`create-node`, `delete-node`).
+- Updated `docs-site/pages/sdk/workspace-api.mdx` to cover new clipboard operations and drawing tools methods.
+- Updated `docs-site/pages/sdk/renderer.mdx` to document `isContainerNode` helper, `visualRect` on `SpacingAdjusterInfo`, and drawing/radius properties on `OverlayFrame`.
+- Updated `docs-site/pages/guides/operations.mdx` to include schemas and examples for `create-node` and `delete-node` operations.
 - Updated `docs-site/pages/sdk/renderer.mdx` with `LayoutBadgeInfo` changes.
 - Updated `docs-site/pages/concepts/canvas-overlay.mdx` with Script badges & side-by-side badges details.
 - Created full documentation site at `docs-site/` powered by Nextra 3 + Next.js 14

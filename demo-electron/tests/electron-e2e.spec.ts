@@ -237,6 +237,69 @@ test.describe('Electron E2E Integration Suite', () => {
     }
   });
 
+  test('loads CSS Layer Pressure Test, selects a zoomed card, and verifies scaled spacing adjusters', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Select 'CSS Layer Pressure Test'
+      const templateSelect = window.locator('#sel-template');
+      await templateSelect.selectOption('pressure-test');
+
+      // Wait for the grid card to be visible in the shadow DOM
+      const card = window.locator('[data-canvus-id="imported-node-1"]');
+      await expect(card).toBeVisible({ timeout: 10000 });
+
+      // Click on the root node to select it and register its children
+      const rootNodeCard = window.locator('#node-list .node-card', { hasText: 'imported-node-1' });
+      await rootNodeCard.click();
+
+      // Now the grid child is registered. Click it to register the cards.
+      const gridNodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ imported-node-1__child-1$/ });
+      await expect(gridNodeCard).toBeVisible();
+      await gridNodeCard.click();
+
+      // Click on Card 1 (dynamically matches the first registered card) to select it
+      const card1NodeCard = window.locator('#node-list .node-card .node-id', { hasText: 'imported-node-1__child-1__child-' }).first();
+      await expect(card1NodeCard).toBeVisible();
+      await card1NodeCard.click();
+
+      // Evaluate the spacing adjusters in the workspace using the dynamically selected card ID
+      const adjusterInfo = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        const selectedId = Array.from(wsInstance.getSelectedIds())[0] as string;
+        const adjusters = wsInstance.computeSpacingAdjusters(selectedId);
+        const contentRoot = wsInstance.getContentRoot(selectedId);
+        const internalScale = wsInstance.mount.getElementScale(contentRoot);
+        return {
+          internalScale,
+          adjusters
+        };
+      });
+
+      // Verify internal scale factor is less than or equal to 1, and greater than 0
+      expect(adjusterInfo.internalScale).toBeGreaterThan(0);
+      expect(adjusterInfo.internalScale).toBeLessThanOrEqual(1);
+
+      // Verify that visual heights/widths are scaled compared to the tooltip/value
+      const paddingTopAdjuster = adjusterInfo.adjusters.find(a => a.type === 'padding-top');
+      if (paddingTopAdjuster) {
+        // Visual bounds padding-top rect height: Math.max(10, padTopVal * internalScale)
+        // Check that the height matches the expected scaled calculation
+        const expectedHeight = Math.max(10, paddingTopAdjuster.value * adjusterInfo.internalScale);
+        expect(paddingTopAdjuster.rect.height).toBeCloseTo(expectedHeight, 1);
+      }
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
   test('keyboard interaction nudges absolute nodes and reorders flow children', async () => {
     const appPath = path.resolve(__dirname, '../main.cjs');
     const electronApp = await electron.launch({
@@ -296,5 +359,343 @@ test.describe('Electron E2E Integration Suite', () => {
       await electronApp.close();
     }
   });
+
+  test('floating toolbar can switch tools, select drawing tag, and draw a box', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
+      window.on('pageerror', err => console.error('PAGE ERROR:', err));
+      await window.waitForLoadState('domcontentloaded');
+
+      // Verify that floating toolbar exists
+      const toolbar = window.locator('.figma-toolbar');
+      await expect(toolbar).toBeVisible();
+
+      // Verify tool buttons exist
+      const btnSelect = window.locator('#btn-tool-select');
+      const btnBox = window.locator('#btn-tool-box');
+      const btnText = window.locator('#btn-tool-text');
+      await expect(btnSelect).toBeVisible();
+      await expect(btnBox).toBeVisible();
+      await expect(btnText).toBeVisible();
+
+      // Click on Box Tool button
+      await btnBox.click();
+      await expect(btnBox).toHaveClass(/active/);
+
+      // Verify Toast notification appeared
+      const toast = window.locator('.toast-item').last();
+      await expect(toast).toContainText('Box tool active');
+
+      // Verify drawing tag selector
+      const tagSelect = window.locator('#sel-toolbar-tag');
+      await expect(tagSelect).toBeVisible();
+      await expect(tagSelect).toHaveValue('div');
+
+      // Change drawing tag to section
+      await tagSelect.selectOption('section');
+      await expect(tagSelect).toHaveValue('section');
+
+      // Drag mouse to draw on canvas relative to workspace-wrapper
+      const workspaceWrapper = window.locator('.workspace-wrapper');
+      const wsBox = await workspaceWrapper.boundingBox();
+      expect(wsBox).not.toBeNull();
+
+      const startX = wsBox!.x + 500;
+      const startY = wsBox!.y + 300;
+      const endX = wsBox!.x + 700;
+      const endY = wsBox!.y + 500;
+
+      await window.mouse.move(startX, startY);
+      await window.mouse.down();
+      await window.waitForTimeout(200);
+      await window.mouse.move(endX, endY, { steps: 10 });
+      await window.waitForTimeout(200);
+      await window.mouse.up();
+
+      // On release, a new box node should be created
+      // Wait for it in the node list
+      const sectionNode = window.locator('#node-list .node-card', { hasText: 'box-' });
+      await expect(sectionNode).toBeVisible({ timeout: 5000 });
+
+      // Verify the new node is selected
+      const selectedId = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        return Array.from(wsInstance.getSelectedIds())[0];
+      });
+      expect(selectedId).toContain('box-');
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('Alt-drag duplication clones the selected node immediately on drag start', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Click on the welcome card card in the node list to select it
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      // Find the card bounding box
+      const welcomeCard = window.locator('[data-canvus-id="welcome-card"]');
+      await expect(welcomeCard).toBeVisible();
+      const box = await welcomeCard.boundingBox();
+      expect(box).not.toBeNull();
+
+      const startX = box!.x + box!.width / 2;
+      const startY = box!.y + box!.height / 2;
+
+      // Hold Alt key and drag the welcome card
+      await window.mouse.move(startX, startY);
+      await window.keyboard.down('Alt');
+      await window.mouse.down();
+      await window.waitForTimeout(200);
+      await window.mouse.move(startX + 200, startY + 200, { steps: 10 });
+      await window.waitForTimeout(200);
+      await window.mouse.up();
+      await window.keyboard.up('Alt');
+
+      // Verify that a clone is created
+      const clonedCard = window.locator('#node-list .node-card', { hasText: 'cloned-' });
+      await expect(clonedCard).toBeVisible({ timeout: 5000 });
+
+      // Verify that the original welcome-card is still present in its original position (e.g. still exists in node list)
+      const originalCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
+      await expect(originalCard).toBeVisible();
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('nested drawing allows drawing a box inside a newly drawn empty structural container', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Select Box Tool from toolbar
+      const btnBox = window.locator('#btn-tool-box');
+      await btnBox.click();
+
+      // Get workspace boundaries
+      const workspaceWrapper = window.locator('.workspace-wrapper');
+      const wsBox = await workspaceWrapper.boundingBox();
+      expect(wsBox).not.toBeNull();
+
+      // Draw the first box (outer container)
+      const parentStartX = wsBox!.x + 400;
+      const parentStartY = wsBox!.y + 200;
+      const parentEndX = wsBox!.x + 800;
+      const parentEndY = wsBox!.y + 600;
+
+      await window.mouse.move(parentStartX, parentStartY);
+      await window.mouse.down();
+      await window.waitForTimeout(200);
+      await window.mouse.move(parentEndX, parentEndY, { steps: 10 });
+      await window.waitForTimeout(200);
+      await window.mouse.up();
+
+      // The new outer box should be created and selected
+      const outerNodeCard = window.locator('#node-list .node-card', { hasText: 'box-' });
+      await expect(outerNodeCard).toBeVisible({ timeout: 5000 });
+
+      const outerId = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        return Array.from(wsInstance.getSelectedIds())[0];
+      });
+      expect(outerId).toContain('box-');
+
+      // Select Box Tool again
+      await btnBox.click();
+
+      // Draw the second box (inner child) completely inside the first box
+      const childStartX = wsBox!.x + 500;
+      const childStartY = wsBox!.y + 300;
+      const childEndX = wsBox!.x + 700;
+      const childEndY = wsBox!.y + 500;
+
+      await window.mouse.move(childStartX, childStartY);
+      await window.mouse.down();
+      await window.waitForTimeout(200);
+      await window.mouse.move(childEndX, childEndY, { steps: 10 });
+      await window.waitForTimeout(200);
+      await window.mouse.up();
+
+      // Wait for second box
+      const innerNodeCard = window.locator('#node-list .node-card', { hasText: '↳ box-' });
+      await expect(innerNodeCard).toBeVisible({ timeout: 5000 });
+
+      // Verify second box's parentId in the workspace matches the first box's ID
+      const childParentId = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        const selected = Array.from(wsInstance.getSelectedIds())[0];
+        const node = wsInstance.getNodes().find((n: any) => n.id === selected);
+        return node ? node.parentId : null;
+      });
+      expect(childParentId).toBe(outerId);
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('Cmd+D duplicates the selected node immediately as a sibling', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Click on the welcome card card in the node list to select it
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      // Programmatically dispatch Cmd+D key down event
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'd',
+          code: 'KeyD',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Verify that a cloned card is created and visible in the node tree
+      const clonedCard = window.locator('#node-list .node-card', { hasText: 'cloned-' });
+      await expect(clonedCard).toBeVisible({ timeout: 5000 });
+
+      // Verify the new node is selected
+      const selectedId = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        return Array.from(wsInstance.getSelectedIds())[0];
+      });
+      expect(selectedId).toContain('cloned-');
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('Alt-key symmetrical resizing keeps center fixed and expands bounds symmetrically', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Click welcome-card
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      const welcomeCard = window.locator('[data-canvus-id="welcome-card"]');
+      await expect(welcomeCard).toBeVisible();
+      const startBox = await welcomeCard.boundingBox();
+      expect(startBox).not.toBeNull();
+
+      // The South-East resize handle is at (x + width, y + height)
+      const handleX = startBox!.x + startBox!.width;
+      const handleY = startBox!.y + startBox!.height;
+
+      // Start drag at handle with Alt key down
+      await window.mouse.move(handleX, handleY);
+      await window.keyboard.down('Alt');
+      await window.mouse.down();
+      // Drag outward by 50px right, 50px down
+      await window.mouse.move(handleX + 50, handleY + 50, { steps: 5 });
+      await window.mouse.up();
+      await window.keyboard.up('Alt');
+
+      const endBox = await welcomeCard.boundingBox();
+      expect(endBox).not.toBeNull();
+
+      // Symmetrical resize means the center coordinate remains constant
+      const startCenter = { x: startBox!.x + startBox!.width / 2, y: startBox!.y + startBox!.height / 2 };
+      const endCenter = { x: endBox!.x + endBox!.width / 2, y: endBox!.y + endBox!.height / 2 };
+
+      expect(endCenter.x).toBeCloseTo(startCenter.x, 1);
+      expect(endCenter.y).toBeCloseTo(startCenter.y, 1);
+      expect(endBox!.width).toBeGreaterThan(startBox!.width + 80);
+      expect(endBox!.height).toBeGreaterThan(startBox!.height + 80);
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('Figma-style corner radius drag handles allow dragging to adjust border-radius', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
+      window.on('pageerror', err => console.error('PAGE ERROR:', err));
+      await window.waitForLoadState('domcontentloaded');
+
+      // Click welcome-card
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      const welcomeCard = window.locator('[data-canvus-id="welcome-card"]');
+      await expect(welcomeCard).toBeVisible();
+      const box = await welcomeCard.boundingBox();
+      expect(box).not.toBeNull();
+
+      // The top-left corner radius handle is inset by 16px
+      const handleX = box!.x + 16;
+      const handleY = box!.y + 16;
+
+      await window.mouse.move(handleX, handleY);
+      await window.mouse.down();
+      // Drag inwards (down and right) to increase corner radius
+      await window.mouse.move(handleX + 30, handleY + 30, { steps: 5 });
+      await window.mouse.up();
+
+      // Verify style.borderRadius has been updated on the content root of welcome-card
+      const borderRadius = await welcomeCard.evaluate(el => {
+        const content = el.firstElementChild as HTMLElement;
+        return content ? content.style.borderRadius : el.style.borderRadius;
+      });
+      expect(borderRadius).toContain('px');
+      const radiusVal = parseInt(borderRadius, 10);
+      expect(radiusVal).toBeGreaterThan(30); // It was dragged by 30px, so it should be significantly increased
+
+    } finally {
+      await electronApp.close();
+    }
+  });
 });
+
 

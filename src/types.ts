@@ -177,6 +177,8 @@ export type InteractionMode =
   | "reorder"
   | "select-marquee"
   | "adjust-spacing"
+  | "draw-node"
+  | "resize-radius"
   | null;
 
 /**
@@ -227,13 +229,18 @@ export function createDefaultViewport(): ViewportMatrix {
 
 // ── State Operations ────────────────────────────────────────
 
+/** Supported tool types for drawing. */
+export type CanvusTool = "box" | "text" | null;
+
 /** Supported operation types for visual editor changes. */
 export type OperationType =
   | "update-style"
   | "update-classes"
   | "reparent"
   | "reorder"
-  | "update-text";
+  | "update-text"
+  | "create-node"
+  | "delete-node";
 
 /** Serialized atomic modification block for undo/redo & collaborative synchronization. */
 export interface Operation {

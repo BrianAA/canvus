@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Workspace } from '../../dist/index.js';
+import { Workspace, type CanvusTool } from '../../dist/index.js';
 import { importHTMLDocument, ImportResultLog } from './importer.ts';
 import './index.css';
 
@@ -36,6 +36,8 @@ interface SimplifiedNode {
 export default function App() {
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [ws, setWs] = useState<Workspace | null>(null);
+  const [activeTool, setActiveTool] = useState<CanvusTool>(null);
+  const [drawingTag, setDrawingTag] = useState<string>('div');
 
   // Readouts state
   const [viewport, setViewport] = useState<ViewportState>({ scale: 1, offsetX: 0, offsetY: 0 });
@@ -125,6 +127,7 @@ export default function App() {
 
       onInteractionChange(mode) {
         setInteractionMode(mode);
+        setActiveTool(workspaceInstance.getActiveTool());
       },
 
       onOperationsGenerated(ops) {
@@ -159,11 +162,35 @@ export default function App() {
       currentRect: { x: 80, y: 80, width: 340, height: 0 }
     });
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.composedPath()[0] as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      if (e.key === 'r' || e.key === 'R') {
+        workspaceInstance.setActiveTool('box');
+        setActiveTool(workspaceInstance.getActiveTool());
+        addToast('Box tool active (▢)');
+      } else if (e.key === 't' || e.key === 'T') {
+        workspaceInstance.setActiveTool('text');
+        setActiveTool(workspaceInstance.getActiveTool());
+        addToast('Text tool active (T)');
+      } else if (e.key === 'v' || e.key === 'V') {
+        workspaceInstance.setActiveTool(null);
+        setActiveTool(workspaceInstance.getActiveTool());
+        addToast('Move tool active');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
     setWs(workspaceInstance);
     triggerNodeRefresh(workspaceInstance);
 
     return () => {
       workspaceInstance.dispose();
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -299,6 +326,26 @@ export default function App() {
     return filePath.split(/[\\/]/).pop() || filePath;
   };
 
+  const selectTool = (tool: CanvusTool) => {
+    if (!ws) return;
+    ws.setActiveTool(tool);
+    setActiveTool(tool);
+    if (tool === 'box') {
+      addToast('Box tool active (▢)');
+    } else if (tool === 'text') {
+      addToast('Text tool active (T)');
+    } else if (tool === null) {
+      addToast('Move tool active');
+    }
+  };
+
+  const selectTag = (tag: string) => {
+    if (!ws) return;
+    ws.setDrawingTag(tag);
+    setDrawingTag(tag);
+    addToast(`Drawing tag set to <${tag}>`);
+  };
+
   const handleUndo = () => {
     if (!ws || undoStack.length === 0) return;
     const stack = [...undoStack];
@@ -361,6 +408,99 @@ export default function App() {
           opacity: Math.min(0.2, viewport.scale * 0.15)
         }}></div>
         <div ref={workspaceRef} style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}></div>
+
+        {/* Figma Floating Toolbar */}
+        <div className="figma-toolbar">
+          {/* Move Tool (V) */}
+          <button
+            id="btn-tool-select"
+            className={`toolbar-btn ${activeTool === null ? 'active' : ''}`}
+            onClick={() => selectTool(null)}
+            title="Move Tool (V)"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="3 3 3 16 8 13 13 21 16 19 11 12 17 12 3 3" />
+            </svg>
+          </button>
+
+          {/* Box Tool (R) */}
+          <button
+            id="btn-tool-box"
+            className={`toolbar-btn ${activeTool === 'box' ? 'active' : ''}`}
+            onClick={() => selectTool('box')}
+            title="Box Tool (R)"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+            </svg>
+          </button>
+
+          {/* Text Tool (T) */}
+          <button
+            id="btn-tool-text"
+            className={`toolbar-btn ${activeTool === 'text' ? 'active' : ''}`}
+            onClick={() => selectTool('text')}
+            title="Text Tool (T)"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="4 7 4 4 20 4 20 7" />
+              <line x1="9" y1="20" x2="15" y2="20" />
+              <line x1="12" y1="4" x2="12" y2="20" />
+            </svg>
+          </button>
+
+          <div className="toolbar-divider"></div>
+
+          {/* Drawing Tag Selector */}
+          <div className="toolbar-select-container">
+            <select
+              id="sel-toolbar-tag"
+              className="toolbar-select"
+              value={drawingTag}
+              onChange={(e) => selectTag(e.target.value)}
+              title="Drawing Tag"
+            >
+              <option value="div">div</option>
+              <option value="section">section</option>
+              <option value="header">header</option>
+              <option value="footer">footer</option>
+              <option value="p">p (paragraph)</option>
+              <option value="h1">h1</option>
+              <option value="h2">h2</option>
+              <option value="h3">h3</option>
+              <option value="span">span</option>
+            </select>
+          </div>
+
+          <div className="toolbar-divider"></div>
+
+          {/* Undo Action */}
+          <button
+            id="btn-toolbar-undo"
+            className="toolbar-btn"
+            onClick={handleUndo}
+            disabled={undoStack.length === 0}
+            title="Undo (Cmd+Z / Ctrl+Z)"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7v6h6" />
+              <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+            </svg>
+          </button>
+
+          {/* Reset Viewport */}
+          <button
+            id="btn-toolbar-reset"
+            className="toolbar-btn"
+            onClick={() => { ws?.resetViewport(); addToast('Viewport reset to 1:1'); }}
+            title="Reset Viewport"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Control Sidebar Panel */}
