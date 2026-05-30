@@ -62,6 +62,14 @@ function computeSnappedPosition(
 ): Vec2
 ```
 
+### `isContainerNode(node)`
+
+Returns whether a node is structurally or behaviorally a container node (can hold children or is layout container).
+
+```typescript
+function isContainerNode(node: ResolvedNode): boolean
+```
+
 ---
 
 ## Type Definitions
@@ -88,12 +96,7 @@ interface OverlayFrame {
   /** Current viewport transform. */
   viewport: ViewportMatrix
   /** All mounted nodes with their canvas-space rects and hierarchy data. */
-  nodes: ReadonlyArray<Readonly<{
-    id: string
-    currentRect: Rect | null
-    parentId?: string | null
-    childIds?: readonly string[]
-  }>>
+  nodes: ReadonlyArray<ResolvedNode>
   /** Set of currently selected node IDs. */
   selectedIds: ReadonlySet<string>
   /** ID of the node under the cursor (hover), or null. */
@@ -122,6 +125,12 @@ interface OverlayFrame {
   marqueeRect?: Rect | null
   /** Active spacing adjusters to render. */
   spacingAdjusters?: ReadonlyArray<SpacingAdjusterInfo>
+  /** Active drawing element bounds in canvas-space. */
+  drawingRect?: Rect | null
+  /** Active drawing element HTML tag name. */
+  drawingTag?: string | null
+  /** Active or hovered corner radius handle name (tl, tr, bl, br). */
+  activeRadiusCorner?: string | null
 }
 ```
 
@@ -181,6 +190,8 @@ interface SpacingAdjusterInfo {
   type: SpacingAdjusterType
   /** Bounding box of the handle bar in canvas-space. */
   rect: Rect
+  /** Visual bounding box representing the actual spacing dimensions exactly. */
+  visualRect: Rect
   /** Spacing value in pixels. */
   value: number
   /** Whether the adjuster is currently hovered. */

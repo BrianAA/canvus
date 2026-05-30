@@ -177,7 +177,8 @@ export interface Operation {
 ### Enumeration Types
 *   `LayoutMode` = `"block" | "flex" | "grid" | "inline" | "inline-flex" | "inline-grid" | "none"`
 *   `ResizeAnchor` = `"nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w"`
-*   `InteractionMode` = `"pan" | "drag-node" | "resize-node" | "reparent" | "reorder" | "select-marquee" | "adjust-spacing" | null`
+*   `InteractionMode` = `"pan" | "drag-node" | "resize-node" | "reparent" | "reorder" | "select-marquee" | "adjust-spacing" | "draw-node" | "resize-radius" | null`
+*   `CanvusTool` = `"box" | "text" | null`
 
 ---
 

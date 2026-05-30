@@ -27,6 +27,7 @@ This manifest tracks documentation coverage for every public export in the Canvu
 | `createIdleDragState` | function | `sdk/types.mdx` | ✅ |
 | `createDefaultViewport` | function | `sdk/types.mdx` | ✅ |
 | `resolveNode` | function | `sdk/types.mdx` | ✅ |
+| `CanvusTool` | type | `sdk/types.mdx` | ✅ |
 
 ---
 
@@ -126,7 +127,7 @@ This manifest tracks documentation coverage for every public export in the Canvu
 
 | Module | Total Exports | ✅ Documented | ⚠️ Needs Review | ❌ Missing |
 |--------|--------------|---------------|-----------------|----------|
-| `types.ts` | 14 | 14 | 0 | 0 |
+| `types.ts` | 15 | 15 | 0 | 0 |
 | `matrix.ts` | 11 | 11 | 0 | 0 |
 | `shadow-mount.ts` | 2 | 2 | 0 | 0 |
 | `tree.ts` | 2 | 2 | 0 | 0 |
@@ -134,7 +135,7 @@ This manifest tracks documentation coverage for every public export in the Canvu
 | `renderer.ts` | 11 | 11 | 0 | 0 |
 | `workspace.ts` | 3 | 3 | 0 | 0 |
 | `drop-zone.ts` | 3 | 3 | 0 | 0 |
-| **TOTAL** | **57** | **57** | **0** | **0** |
+| **TOTAL** | **58** | **58** | **0** | **0** |
 
 ### All Exports Covered ✅
 

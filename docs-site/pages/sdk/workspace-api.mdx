@@ -56,6 +56,50 @@ updateMarkup(id: string, markup: string): Rect | null
 
 ---
 
+## Clipboard & Deletion
+
+### `deleteSelectedNode()`
+
+Deletes the currently selected node (if selection size is 1) from the workspace. Automatically generates a `delete-node` operation and commits the parent's new HTML.
+
+```typescript
+deleteSelectedNode(): void
+```
+
+### `duplicateSelectedNode()`
+
+Duplicates the selected node right next to it as a sibling. Generates a `create-node` operation and commits the parent's HTML.
+
+```typescript
+duplicateSelectedNode(): void
+```
+
+### `copySelectedNode()`
+
+Copies the selected node's markup and bounds to the internal clipboard.
+
+```typescript
+copySelectedNode(): void
+```
+
+### `cutSelectedNode()`
+
+Cuts the selected node to the clipboard, removing it from the canvas.
+
+```typescript
+cutSelectedNode(): void
+```
+
+### `pasteNode()`
+
+Pastes the node currently in the clipboard into the canvas. Resolves the location based on current selection: pastes inside a selected container, or as a sibling right after a selected leaf node.
+
+```typescript
+pasteNode(): void
+```
+
+---
+
 ## Style Manipulation
 
 ### `setNodeStyle(id, property, value)`
@@ -293,6 +337,42 @@ Returns whether the workspace is currently in Preview Mode.
 
 ```typescript
 isPreviewMode(): boolean
+```
+
+---
+
+## Drawing Tools
+
+### `setActiveTool(tool)`
+
+Sets the active drawing tool (`"box"`, `"text"`, or `null` to return to selection/idle mode). Selecting a drawing tool automatically deselects all nodes and changes the workspace cursor to `crosshair`.
+
+```typescript
+setActiveTool(tool: CanvusTool): void
+```
+
+### `getActiveTool()`
+
+Returns the currently active drawing tool.
+
+```typescript
+getActiveTool(): CanvusTool
+```
+
+### `setDrawingTag(tag)`
+
+Customizes the HTML tag type for box or text drawing.
+
+```typescript
+setDrawingTag(tag: string): void
+```
+
+### `getDrawingTag()`
+
+Returns the active drawing tag based on the selected tool.
+
+```typescript
+getDrawingTag(): string
 ```
 
 ---
