@@ -477,6 +477,52 @@ test.describe('Electron E2E Integration Suite', () => {
       const originalCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(originalCard).toBeVisible();
 
+      // Retrieve the clone ID
+      const clonedId = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        return Array.from(wsInstance.getSelectedIds())[0] as string;
+      });
+      expect(clonedId).toContain('cloned-');
+
+      // Clear selection by clicking on the canvas background (far from any cards)
+      const canvasBackground = window.locator('.workspace-wrapper');
+      await canvasBackground.click({ position: { x: 500, y: 500 } });
+
+      // Verify selection is cleared
+      const selectionCount = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        return wsInstance.getSelectedIds().size;
+      });
+      expect(selectionCount).toBe(0);
+
+      // Click the title inside the clone to select the card element
+      const clonedH2 = window.locator(`div[data-canvus-id="${clonedId}"] h2`);
+      await expect(clonedH2).toBeVisible();
+      await clonedH2.click();
+
+      // Verify selection is updated to the clone ID
+      const selectionCountAfterClick = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        return wsInstance.getSelectedIds().size;
+      });
+      const selectedIdAfterClick = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        return Array.from(wsInstance.getSelectedIds())[0] as string;
+      });
+      expect(selectionCountAfterClick).toBe(1);
+      expect(selectedIdAfterClick).toBe(clonedId);
+
+      // Double-click it to verify inline text editing triggers correctly on the clone
+      await clonedH2.dblclick();
+      await expect(clonedH2).toHaveAttribute('contenteditable', 'plaintext-only');
+      const clonedWrapper = window.locator(`div[data-canvus-id="${clonedId}"]`);
+      await expect(clonedWrapper).toHaveClass(/canvus-editing/);
+
+      // Press Escape to cancel editing
+      await window.keyboard.press('Escape');
+      await expect(clonedH2).not.toHaveAttribute('contenteditable', 'plaintext-only');
+      await expect(clonedWrapper).not.toHaveClass(/canvus-editing/);
+
     } finally {
       await electronApp.close();
     }
@@ -691,6 +737,640 @@ test.describe('Electron E2E Integration Suite', () => {
       expect(borderRadius).toContain('px');
       const radiusVal = parseInt(borderRadius, 10);
       expect(radiusVal).toBeGreaterThan(30); // It was dragged by 30px, so it should be significantly increased
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('loads CSS Layer Pressure Test, selects the card button wrapper and resizes it without jumping to the top', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
+      window.on('pageerror', err => console.error('PAGE ERROR:', err));
+      await window.waitForLoadState('domcontentloaded');
+
+      // Select 'CSS Layer Pressure Test'
+      const templateSelect = window.locator('#sel-template');
+      await templateSelect.selectOption('pressure-test');
+
+      // Wait for the grid card to be visible in the shadow DOM
+      const card = window.locator('[data-canvus-id="imported-node-1"]');
+      await expect(card).toBeVisible({ timeout: 10000 });
+
+      // Click on the root node to select it and register its children
+      const rootNodeCard = window.locator('#node-list .node-card', { hasText: 'imported-node-1' });
+      await rootNodeCard.click();
+
+      // Now the grid child is registered. Click it to register the cards.
+      const gridNodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ imported-node-1__child-1$/ });
+      await expect(gridNodeCard).toBeVisible();
+      await gridNodeCard.click();
+
+      // Select the button wrapper directly via the workspace API
+      const buttonId = await window.evaluate(() => {
+        const wsInstance = (window as any).ws;
+        const nodes = wsInstance.getNodes();
+        const gridChildId = 'imported-node-1__child-1';
+        const cardNodes = nodes.filter((n: any) => n.parentId === gridChildId);
+        const card1 = cardNodes[0];
+        if (card1) {
+          wsInstance.selectNode(card1.id);
+          const updatedNodes = wsInstance.getNodes();
+          const buttonNode = updatedNodes.find((n: any) => {
+            if (n.parentId === card1.id) {
+              const el = wsInstance.mount.getContentRoot(n.id);
+              return el && el.classList.contains('_button');
+            }
+            return false;
+          });
+          if (buttonNode) {
+            // Center the viewport on the button wrapper at scale 1.0 to ensure it is visible and clickable on screen
+            const rect = buttonNode.currentRect;
+            if (rect) {
+              const rectCenterX = rect.x + rect.width / 2;
+              const rectCenterY = rect.y + rect.height / 2;
+              wsInstance.setViewport({
+                scale: 1.0,
+                offsetX: 700 - rectCenterX,
+                offsetY: 450 - rectCenterY
+              });
+            }
+            wsInstance.selectNode(buttonNode.id);
+            return buttonNode.id;
+          }
+        }
+        return null;
+      });
+      expect(buttonId).not.toBeNull();
+      await window.waitForTimeout(500);
+
+       // Find the button wrapper bounding box
+      const buttonWrapper = window.locator(`[data-canvus-id="${buttonId}"]`);
+      await expect(buttonWrapper).toBeVisible();
+      const startBox = await buttonWrapper.boundingBox();
+      console.log('DEBUG E2E Test 12: startBox', startBox);
+      expect(startBox).not.toBeNull();
+
+      // The South-East resize handle is at (x + width, y + height)
+      const handleX = startBox!.x + startBox!.width;
+      const handleY = startBox!.y + startBox!.height;
+
+      // Start drag at handle
+      await window.mouse.move(handleX, handleY);
+      await window.mouse.down();
+      // Drag outward / downward slightly
+      await window.mouse.move(handleX + 10, handleY + 10, { steps: 5 });
+      await window.mouse.up();
+
+      // Verify that the button did not jump to the top of the card (e.g., behind thumbnail stack at row 1)
+      const endBox = await buttonWrapper.boundingBox();
+      console.log('DEBUG E2E Test 12: endBox', endBox);
+      expect(endBox).not.toBeNull();
+      // If it jumped to row 1, Y difference would be massive (> 200px)
+      // Since it stays at row 5, the Y coordinate should be close to its start Y position
+      console.log('DEBUG E2E Test 12: Y difference:', Math.abs(endBox!.y - startBox!.y));
+      expect(Math.abs(endBox!.y - startBox!.y)).toBeLessThan(50);
+
+      // Verify that the committed grid-row-start is indeed 5
+      const gridRowStart = await buttonWrapper.evaluate(el => {
+        const content = el.firstElementChild as HTMLElement || el;
+        return content.style.gridRowStart || el.style.gridRowStart;
+      });
+      console.log('DEBUG E2E Test 12: gridRowStart', gridRowStart);
+      expect(gridRowStart).toBe('5');
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('Cmd+Delete ungroups the parent container of the selected node without breaking the canvas root wrapper', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Select 'Standard Test Page'
+      const templateSelect = window.locator('#sel-template');
+      await templateSelect.selectOption('test-page');
+
+      // Select main-container to register its immediate children (page-header, layout-grid, banner)
+      const rootNodeCard = window.locator('#node-list .node-card', { hasText: 'main-container' });
+      await expect(rootNodeCard).toBeVisible();
+      await rootNodeCard.click();
+
+      // Click on layout-grid to register card-1
+      const gridNodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ layout-grid$/ });
+      await expect(gridNodeCard).toBeVisible();
+      await gridNodeCard.click();
+
+      // Click card-1 to register card-1__child-1 (the text inside card-1)
+      const card1NodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ card-1$/ });
+      await expect(card1NodeCard).toBeVisible();
+      await card1NodeCard.click();
+
+      // Click card-1__child-1 to select it
+      const childTextNodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ card-1__child-1$/ });
+      await expect(childTextNodeCard).toBeVisible();
+      await childTextNodeCard.click();
+
+      // Verify that card-1 is the parent of card-1__child-1
+      const initialParent = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        return ws.getNodeTree().get('card-1__child-1')?.parentId;
+      });
+      expect(initialParent).toBe('card-1');
+
+      // Dispatch Cmd+Delete to trigger ungrouping on parent wrapper (card-1)
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'Delete',
+          code: 'Delete',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // After ungrouping:
+      // 1. card-1 should be deleted from the tree
+      // 2. card-1__child-1 should now be parented to layout-grid (promoted up)
+      // 3. layout-grid (canvas wrapper/root node) should still exist!
+      const afterUngroup = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        const tree = ws.getNodeTree();
+        return {
+          card1Exists: tree.has('card-1'),
+          child1Parent: tree.get('card-1__child-1')?.parentId,
+          layoutGridExists: tree.has('layout-grid')
+        };
+      });
+
+      expect(afterUngroup.card1Exists).toBe(false);
+      expect(afterUngroup.child1Parent).toBe('layout-grid');
+      expect(afterUngroup.layoutGridExists).toBe(true);
+
+      // Verify that Undo works and does NOT duplicate elements
+      // Click Undo button in sidebar
+      const undoBtn = window.locator('#btn-undo');
+      await expect(undoBtn).toBeEnabled();
+      await undoBtn.click();
+
+      // After undo:
+      // 1. card-1 should exist again in the tree
+      // 2. card-1__child-1's parent should be card-1 again
+      // 3. In the DOM, card-1 should have exactly 1 h3 and 1 p element (no duplicates!)
+      const afterUndo = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        const tree = ws.getNodeTree();
+        return {
+          card1Exists: tree.has('card-1'),
+          child1Parent: tree.get('card-1__child-1')?.parentId,
+        };
+      });
+
+      expect(afterUndo.card1Exists).toBe(true);
+      expect(afterUndo.child1Parent).toBe('card-1');
+
+      // Verify inside Shadow DOM that there are no duplicates of h3/p inside card-1
+      const cardElement = window.locator('[data-canvus-id="card-1"]');
+      await expect(cardElement).toBeVisible();
+      
+      const h3Count = await cardElement.locator('h3').count();
+      const pCount = await cardElement.locator('p').count();
+      expect(h3Count).toBe(1);
+      expect(pCount).toBe(1);
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('Shift+A wraps the selected node in a centering flexbox container', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Select 'Standard Test Page'
+      const templateSelect = window.locator('#sel-template');
+      await templateSelect.selectOption('test-page');
+
+      // Click on main-container to register children
+      const rootNodeCard = window.locator('#node-list .node-card', { hasText: 'main-container' });
+      await expect(rootNodeCard).toBeVisible();
+      await rootNodeCard.click();
+
+      // Click on layout-grid to register children
+      const gridNodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ layout-grid$/ });
+      await expect(gridNodeCard).toBeVisible();
+      await gridNodeCard.click();
+
+      // Click card-1 to select it
+      const card1NodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ card-1$/ });
+      await expect(card1NodeCard).toBeVisible();
+      await card1NodeCard.click();
+
+      // Dispatch Shift+A to wrap card-1 in a centering flexbox
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'a',
+          code: 'KeyA',
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Verify that card-1 is now nested inside a newly created flex-wrapper
+      const wrapResult = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        const tree = ws.getNodeTree();
+        const selectedId = Array.from(ws.getSelectedIds())[0] as string;
+        const selectedNode = tree.get(selectedId);
+        
+        // The newly created flex-wrapper should be selected
+        const isWrapperSelected = selectedId.includes('flex-wrapper-');
+        
+        // card-1 should now have the wrapper as its parent
+        const card1Parent = tree.get('card-1')?.parentId;
+        const isCard1ChildOfWrapper = card1Parent === selectedId;
+
+        // The wrapper's content root style display should be 'flex'
+        const contentRoot = ws.getShadowMount().getContentRoot(selectedId);
+        const display = contentRoot?.style.display;
+        const justify = contentRoot?.style.justifyContent;
+        const align = contentRoot?.style.alignItems;
+
+        return {
+          isWrapperSelected,
+          isCard1ChildOfWrapper,
+          display,
+          justify,
+          align
+        };
+      });
+
+      expect(wrapResult.isWrapperSelected).toBe(true);
+      expect(wrapResult.isCard1ChildOfWrapper).toBe(true);
+      expect(wrapResult.display).toBe('flex');
+      expect(wrapResult.justify).toBe('center');
+      expect(wrapResult.align).toBe('center');
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('keyboard shortcuts Cmd+Z (Undo) and Cmd+Shift+Z (Redo) propagate correctly and revert/reapply actions', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Click on the welcome card card in the node list to select it
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      // Duplicate it via Cmd+D
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'd',
+          code: 'KeyD',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Verify that a cloned card exists
+      const clonedCard = window.locator('#node-list .node-card', { hasText: 'cloned-' });
+      await expect(clonedCard).toBeVisible({ timeout: 5000 });
+
+      // Hit Cmd+Z to Undo the duplication
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'z',
+          code: 'KeyZ',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Verify that the cloned card is removed from the tree
+      await expect(clonedCard).not.toBeVisible({ timeout: 5000 });
+
+      // Hit Cmd+Shift+Z to Redo the duplication
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'z',
+          code: 'KeyZ',
+          metaKey: true,
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Verify that the cloned card is restored
+      await expect(clonedCard).toBeVisible({ timeout: 5000 });
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('multi-select dragging/moving and Shift+A wrapping works', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      window.on('console', msg => console.log('PAGE LOG Test 16:', msg.text()));
+      window.on('pageerror', err => console.error('PAGE ERROR Test 16:', err));
+      await window.waitForLoadState('domcontentloaded');
+
+      // Select 'Blank Workspace'
+      const templateSelect = window.locator('#sel-template');
+      await templateSelect.selectOption('blank');
+      await window.waitForTimeout(500);
+
+      // Programmatically add card-1 and card-2 as absolute positioned nodes at root
+      await window.evaluate(() => {
+        const ws = (window as any).ws;
+        ws.deselectAll();
+        ws.addNode({
+          id: 'card-1',
+          rawMarkup: `<div class="card" id="card-1" style="width: 200px; height: 100px; background: #242427; border: 1px solid #3f3f46; border-radius: 8px; padding: 16px;">Card 1</div>`,
+          currentRect: { x: 100, y: 100, width: 200, height: 100 }
+        });
+        ws.addNode({
+          id: 'card-2',
+          rawMarkup: `<div class="card" id="card-2" style="width: 200px; height: 100px; background: #242427; border: 1px solid #3f3f46; border-radius: 8px; padding: 16px;">Card 2</div>`,
+          currentRect: { x: 350, y: 100, width: 200, height: 100 }
+        });
+        ws.setViewport({
+          scale: 1.0,
+          offsetX: 300,
+          offsetY: 200
+        });
+        ws.selectedIds.clear();
+        ws.selectedIds.add('card-1');
+        ws.selectedIds.add('card-2');
+        ws.callbacks.onSelectionChange?.(ws.selectedIds);
+        ws.render();
+      });
+      await window.waitForTimeout(500);
+
+      const card1 = window.locator('[data-canvus-id="card-1"]');
+      const card2 = window.locator('[data-canvus-id="card-2"]');
+      await expect(card1).toBeVisible();
+      await expect(card2).toBeVisible();
+
+      // Measure starting position
+      const initialBox1 = await card1.boundingBox();
+      const initialBox2 = await card2.boundingBox();
+      console.log('DEBUG E2E Test 16: initialBox1', initialBox1, 'initialBox2', initialBox2);
+      expect(initialBox1).not.toBeNull();
+      expect(initialBox2).not.toBeNull();
+
+      const startX = initialBox1!.x + initialBox1!.width / 2;
+      const startY = initialBox1!.y + initialBox1!.height / 2;
+
+      // Drag by 100px down and right
+      await window.mouse.move(startX, startY);
+      await window.mouse.down();
+      await window.waitForTimeout(200);
+      await window.mouse.move(startX + 100, startY + 100, { steps: 10 });
+      await window.waitForTimeout(200);
+      await window.mouse.up();
+
+      // Measure ending position
+      const endBox1 = await card1.boundingBox();
+      const endBox2 = await card2.boundingBox();
+      console.log('DEBUG E2E Test 16: endBox1', endBox1, 'endBox2', endBox2);
+      expect(endBox1).not.toBeNull();
+      expect(endBox2).not.toBeNull();
+
+      expect(endBox1!.x - initialBox1!.x).toBeCloseTo(100, -1); // tolerance of 10px
+      expect(endBox1!.y - initialBox1!.y).toBeCloseTo(100, -1);
+      expect(endBox2!.x - initialBox2!.x).toBeCloseTo(100, -1);
+      expect(endBox2!.y - initialBox2!.y).toBeCloseTo(100, -1);
+
+      // Now hit Shift+A to wrap both selected nodes in a flex box
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'a',
+          code: 'KeyA',
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Verify both card-1 and card-2 are nested under a newly created flex-wrapper
+      const wrapResult = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        const tree = ws.getNodeTree();
+        const selectedId = Array.from(ws.getSelectedIds())[0] as string;
+        
+        const card1Parent = tree.get('card-1')?.parentId;
+        const card2Parent = tree.get('card-2')?.parentId;
+
+        return {
+          selectedId,
+          card1Parent,
+          card2Parent
+        };
+      });
+
+      expect(wrapResult.selectedId).toContain('flex-wrapper-');
+      expect(wrapResult.card1Parent).toBe(wrapResult.selectedId);
+      expect(wrapResult.card2Parent).toBe(wrapResult.selectedId);
+
+      // Hit Undo button in sidebar
+      const undoBtn = window.locator('#btn-undo');
+      await expect(undoBtn).toBeEnabled();
+      await undoBtn.click();
+
+      // Verify parents are restored
+      const restoreResult = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        const tree = ws.getNodeTree();
+        return {
+          card1Parent: tree.get('card-1')?.parentId,
+          card2Parent: tree.get('card-2')?.parentId,
+          wrapperExists: ws.getNodes().some((n: any) => n.id.includes('flex-wrapper-'))
+        };
+      });
+      expect(restoreResult.card1Parent).toBeNull();
+      expect(restoreResult.card2Parent).toBeNull();
+      expect(restoreResult.wrapperExists).toBe(false);
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('multi-select keyboard shortcuts copy, paste, duplicate, delete work', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({
+      args: [appPath]
+    });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Select 'Standard Test Page'
+      const templateSelect = window.locator('#sel-template');
+      await templateSelect.selectOption('test-page');
+
+      // Wait for layout grid to load and expand it in the node list
+      const rootNodeCard = window.locator('#node-list .node-card', { hasText: 'main-container' });
+      await expect(rootNodeCard).toBeVisible({ timeout: 10000 });
+      await rootNodeCard.click();
+
+      const gridNodeCard = window.locator('#node-list .node-card .node-id', { hasText: /^↳ layout-grid$/ });
+      await expect(gridNodeCard).toBeVisible();
+      await gridNodeCard.click();
+
+      // 1. Programmatically select card-1 and card-2 in the workspace
+      await window.evaluate(() => {
+        const ws = (window as any).ws;
+        ws.selectedIds.clear();
+        ws.selectedIds.add('card-1');
+        ws.selectedIds.add('card-2');
+        ws.callbacks.onSelectionChange?.(ws.selectedIds);
+        ws.render();
+      });
+
+      // 2. Duplicate via Cmd+D
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'd',
+          code: 'KeyD',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Verify that two cloned cards are created (cloned-card-1 and cloned-card-2)
+      const clonedNodesCount = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        return ws.getNodes().filter((n: any) => n.id.includes('cloned-')).length;
+      });
+      expect(clonedNodesCount).toBe(2);
+
+      // Verify that the clones are selected
+      const selectedClonesCount = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        return Array.from(ws.getSelectedIds()).filter((k: any) => k.includes('cloned-')).length;
+      });
+      expect(selectedClonesCount).toBe(2);
+
+      // 3. Delete the clones via Backspace
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'Backspace',
+          code: 'Backspace',
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Verify clones are gone
+      const clonedNodesCountAfterDelete = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        return ws.getNodes().filter((n: any) => n.id.includes('cloned-')).length;
+      });
+      expect(clonedNodesCountAfterDelete).toBe(0);
+
+      // 4. Multi-select card-1 and card-2 again, copy them
+      await window.evaluate(() => {
+        const ws = (window as any).ws;
+        ws.selectedIds.clear();
+        ws.selectedIds.add('card-1');
+        ws.selectedIds.add('card-2');
+        ws.callbacks.onSelectionChange?.(ws.selectedIds);
+        ws.render();
+      });
+
+      // Press Cmd+C
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'c',
+          code: 'KeyC',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Select main-container (where we want to paste)
+      await window.evaluate(() => {
+        const ws = (window as any).ws;
+        ws.selectNode('main-container');
+      });
+
+      // Press Cmd+V to paste inside main-container
+      await window.evaluate(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'v',
+          code: 'KeyV',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(event);
+      });
+
+      // Verify copies are pasted as children of main-container
+      const pastedChildren = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        const pastedNodes = ws.getNodes().filter((n: any) => n.id.includes('pasted-'));
+        return pastedNodes.map((n: any) => ({
+          id: n.id,
+          parentId: n.parentId
+        }));
+      });
+
+      expect(pastedChildren.length).toBe(2);
+      for (const child of pastedChildren) {
+        expect(child.parentId).toBe('main-container');
+      }
 
     } finally {
       await electronApp.close();

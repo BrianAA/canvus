@@ -1,5 +1,6 @@
 # Canvus SDK
 
+[![npm version](https://img.shields.io/npm/v/@canvus/core.svg)](https://www.npmjs.com/package/@canvus/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Canvus is a headless, framework-agnostic vanilla TypeScript SDK for building visual layout editing workspaces. By separating rendering and visual handles, it enables developers to construct CMS page-builder canvases, A/B testing editors, and high-performance visual IDE tools with web-native performance.
@@ -36,23 +37,34 @@ For a detailed walkthrough of each source file and their individual roles, see t
 ## 🛠️ Quick Start
 
 ### 1. Installation
-Clone the repository and install the development dependencies:
+Install via npm:
+```bash
+npm install @canvus/core
+```
+
+### 2. Basic Usage
+Import and initialize a workspace in your project:
+```ts
+import { Workspace } from "@canvus/core";
+
+const workspace = new Workspace(container, {
+  html: '<div class="my-layout">Hello Canvus</div>',
+  onChange(ops) {
+    console.log("Operations:", ops);
+  },
+});
+```
+
+The SDK exports all core primitives — see the [API Reference](docs/api.md) for the full surface.
+
+### 3. Development (Contributing)
+To work on the SDK itself, clone the repo and use the local dev scripts:
 ```bash
 git clone https://github.com/balfaro01/canvus.git
 cd canvus
 npm install
-```
-
-### 2. Build the SDK
-Compile the TypeScript source files in `src/` to the compiled ESM distribution bundle in `dist/`:
-```bash
-npm run build
-```
-
-### 3. Launch the Workbench Demo
-Launch a local development server on `http://localhost:3000` to interact with selection overlays, resizing reflow, and operations streams:
-```bash
-npm run demo
+npm run build      # Compile TypeScript → dist/
+npm run demo       # Launch workbench at http://localhost:3000
 ```
 
 ---

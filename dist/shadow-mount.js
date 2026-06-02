@@ -464,6 +464,7 @@ export class ShadowMount {
         if (newParentId === null) {
             // Move to shadow root — become absolutely positioned.
             mounted.wrapper.classList.remove("canvus-flow-child");
+            mounted.wrapper.style.position = "absolute";
             this.shadow.appendChild(mounted.wrapper);
         }
         else {
@@ -476,6 +477,7 @@ export class ShadowMount {
             if (!mounted.isDirect) {
                 mounted.wrapper.classList.add("canvus-flow-child");
             }
+            mounted.wrapper.style.position = "";
             mounted.wrapper.style.left = "auto";
             mounted.wrapper.style.top = "auto";
             // Insert into parent's CONTENT ROOT (user's markup root).

@@ -149,4 +149,32 @@ export interface Operation {
     /** Reciprocal delta payload to undo this change. */
     undoPayload: any;
 }
+/** Key/modifier match configuration for keyboard events. */
+export interface CommandShortcut {
+    /** The KeyboardEvent.key value, e.g. "d", "c", "Delete". Case-insensitive. */
+    key?: string;
+    /** The KeyboardEvent.code value, e.g. "KeyD", "Space", "ArrowUp". */
+    code?: string;
+    /** Whether Meta (Mac) or Control (Windows/Linux) must be pressed. */
+    metaOrCtrl?: boolean;
+    /** Whether Shift must be pressed. */
+    shift?: boolean;
+    /** Whether Alt must be pressed. */
+    alt?: boolean;
+}
+/** Modular keyboard command descriptor. */
+export interface Command {
+    /** Unique command identifier. */
+    id: string;
+    /** User-friendly name. */
+    name: string;
+    /** Description of what the command does. */
+    description?: string;
+    /** Key shortcut configuration(s). */
+    shortcut?: CommandShortcut | CommandShortcut[];
+    /** Action executed when shortcut is triggered. */
+    execute: (workspace: any, event?: KeyboardEvent) => void;
+    /** Optional filter determining if command is active/enabled. */
+    enabled?: (workspace: any) => boolean;
+}
 //# sourceMappingURL=types.d.ts.map

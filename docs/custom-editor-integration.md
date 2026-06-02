@@ -44,7 +44,7 @@ export interface WorkspaceCallbacks {
 Here is a complete integration example showing how to mount a custom editor overlay on double-click:
 
 ```typescript
-import { Workspace } from 'canvus';
+import { Workspace } from '@canvus/core';
 
 // Instantiate Workspace
 const ws = new Workspace(document.getElementById('canvas-container')!, {

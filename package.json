@@ -1,10 +1,16 @@
 {
-  "name": "canvus",
+  "name": "@canvus/core",
   "version": "0.1.0",
   "description": "High-performance HTML-in-Canvas Interactive Workspace SDK",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",

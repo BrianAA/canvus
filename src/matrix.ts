@@ -155,9 +155,17 @@ export function applyWheelZoom(
   deltaY: number,
   viewport: Readonly<ViewportMatrix>,
   canvasRect: Readonly<Rect>,
+  isPinch: boolean = false,
 ): ViewportMatrix {
-  // Exponential mapping: smooth zoom that is device-agnostic.
-  const scaleDelta = Math.exp(-deltaY * 0.001);
+  // Trackpad pinch events have small deltas. We use a higher sensitivity (0.01)
+  // for pinch to make it feel fluid, and a standard sensitivity (0.001) for regular scroll.
+  const sensitivity = isPinch ? 0.01 : 0.001;
+  let scaleDelta = Math.exp(-deltaY * sensitivity);
+
+  // Clamp the scaleDelta to a safe range per event [0.85, 1.15] (15% max change)
+  // to prevent standard mouse wheel zooms (e.g. Ctrl + Mouse Wheel) from zooming too fast.
+  scaleDelta = Math.min(1.15, Math.max(0.85, scaleDelta));
+
   return calculateZoomAnchor(clientX, clientY, scaleDelta, viewport, canvasRect);
 }
 

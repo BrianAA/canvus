@@ -46,7 +46,7 @@ interface WorkspaceCallbacks {
 Here is a complete integration example mounting a custom editor overlay on double-click:
 
 ```typescript
-import { Workspace } from 'canvus'
+import { Workspace } from '@canvus/core'
 
 const ws = new Workspace(document.getElementById('canvas-container')!, {
   onTextEditRequest(nodeId, element, commit) {

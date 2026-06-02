@@ -103,7 +103,9 @@ export declare class Workspace {
     private isAdjustingRadius;
     private activeRadiusCorner;
     private hoveredRadiusCorner;
-    private radiusStartValue;
+    private radiusTargetNodeId;
+    private radiusStartValues;
+    private readonly dragStartNodes;
     private isPanning;
     private isDragging;
     private pointerDownReadyToDrag;
@@ -118,9 +120,6 @@ export declare class Workspace {
     private adjusterStartValueStr;
     private dragStartCanvas;
     private lastCanvasPos;
-    private dragStartNodePos;
-    private dragStartParentId;
-    private dragStartIndex;
     private resizeStartRect;
     private dragStartStyles;
     private disposed;
@@ -138,10 +137,8 @@ export declare class Workspace {
     private drawStartCanvas;
     private drawCurrentCanvas;
     private newElementCounter;
-    private clipboardNodeMarkup;
-    private clipboardNodeRect;
+    private clipboardItems;
     private isDragCopy;
-    private dragCopyMarkup;
     private readonly onWheel;
     private readonly onPointerDown;
     private readonly onPointerMove;
@@ -309,7 +306,9 @@ export declare class Workspace {
     private handlePointerUp;
     /** Spacebar tracking for pan mode. */
     private handleKeyDown;
-    private nudgeOrReorderNode;
+    private nudgeOrReorderSelected;
+    private ungroupSelectedOrParent;
+    private wrapSelectedInFlex;
     private handleKeyUp;
     /** Resize canvas to match container dimensions. */
     private handleResize;
@@ -343,9 +342,11 @@ export declare class Workspace {
     private deregisterLazyChildren;
     /** Returns nodes in depth-first order for hit testing and rendering. */
     private getOrderedNodeList;
+    private getTopLevelSelectedIds;
     private hitTestRadiusHandle;
     /** Returns canvas-space rects of all nodes except the given ID. */
     private getOtherRects;
+    private getOtherRectsMultiple;
     /**
      * Re-measures a node and all its descendants using
      * canvas-space coordinate extraction.

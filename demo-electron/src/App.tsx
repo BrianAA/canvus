@@ -47,6 +47,7 @@ export default function App() {
   const [commitLogs, setCommitLogs] = useState<CommitLogEntry[]>([]);
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
   const [undoStack, setUndoStack] = useState<any[][]>([]);
+  const [redoStack, setRedoStack] = useState<any[][]>([]);
   const [importLog, setImportLog] = useState<ImportResultLog | null>(null);
 
   // Style input state
@@ -74,6 +75,7 @@ export default function App() {
     if (!workspaceRef.current) return;
 
     let localUndoStack: any[][] = [];
+    let localRedoStack: any[][] = [];
 
     const workspaceInstance = new Workspace(workspaceRef.current, {
       onHTMLCommit(id, html) {
@@ -134,6 +136,50 @@ export default function App() {
         console.log('⚡ Operations Generated:', ops);
         localUndoStack.push(ops);
         setUndoStack([...localUndoStack]);
+        localRedoStack = [];
+        setRedoStack([]);
+      },
+
+      onUndo() {
+        if (localUndoStack.length === 0) return;
+        const ops = localUndoStack.pop()!;
+        setUndoStack([...localUndoStack]);
+
+        // Apply operations in reverse sequence with reverse payloads
+        for (let i = ops.length - 1; i >= 0; i--) {
+          const op = ops[i];
+          workspaceInstance.applyOperation({
+            type: op.type,
+            nodeId: op.nodeId,
+            payload: op.undoPayload,
+            undoPayload: op.payload
+          });
+        }
+        localRedoStack.push(ops);
+        setRedoStack([...localRedoStack]);
+        triggerNodeRefresh(workspaceInstance);
+        addToast(`Undid ${ops.length} operation(s)`);
+      },
+
+      onRedo() {
+        if (localRedoStack.length === 0) return;
+        const ops = localRedoStack.pop()!;
+        setRedoStack([...localRedoStack]);
+
+        // Re-apply operations in original sequence with original payloads
+        for (let i = 0; i < ops.length; i++) {
+          const op = ops[i];
+          workspaceInstance.applyOperation({
+            type: op.type,
+            nodeId: op.nodeId,
+            payload: op.payload,
+            undoPayload: op.undoPayload
+          });
+        }
+        localUndoStack.push(ops);
+        setUndoStack([...localUndoStack]);
+        triggerNodeRefresh(workspaceInstance);
+        addToast(`Redid ${ops.length} operation(s)`);
       },
 
       onForcePseudoState(nodeId, state, enabled) {
@@ -180,6 +226,16 @@ export default function App() {
         workspaceInstance.setActiveTool(null);
         setActiveTool(workspaceInstance.getActiveTool());
         addToast('Move tool active');
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          workspaceInstance.callbacks.onRedo?.();
+        } else {
+          workspaceInstance.callbacks.onUndo?.();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        workspaceInstance.callbacks.onRedo?.();
       }
     };
 
@@ -347,22 +403,11 @@ export default function App() {
   };
 
   const handleUndo = () => {
-    if (!ws || undoStack.length === 0) return;
-    const stack = [...undoStack];
-    const ops = stack.pop()!;
-    // Apply operations in reverse sequence with reverse payloads
-    for (let i = ops.length - 1; i >= 0; i--) {
-      const op = ops[i];
-      ws.applyOperation({
-        type: op.type,
-        nodeId: op.nodeId,
-        payload: op.undoPayload,
-        undoPayload: op.payload
-      });
-    }
-    setUndoStack(stack);
-    triggerNodeRefresh(ws);
-    addToast(`Undid ${ops.length} operation(s)`);
+    ws?.callbacks.onUndo?.();
+  };
+
+  const handleRedo = () => {
+    ws?.callbacks.onRedo?.();
   };
 
   // Node style change emitter
@@ -485,6 +530,20 @@ export default function App() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 7v6h6" />
               <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+            </svg>
+          </button>
+
+          {/* Redo Action */}
+          <button
+            id="btn-toolbar-redo"
+            className="toolbar-btn"
+            onClick={handleRedo}
+            disabled={redoStack.length === 0}
+            title="Redo (Cmd+Shift+Z / Cmd+Y)"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 7v6h-6" />
+              <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
             </svg>
           </button>
 
@@ -747,6 +806,9 @@ export default function App() {
         <div className="sidebar-actions">
           <button id="btn-undo" className="btn" disabled={undoStack.length === 0} onClick={handleUndo}>
             ↶ Undo
+          </button>
+          <button id="btn-redo" className="btn" disabled={redoStack.length === 0} onClick={handleRedo}>
+            ↷ Redo
           </button>
           <button id="btn-reset" className="btn" onClick={() => { ws?.resetViewport(); addToast('Viewport reset to 1:1'); }}>
             ↺ Reset Viewport
