@@ -88,7 +88,7 @@ export declare function calculateZoomAnchor(clientX: number, clientY: number, sc
  * @param canvasRect - Canvas element bounding rect.
  * @returns A new `ViewportMatrix` with the wheel-zoom applied.
  */
-export declare function applyWheelZoom(clientX: number, clientY: number, deltaY: number, viewport: Readonly<ViewportMatrix>, canvasRect: Readonly<Rect>): ViewportMatrix;
+export declare function applyWheelZoom(clientX: number, clientY: number, deltaY: number, viewport: Readonly<ViewportMatrix>, canvasRect: Readonly<Rect>, isPinch?: boolean): ViewportMatrix;
 /**
  * Applies a screen-space pan delta to the viewport offset.
  * Typically driven by pointer-move events while spacebar is held

@@ -15,6 +15,8 @@ export type {
   InteractionMode,
   DragHandleState,
   CanvusTool,
+  CommandShortcut,
+  Command,
 } from "./types.js";
 
 export {

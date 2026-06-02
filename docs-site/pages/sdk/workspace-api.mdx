@@ -5,7 +5,7 @@ The `Workspace` class is the core engine orchestrating events, DOM mounting, and
 ## Constructor
 
 ```typescript
-import { Workspace } from 'canvus'
+import { Workspace } from '@canvus/core'
 
 const ws = new Workspace(container: HTMLElement, callbacks?: WorkspaceCallbacks, config?: WorkspaceConfig)
 ```
@@ -301,7 +301,7 @@ getContentRoot(id: string): HTMLElement | null
 Utility function (exported from `tree.ts`) that computes a single bounding rectangle encompassing all provided nodes. Returns `null` if no nodes have measured rects.
 
 ```typescript
-import { computeAggregateBounds } from 'canvus'
+import { computeAggregateBounds } from '@canvus/core'
 
 const bounds = computeAggregateBounds(ws.getNodes())
 // { x, y, width, height } or null

@@ -493,29 +493,33 @@ export class OverlayRenderer {
     }
 
     // 7b. Corner radius handles
-    if (selectedIds.size === 1) {
-      const selId = selectedIds.values().next().value as string;
-      const node = frame.nodes.find(n => n.id === selId);
+    for (const id of selectedIds) {
+      const node = frame.nodes.find(n => n.id === id);
       if (node && isContainerNode(node)) {
-        const p = projected.get(selId);
-        if (p && p.sw >= 64 && p.sh >= 64) {
-          const inset = 16;
-          const handles = [
-            { type: "tl", hx: p.sx + inset, hy: p.sy + inset },
-            { type: "tr", hx: p.sx + p.sw - inset, hy: p.sy + inset },
-            { type: "bl", hx: p.sx + inset, hy: p.sy + p.sh - inset },
-            { type: "br", hx: p.sx + p.sw - inset, hy: p.sy + p.sh - inset },
-          ];
+        const isHovered = frame.hoveredId === id;
+        const shouldDrawHandles = selectedIds.size === 1 || isHovered || frame.activeRadiusCorner;
 
-          for (const handle of handles) {
-            const isActive = handle.type === frame.activeRadiusCorner;
-            ctx.beginPath();
-            ctx.arc(handle.hx, handle.hy, isActive ? 5 : 3.5, 0, Math.PI * 2);
-            ctx.fillStyle = isActive ? style.selectionStroke : "#ffffff";
-            ctx.fill();
-            ctx.strokeStyle = style.selectionStroke;
-            ctx.lineWidth = isActive ? 2 : 1.5;
-            ctx.stroke();
+        if (shouldDrawHandles) {
+          const p = projected.get(id);
+          if (p && p.sw >= 64 && p.sh >= 64) {
+            const inset = 16;
+            const handles = [
+              { type: "tl", hx: p.sx + inset, hy: p.sy + inset },
+              { type: "tr", hx: p.sx + p.sw - inset, hy: p.sy + inset },
+              { type: "bl", hx: p.sx + inset, hy: p.sy + p.sh - inset },
+              { type: "br", hx: p.sx + p.sw - inset, hy: p.sy + p.sh - inset },
+            ];
+
+            for (const handle of handles) {
+              const isActive = handle.type === frame.activeRadiusCorner && (selectedIds.size === 1 || isHovered || frame.activeRadiusCorner);
+              ctx.beginPath();
+              ctx.arc(handle.hx, handle.hy, isActive ? 5 : 3.5, 0, Math.PI * 2);
+              ctx.fillStyle = isActive ? style.selectionStroke : "#ffffff";
+              ctx.fill();
+              ctx.strokeStyle = style.selectionStroke;
+              ctx.lineWidth = isActive ? 2 : 1.5;
+              ctx.stroke();
+            }
           }
         }
       }
