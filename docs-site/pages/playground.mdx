@@ -1,0 +1,103 @@
+# Interactive Playground
+
+Experience the Canvus SDK in action — a fully interactive design editor running in your browser.
+
+import { Callout } from 'nextra/components'
+import { useEffect, useState } from 'react'
+
+export function PlaygroundEmbed() {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+  if (isMobile) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '16px',
+        padding: '48px 24px',
+        textAlign: 'center',
+        background: 'rgba(99, 102, 241, 0.05)',
+        border: '1px solid rgba(99, 102, 241, 0.15)',
+        borderRadius: '12px',
+      }}>
+        <div style={{
+          width: '56px', height: '56px', borderRadius: '14px',
+          background: 'linear-gradient(135deg, #6366f1, #a78bfa)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '24px', boxShadow: '0 8px 24px rgba(99,102,241,0.3)',
+        }}>🎨</div>
+        <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Desktop Required</h3>
+        <p style={{ fontSize: '14px', color: '#8b8ba3', lineHeight: 1.7, maxWidth: '300px' }}>
+          The interactive playground needs a larger screen to showcase the full editor experience with canvas, layers, and inspector panels.
+        </p>
+      </div>
+    )
+  }
+  return (
+    <div style={{
+      width: '100%',
+      height: '75vh',
+      minHeight: '500px',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      border: '1px solid rgba(255,255,255,0.08)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      position: 'relative',
+    }}>
+      <iframe
+        src="/playground/index.html"
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          background: '#09090b',
+        }}
+        title="Canvus Interactive Playground"
+        loading="lazy"
+      />
+    </div>
+  )
+}
+
+<Callout type="info">
+  **Try it out!** Select elements on the canvas to edit their styles in real-time. Use the tools in the toolbar to draw new elements, pan with Space, and zoom with scroll.
+</Callout>
+
+<Callout type="warning">
+  The **toolbar, layers panel, and design inspector** are the "host app" — UI *you* build around Canvus. The **canvas workspace** in the center is powered by the Canvus SDK. Look for the **YOUR APP** and **CANVUS SDK** badges in the demo.
+</Callout>
+
+<PlaygroundEmbed />
+
+## What This Demonstrates
+
+| Feature | Description |
+|---------|-------------|
+| **Layers Panel** · _Your App_ | Tree view of all mounted HTML nodes with hierarchy visualization |
+| **Design Inspector** · _Your App_ | Live CSS property editing — layout, spacing, fill, border, typography |
+| **Canvas Workspace** · _Canvus SDK_ | Infinite pan/zoom canvas with dot grid, snap alignment guides, and selection overlays |
+| **Drawing Tools** · _Canvus SDK_ | Box and Text drawing tools to create new elements on the canvas |
+| **Shadow DOM Isolation** · _Canvus SDK_ | All content renders inside Shadow DOM — zero style leakage |
+| **Flat String Bridge** · _Canvus SDK_ | Every visual edit produces clean, semantic HTML output |
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `V` | Switch to Move tool |
+| `R` | Switch to Box drawing tool |
+| `T` | Switch to Text drawing tool |
+| `Space + Drag` | Pan the canvas |
+| `Scroll` | Zoom in/out at cursor |
+| `Double-click` | Edit text content inline |
+
+---
+
+Ready to build your own? Check out the [Quick Start guide](/getting-started/quickstart) or explore the full [SDK Reference](/sdk/workspace-api).
