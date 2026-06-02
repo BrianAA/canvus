@@ -45,6 +45,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Interval-driven reset during text editing: Prevented background intervals (like `updateToggleBtn` in `test-page.html`) from resetting the text and cursor of an active button while the user is actively editing it.
 
 ### Documented
+- Updated `docs-site/pages/getting-started/installation.mdx` — added `npm install @canvus/core` as primary installation method, moved clone-and-build to a secondary "Contributing" section
+- Updated `docs-site/pages/getting-started/quickstart.mdx` — imports now use `@canvus/core` package instead of `./dist/index.js`
+- Updated `docs-site/pages/contributing/development.mdx` — added callout clarifying contributor vs. end-user setup paths
 - Updated `docs-site/pages/sdk/types.mdx` to cover `CanvusTool`, new interaction modes (`draw-node`, `resize-radius`), and new operations (`create-node`, `delete-node`).
 - Updated `docs-site/pages/sdk/workspace-api.mdx` to cover new clipboard operations and drawing tools methods.
 - Updated `docs-site/pages/sdk/renderer.mdx` to document `isContainerNode` helper, `visualRect` on `SpacingAdjusterInfo`, and drawing/radius properties on `OverlayFrame`.

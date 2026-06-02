@@ -1,6 +1,6 @@
 # Documentation Coverage Manifest
 
-> **Last Updated**: 2026-05-29
+> **Last Updated**: 2026-06-02
 > **Source of Truth**: `src/index.ts`
 
 This manifest tracks documentation coverage for every public export in the Canvus SDK. Compare this against `src/index.ts` after any code change.

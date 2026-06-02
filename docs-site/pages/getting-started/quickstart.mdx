@@ -2,7 +2,13 @@
 
 Build a working interactive workspace in under 5 minutes.
 
-## 1. Set Up the Container
+## 1. Install the SDK
+
+```bash
+npm install @canvus/core
+```
+
+## 2. Set Up the Container
 
 Create an HTML file with a container element for the workspace:
 
@@ -31,12 +37,12 @@ Create an HTML file with a container element for the workspace:
 </html>
 ```
 
-## 2. Initialize the Workspace
+## 3. Initialize the Workspace
 
 Create `app.js` and import the Canvus SDK:
 
 ```typescript
-import { Workspace } from './dist/index.js'
+import { Workspace } from '@canvus/core'
 
 // 1. Grab the container element
 const container = document.getElementById('canvas-container')
@@ -60,7 +66,7 @@ const ws = new Workspace(container, {
 })
 ```
 
-## 3. Add Content Nodes
+## 4. Add Content Nodes
 
 Mount HTML content nodes into the workspace:
 
@@ -93,7 +99,7 @@ ws.addNode({
 })
 ```
 
-## 4. Try It Out
+## 5. Try It Out
 
 Now you can:
 
@@ -105,7 +111,7 @@ Now you can:
 - **Double-click** a text element to edit it inline
 - **Hover** over padding areas to see spacing adjusters
 
-## 5. Listen for Changes
+## 6. Listen for Changes
 
 The workspace emits operations you can use for undo/redo:
 
