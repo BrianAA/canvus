@@ -428,6 +428,10 @@ export interface Command {
 | `markNodeHasJS(nodeId)` | Explicitly flag a node as containing/using JavaScript |
 | `unmarkNodeHasJS(nodeId)` | Remove the JavaScript flag from a node |
 | `hasJSMark(nodeId)` | Check if a node is flagged as containing JavaScript |
+| `lockNode(nodeId)` | Lock a node, making it non-interactive on the canvas |
+| `unlockNode(nodeId)` | Unlock a previously locked node, restoring interactivity |
+| `isNodeLocked(nodeId)` | Check if a node is locked (directly or via ancestor) |
+| `getLockedNodeIds()` | Get the set of directly locked node IDs |
 | `dispose()` | Cleanup event listeners |
 
 ---
@@ -444,6 +448,7 @@ export interface Command {
 | `onInteractionChange(mode)` | Drag state changes (pan, resize, etc.) |
 | `onOperationsGenerated(ops)` | Undoable operations produced |
 | `onTextEditRequest(nodeId, el, commit)` | Custom editor escape hatch |
+| `onLockedNodeInteraction(nodeId)` | User clicked/interacted with a locked node |
 
 ---
 

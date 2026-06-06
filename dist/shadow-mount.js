@@ -23,6 +23,7 @@ const SHADOW_RESET_CSS = `
 
 :host {
   all: initial;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   display: block;
   position: absolute;
   top: 0;
@@ -463,8 +464,44 @@ export class ShadowMount {
         mounted.wrapper.remove();
         if (newParentId === null) {
             // Move to shadow root — become absolutely positioned.
-            mounted.wrapper.classList.remove("canvus-flow-child");
-            mounted.wrapper.style.position = "absolute";
+            if (mounted.isDirect) {
+                // Convert to wrapper-based node so it doesn't leak styling/position properties into the content element
+                const contentEl = mounted.wrapper;
+                contentEl.removeAttribute("data-canvus-id");
+                const wrapper = document.createElement("div");
+                wrapper.className = "canvus-node-wrapper";
+                wrapper.setAttribute("data-canvus-id", id);
+                // Move explicit position/size styles from content to wrapper
+                const left = contentEl.style.left;
+                const top = contentEl.style.top;
+                const width = contentEl.style.width;
+                const height = contentEl.style.height;
+                const transform = contentEl.style.transform;
+                contentEl.style.left = "";
+                contentEl.style.top = "";
+                contentEl.style.width = "";
+                contentEl.style.height = "";
+                contentEl.style.position = "";
+                contentEl.style.transform = "";
+                if (left)
+                    wrapper.style.left = left;
+                if (top)
+                    wrapper.style.top = top;
+                if (width)
+                    wrapper.style.width = width;
+                if (height)
+                    wrapper.style.height = height;
+                wrapper.style.position = "absolute";
+                if (transform)
+                    wrapper.style.transform = transform;
+                wrapper.appendChild(contentEl);
+                mounted.wrapper = wrapper;
+                mounted.isDirect = false;
+            }
+            else {
+                mounted.wrapper.classList.remove("canvus-flow-child");
+                mounted.wrapper.style.position = "absolute";
+            }
             this.shadow.appendChild(mounted.wrapper);
         }
         else {
@@ -875,6 +912,18 @@ export class ShadowMount {
         // Remove SDK tracking attribute from the clone.
         if (mounted.isDirect) {
             clone.removeAttribute("data-canvus-id");
+            const cloneId = clone.getAttribute("id");
+            if (cloneId && cloneId.includes("__child-")) {
+                clone.removeAttribute("id");
+            }
+        }
+        // Clean up auto-generated lazy child IDs from descendants
+        const elementsWithIds = clone.querySelectorAll("[id]");
+        for (const el of elementsWithIds) {
+            const elId = el.getAttribute("id");
+            if (elId && elId.includes("__child-")) {
+                el.removeAttribute("id");
+            }
         }
         // Clean up forced state classes if present
         clone.classList.remove("canvus-state-hover", "canvus-state-active", "canvus-state-focus");

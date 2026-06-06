@@ -957,7 +957,7 @@ test.describe('Electron E2E Integration Suite', () => {
     }
   });
 
-  test('Shift+A wraps the selected node in a centering flexbox container', async () => {
+  test('Shift+A on single node transforms it into a flex container in-place', async () => {
     const appPath = path.resolve(__dirname, '../main.cjs');
     const electronApp = await electron.launch({
       args: [appPath]
@@ -986,7 +986,7 @@ test.describe('Electron E2E Integration Suite', () => {
       await expect(card1NodeCard).toBeVisible();
       await card1NodeCard.click();
 
-      // Dispatch Shift+A to wrap card-1 in a centering flexbox
+      // Dispatch Shift+A to transform card-1 into a flex container
       await window.evaluate(() => {
         const event = new KeyboardEvent('keydown', {
           key: 'a',
@@ -998,40 +998,43 @@ test.describe('Electron E2E Integration Suite', () => {
         window.dispatchEvent(event);
       });
 
-      // Verify that card-1 is now nested inside a newly created flex-wrapper
-      const wrapResult = await window.evaluate(() => {
+      // Verify that card-1 itself became a flex container (no wrapper created)
+      const result = await window.evaluate(() => {
         const ws = (window as any).ws;
         const tree = ws.getNodeTree();
         const selectedId = Array.from(ws.getSelectedIds())[0] as string;
-        const selectedNode = tree.get(selectedId);
-        
-        // The newly created flex-wrapper should be selected
-        const isWrapperSelected = selectedId.includes('flex-wrapper-');
-        
-        // card-1 should now have the wrapper as its parent
-        const card1Parent = tree.get('card-1')?.parentId;
-        const isCard1ChildOfWrapper = card1Parent === selectedId;
 
-        // The wrapper's content root style display should be 'flex'
-        const contentRoot = ws.getShadowMount().getContentRoot(selectedId);
+        // card-1 should still be selected (no wrapper created)
+        const isCard1Selected = selectedId === 'card-1';
+
+        // card-1's parent should still be layout-grid (unchanged)
+        const card1Parent = tree.get('card-1')?.parentId;
+
+        // No flex-wrapper should exist
+        const hasWrapper = Array.from(tree.values() as IterableIterator<any>).some((n: any) => n.id.includes('flex-wrapper-'));
+
+        // card-1's content root should now have flex styles applied
+        const contentRoot = ws.getShadowMount().getContentRoot('card-1');
         const display = contentRoot?.style.display;
         const justify = contentRoot?.style.justifyContent;
         const align = contentRoot?.style.alignItems;
 
         return {
-          isWrapperSelected,
-          isCard1ChildOfWrapper,
+          isCard1Selected,
+          card1Parent,
+          hasWrapper,
           display,
           justify,
           align
         };
       });
 
-      expect(wrapResult.isWrapperSelected).toBe(true);
-      expect(wrapResult.isCard1ChildOfWrapper).toBe(true);
-      expect(wrapResult.display).toBe('flex');
-      expect(wrapResult.justify).toBe('center');
-      expect(wrapResult.align).toBe('center');
+      expect(result.isCard1Selected).toBe(true);
+      expect(result.card1Parent).toBe('layout-grid');
+      expect(result.hasWrapper).toBe(false);
+      expect(result.display).toBe('flex');
+      expect(result.justify).toBe('center');
+      expect(result.align).toBe('center');
 
     } finally {
       await electronApp.close();
@@ -1379,3 +1382,357 @@ test.describe('Electron E2E Integration Suite', () => {
 });
 
 
+// ── Property Lock System E2E Tests ──────────────────────────
+
+test.describe('Property Lock System', () => {
+
+  test('locked padding blocks spacing adjuster drag and fires lock interaction callback', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({ args: [appPath] });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Register mock lock callbacks
+      await window.evaluate(() => {
+        const ws = (window as any).ws;
+        (window as any).__lockLog = [];
+        (ws as any).callbacks.isPropertyLocked = (nodeId: string, property: string) => {
+          // Lock all padding properties on welcome-card
+          return nodeId === 'welcome-card' && property.startsWith('padding');
+        };
+        (ws as any).callbacks.onPropertyLockInteraction = (nodeId: string, property: string, currentValue: string) => {
+          (window as any).__lockLog.push({ nodeId, property, currentValue });
+        };
+      });
+
+      // Select the welcome-card
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      // Get the welcome card bounding box
+      const welcomeCard = window.locator('[data-canvus-id="welcome-card"]');
+      await expect(welcomeCard).toBeVisible();
+      const box = await welcomeCard.boundingBox();
+      expect(box).not.toBeNull();
+
+      // Record the initial bounding box for comparison
+      const initialBox = { ...box! };
+
+      // Attempt to click inside the padding area (top padding region)
+      // The spacing adjuster for padding-top is near the top edge of the element
+      const padTopY = box!.y + 5; // Inside the top padding
+      const padTopX = box!.x + box!.width / 2;
+
+      await window.mouse.move(padTopX, padTopY);
+      await window.mouse.down();
+      await window.waitForTimeout(100);
+      // Attempt to drag down (increase padding)
+      await window.mouse.move(padTopX, padTopY + 40, { steps: 5 });
+      await window.waitForTimeout(100);
+      await window.mouse.up();
+
+      // Verify that the lock interaction callback was fired
+      const lockLog = await window.evaluate(() => (window as any).__lockLog);
+      const paddingLocks = lockLog.filter((entry: any) => entry.property.startsWith('padding'));
+      expect(paddingLocks.length).toBeGreaterThan(0);
+      expect(paddingLocks[0].nodeId).toBe('welcome-card');
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('locked width blocks resize handle and fires lock interaction callback', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({ args: [appPath] });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Register mock lock callbacks
+      await window.evaluate(() => {
+        const ws = (window as any).ws;
+        (window as any).__lockLog = [];
+        (ws as any).callbacks.isPropertyLocked = (nodeId: string, property: string) => {
+          return nodeId === 'welcome-card' && property === 'width';
+        };
+        (ws as any).callbacks.onPropertyLockInteraction = (nodeId: string, property: string, currentValue: string) => {
+          (window as any).__lockLog.push({ nodeId, property, currentValue });
+        };
+      });
+
+      // Select the welcome-card
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      // Get the welcome card bounding box
+      const welcomeCard = window.locator('[data-canvus-id="welcome-card"]');
+      await expect(welcomeCard).toBeVisible();
+      const box = await welcomeCard.boundingBox();
+      expect(box).not.toBeNull();
+
+      const initialWidth = box!.width;
+
+      // The east resize handle is at the right edge
+      const handleX = box!.x + box!.width;
+      const handleY = box!.y + box!.height / 2;
+
+      // Attempt to drag the east resize handle
+      await window.mouse.move(handleX, handleY);
+      await window.mouse.down();
+      await window.waitForTimeout(100);
+      await window.mouse.move(handleX + 80, handleY, { steps: 5 });
+      await window.waitForTimeout(100);
+      await window.mouse.up();
+
+      // Verify that the lock interaction callback was fired
+      const lockLog = await window.evaluate(() => (window as any).__lockLog);
+      const widthLocks = lockLog.filter((entry: any) => entry.property === 'width');
+      expect(widthLocks.length).toBeGreaterThan(0);
+      expect(widthLocks[0].nodeId).toBe('welcome-card');
+
+      // Verify the width did not change (resize was blocked)
+      const afterBox = await welcomeCard.boundingBox();
+      expect(afterBox!.width).toBeCloseTo(initialWidth, 0);
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('locked border-radius blocks corner-radius drag and fires lock interaction callback', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({ args: [appPath] });
+
+    try {
+      const window = await electronApp.firstWindow();
+      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
+      await window.waitForLoadState('domcontentloaded');
+
+      // Register mock lock callbacks
+      await window.evaluate(() => {
+        const ws = (window as any).ws;
+        (window as any).__lockLog = [];
+        (ws as any).callbacks.isPropertyLocked = (nodeId: string, property: string) => {
+          return nodeId === 'welcome-card' && property === 'border-radius';
+        };
+        (ws as any).callbacks.onPropertyLockInteraction = (nodeId: string, property: string, currentValue: string) => {
+          (window as any).__lockLog.push({ nodeId, property, currentValue });
+        };
+      });
+
+      // Select the welcome-card
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      // Get the welcome card bounding box
+      const welcomeCard = window.locator('[data-canvus-id="welcome-card"]');
+      await expect(welcomeCard).toBeVisible();
+      const box = await welcomeCard.boundingBox();
+      expect(box).not.toBeNull();
+
+      // Record the initial border-radius
+      const initialRadius = await welcomeCard.evaluate(el => {
+        const content = el.firstElementChild as HTMLElement;
+        return content ? content.style.borderRadius : el.style.borderRadius;
+      });
+
+      // The top-left corner radius handle is inset by 16px
+      const handleX = box!.x + 16;
+      const handleY = box!.y + 16;
+
+      // Attempt to drag the corner radius handle
+      await window.mouse.move(handleX, handleY);
+      await window.mouse.down();
+      await window.waitForTimeout(100);
+      await window.mouse.move(handleX + 30, handleY + 30, { steps: 5 });
+      await window.waitForTimeout(100);
+      await window.mouse.up();
+
+      // Verify that the lock interaction callback was fired
+      const lockLog = await window.evaluate(() => (window as any).__lockLog);
+      const radiusLocks = lockLog.filter((entry: any) => entry.property === 'border-radius');
+      expect(radiusLocks.length).toBeGreaterThan(0);
+      expect(radiusLocks[0].nodeId).toBe('welcome-card');
+
+      // Verify the border-radius did not change
+      const afterRadius = await welcomeCard.evaluate(el => {
+        const content = el.firstElementChild as HTMLElement;
+        return content ? content.style.borderRadius : el.style.borderRadius;
+      });
+      expect(afterRadius).toBe(initialRadius);
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('unlocking a previously locked property re-enables interaction', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({ args: [appPath] });
+
+    try {
+      const window = await electronApp.firstWindow();
+      await window.waitForLoadState('domcontentloaded');
+
+      // Register mock lock callbacks — width starts LOCKED
+      await window.evaluate(() => {
+        const ws = (window as any).ws;
+        (window as any).__widthLocked = true;
+        (window as any).__lockLog = [];
+        (ws as any).callbacks.isPropertyLocked = (nodeId: string, property: string) => {
+          return nodeId === 'welcome-card' && property === 'width' && (window as any).__widthLocked;
+        };
+        (ws as any).callbacks.onPropertyLockInteraction = (nodeId: string, property: string, currentValue: string) => {
+          (window as any).__lockLog.push({ nodeId, property, currentValue });
+        };
+      });
+
+      // Select the welcome-card
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      await expect(welcomeNodeCard).toBeVisible();
+      await welcomeNodeCard.click();
+
+      const welcomeCard = window.locator('[data-canvus-id="welcome-card"]');
+      await expect(welcomeCard).toBeVisible();
+      const box = await welcomeCard.boundingBox();
+      expect(box).not.toBeNull();
+      const initialWidth = box!.width;
+
+      // 1. First attempt: locked → resize should be blocked
+      const handleX = box!.x + box!.width;
+      const handleY = box!.y + box!.height / 2;
+
+      await window.mouse.move(handleX, handleY);
+      await window.mouse.down();
+      await window.waitForTimeout(100);
+      await window.mouse.move(handleX + 60, handleY, { steps: 5 });
+      await window.waitForTimeout(100);
+      await window.mouse.up();
+
+      const lockLog1 = await window.evaluate(() => (window as any).__lockLog);
+      expect(lockLog1.length).toBeGreaterThan(0);
+
+      const afterBox1 = await welcomeCard.boundingBox();
+      expect(afterBox1!.width).toBeCloseTo(initialWidth, 0);
+
+      // 2. Unlock the width property
+      await window.evaluate(() => {
+        (window as any).__widthLocked = false;
+      });
+
+      // Re-select to ensure fresh state
+      await welcomeNodeCard.click();
+
+      const box2 = await welcomeCard.boundingBox();
+      expect(box2).not.toBeNull();
+
+      // 3. Second attempt: unlocked → resize should work
+      const handleX2 = box2!.x + box2!.width;
+      const handleY2 = box2!.y + box2!.height / 2;
+
+      await window.mouse.move(handleX2, handleY2);
+      await window.mouse.down();
+      await window.waitForTimeout(100);
+      await window.mouse.move(handleX2 + 60, handleY2, { steps: 5 });
+      await window.waitForTimeout(100);
+      await window.mouse.up();
+
+      const afterBox2 = await welcomeCard.boundingBox();
+      // Width should have changed since the lock was removed
+      expect(afterBox2!.width).toBeGreaterThan(initialWidth + 30);
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+
+  test('multi-node drag is blocked when any selected node has a locked position property', async () => {
+    const appPath = path.resolve(__dirname, '../main.cjs');
+    const electronApp = await electron.launch({ args: [appPath] });
+
+    try {
+      const window = await electronApp.firstWindow();
+      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
+      await window.waitForLoadState('domcontentloaded');
+
+      // Load test page template
+      const templateSelect = window.locator('#sel-template');
+      await templateSelect.selectOption('test-page');
+
+      // Wait for the main-container to appear
+      const mainContainerNode = window.locator('#node-list .node-card', { hasText: 'main-container' });
+      await expect(mainContainerNode).toBeVisible({ timeout: 10000 });
+
+      // Select main-container to register its children
+      await mainContainerNode.click();
+
+      // Select layout-grid to register its children
+      const layoutGridNode = window.locator('#node-list .node-card', { hasText: 'layout-grid' });
+      await expect(layoutGridNode).toBeVisible();
+      await layoutGridNode.click();
+
+      // Register mock lock callbacks — lock 'left' on card-1 only
+      await window.evaluate(() => {
+        const ws = (window as any).ws;
+        (window as any).__lockLog = [];
+        (ws as any).callbacks.isPropertyLocked = (nodeId: string, property: string) => {
+          return nodeId === 'card-1' && (property === 'left' || property === 'top');
+        };
+        (ws as any).callbacks.onPropertyLockInteraction = (nodeId: string, property: string, currentValue: string) => {
+          (window as any).__lockLog.push({ nodeId, property, currentValue });
+        };
+      });
+
+      // Multi-select card-1 and card-2 programmatically
+      await window.evaluate(() => {
+        const ws = (window as any).ws;
+        // Select card-1
+        ws.selectNode('card-1');
+        // Shift-select card-2 by adding to selection
+        const selectedIds = ws.getSelectedIds();
+        selectedIds.add('card-2');
+        // Trigger selection change callback
+        ws.callbacks.onSelectionChange?.(selectedIds);
+      });
+
+      // Verify both are selected
+      const selectedCount = await window.evaluate(() => {
+        const ws = (window as any).ws;
+        return ws.getSelectedIds().size;
+      });
+      expect(selectedCount).toBe(2);
+
+      // Get card-1 bounding box to initiate a drag
+      const card1 = window.locator('[data-canvus-id="card-1"]');
+      await expect(card1).toBeVisible();
+      const box = await card1.boundingBox();
+      expect(box).not.toBeNull();
+
+      const startX = box!.x + box!.width / 2;
+      const startY = box!.y + box!.height / 2;
+
+      // Attempt to drag (should be blocked because card-1 is locked)
+      await window.mouse.move(startX, startY);
+      await window.mouse.down();
+      await window.waitForTimeout(200);
+      await window.mouse.move(startX + 100, startY + 100, { steps: 10 });
+      await window.waitForTimeout(200);
+      await window.mouse.up();
+
+      // Verify that the lock interaction callback was fired for card-1
+      const lockLog = await window.evaluate(() => (window as any).__lockLog);
+      const card1Locks = lockLog.filter((entry: any) => entry.nodeId === 'card-1');
+      expect(card1Locks.length).toBeGreaterThan(0);
+
+    } finally {
+      await electronApp.close();
+    }
+  });
+});

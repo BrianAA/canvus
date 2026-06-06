@@ -10,6 +10,7 @@ export default {
   "overview": "Overview",
   "concepts": "Core Concepts",
   "sdk": "SDK Reference",
+  "react": "⚛️ React",
   "guides": "Guides",
   "architecture": "Architecture",
   "contributing": "Contributing"
