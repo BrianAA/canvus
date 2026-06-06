@@ -1,0 +1,159 @@
+# API Reference
+
+Complete reference for all exports from `@canvus/react`.
+
+## Components
+
+### `<Canvus />`
+
+The primary workspace component. Creates a container `<div>`, initializes the `@canvus/core` Workspace engine, and provides context to child components.
+
+```tsx
+import { Canvus } from "@canvus/react";
+
+<Canvus
+  config={{ snapThreshold: 8 }}
+  onReactNodeCommit={(id, snapshot) => { /* ... */ }}
+  onHTMLCommit={(id, html) => { /* ... */ }}
+  onSelectionChange={(ids) => { /* ... */ }}
+  style={{ width: "100%", height: "100vh" }}
+  className="my-workspace"
+  ref={canvusRef}
+>
+  {/* Child components can use useCanvus() */}
+</Canvus>
+```
+
+#### Props
+
+| Prop | Type | Description |
+|---|---|---|
+| `config` | `WorkspaceConfig` | Workspace configuration (snap threshold, overlay styles) |
+| `style` | `CSSProperties` | CSS styles for the container div |
+| `className` | `string` | CSS class name for the container div |
+| `onHTMLCommit` | `(id, html) => void` | Fired for vanilla HTML node commits only |
+| `onReactNodeCommit` | `(id, snapshot) => void` | Fired for React node commits (drag/resize) |
+| `onSelectionChange` | `(ids) => void` | Fired when selection changes |
+| `onViewportChange` | `(viewport) => void` | Fired on pan/zoom |
+| `onOperationsGenerated` | `(ops) => void` | Fired when undoable operations are produced |
+| `onNodeRectChange` | `(id, rect) => void` | Fired when a node's bounds change |
+| `onInteractionChange` | `(mode) => void` | Fired when interaction mode changes |
+| `onBreadcrumbChange` | `(path) => void` | Fired when selection hierarchy changes |
+| `onTextEditRequest` | `(nodeId, el, commit) => void` | Fired for inline text editing |
+| `ref` | `Ref<CanvusHandle>` | Imperative handle for direct access |
+| `children` | `ReactNode` | Child components (can use `useCanvus()`) |
+
+#### Ref Handle (`CanvusHandle`)
+
+When you pass a `ref` to `<Canvus />`, you get a `CanvusHandle` with the same shape as the `useCanvus()` return value:
+
+```tsx
+const canvusRef = useRef<CanvusHandle>(null);
+
+// Later:
+canvusRef.current?.addReactNode({ ... });
+canvusRef.current?.workspace?.selectNode("node-1");
+```
+
+---
+
+## Hooks
+
+### `useCanvus()`
+
+Returns the workspace context from the nearest `<Canvus />` ancestor.
+
+```tsx
+import { useCanvus } from "@canvus/react";
+
+function MyComponent() {
+  const {
+    workspace,
+    addReactNode,
+    updateReactNode,
+    removeReactNode,
+    addNode,
+  } = useCanvus();
+
+  // ...
+}
+```
+
+> Throws an error if called outside of a `<Canvus />` component tree.
+
+#### Return Type: `CanvusContextValue`
+
+| Property | Type | Description |
+|---|---|---|
+| `workspace` | `Workspace \| null` | The raw `@canvus/core` Workspace instance (`null` before mount) |
+| `addReactNode` | `(descriptor) => void` | Mount a React component as a canvas node |
+| `updateReactNode` | `(id, props) => void` | Update props and re-render a React node |
+| `removeReactNode` | `(id) => void` | Unmount and remove a React node |
+| `addNode` | `(node, parentId?, index?) => Rect` | Add a vanilla HTML node (pass-through to core) |
+
+---
+
+## Types
+
+### `ReactNodeDescriptor`
+
+Describes a React component to mount on the canvas.
+
+```typescript
+interface ReactNodeDescriptor {
+  /** Unique node identifier. */
+  id: string;
+  /** The React component to render. */
+  component: ComponentType<any>;
+  /** Props to pass to the component. */
+  props: Record<string, any>;
+  /** Initial position and dimensions in canvas-space. */
+  currentRect: Rect;
+  /** Optional parent node ID for nested mounting. */
+  parentId?: string | null;
+}
+```
+
+### `ReactNodeSnapshot`
+
+Emitted via `onReactNodeCommit` when a React node is committed after a visual gesture.
+
+```typescript
+interface ReactNodeSnapshot {
+  /** The React component reference. */
+  component: ComponentType<any>;
+  /** String name of the component (for serialization). */
+  componentName: string;
+  /** Current props at the time of commit. */
+  props: Record<string, any>;
+  /** Current canvas-space bounding rect. */
+  rect: Rect;
+}
+```
+
+The `componentName` is derived from `Component.displayName || Component.name`. Set `displayName` on your components for reliable serialization:
+
+```tsx
+function DashboardCard(props) { /* ... */ }
+DashboardCard.displayName = "DashboardCard";
+```
+
+### `CanvusProps`
+
+Props accepted by the `<Canvus />` component. See the [Props table above](#props) for full details.
+
+### `CanvusHandle`
+
+Type alias for the imperative ref handle, identical to `CanvusContextValue`.
+
+---
+
+## Advanced: `CanvusProvider` & `CanvusContext`
+
+For advanced use cases where you need to separate the container div from the context provider, both are exported:
+
+```tsx
+import { CanvusProvider, CanvusContext } from "@canvus/react";
+```
+
+In most cases, the `<Canvus />` component handles this for you and these exports are not needed.

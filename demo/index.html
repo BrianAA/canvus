@@ -329,6 +329,44 @@
       flex-shrink: 0;
     }
 
+    .layer-lock-btn {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 3px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: all var(--transition-fast);
+      padding: 0;
+    }
+    .layer-item:hover .layer-lock-btn { opacity: 0.6; }
+    .layer-lock-btn:hover { opacity: 1 !important; background: var(--bg-hover); color: var(--text-primary); }
+    .layer-lock-btn.locked {
+      opacity: 1;
+      color: var(--warning);
+    }
+    .layer-lock-btn.locked:hover {
+      color: var(--text-primary);
+    }
+    .layer-lock-btn svg { width: 12px; height: 12px; }
+
+    .layer-item.locked-layer {
+      opacity: 0.5;
+    }
+    .layer-item.locked-layer .layer-name {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .layer-item.locked-layer.selected .layer-name {
+      color: var(--text-muted);
+    }
+
     /* ── Canvas Workspace ──────────────────────────── */
     #workspace-container {
       flex: 1;
@@ -984,9 +1022,18 @@
           document.getElementById('btn-tool-box').classList.toggle('active', tool === 'box');
           document.getElementById('btn-tool-text').classList.toggle('active', tool === 'text');
         },
+
+        onLockedNodeInteraction(nodeId) {
+          toast(`🔒 Layer "${nodeId}" is locked`);
+        },
       }
     );
     window.ws = ws;
+    ws.injectCSS(`
+      :host {
+        font-family: 'Inter', sans-serif;
+      }
+    `);
 
     // ── Grid Sync ────────────────────────────────────
     function syncGrid(vp) {
@@ -1002,14 +1049,23 @@
       container.innerHTML = '';
       const nodes = ws.getNodes();
       const selected = ws.getSelectedIds();
+      const lockedIds = ws.getLockedNodeIds();
 
       for (const node of nodes) {
+        const isLocked = ws.isNodeLocked(node.id);
+        const isDirectlyLocked = lockedIds.has(node.id);
         const item = document.createElement('div');
-        item.className = 'layer-item' + (selected.has(node.id) ? ' selected' : '');
+        item.className = 'layer-item'
+          + (selected.has(node.id) ? ' selected' : '')
+          + (isLocked ? ' locked-layer' : '');
         item.style.paddingLeft = `${10 + (node.depth ?? 0) * 16}px`;
 
         const hasChildren = node.childIds && node.childIds.length > 0;
         const isText = /^(p|h[1-6]|span|a|strong|em)$/i.test(getNodeTag(node));
+
+        // Lock icon SVGs
+        const lockIconLocked = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+        const lockIconUnlocked = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`;
 
         item.innerHTML = `
           <span class="layer-chevron ${hasChildren ? 'has-children expanded' : ''}">
@@ -1020,9 +1076,36 @@
           </span>
           <span class="layer-name">${node.id}</span>
           <span class="layer-tag">${getNodeTag(node)}</span>
+          <button class="layer-lock-btn ${isDirectlyLocked ? 'locked' : ''}" data-lock-id="${node.id}" title="${isLocked ? 'Unlock layer' : 'Lock layer'}">
+            ${isLocked ? lockIconLocked : lockIconUnlocked}
+          </button>
         `;
 
-        item.addEventListener('click', () => ws.selectNode(node.id));
+        // Click on layer name area to select
+        item.addEventListener('click', (e) => {
+          // Don't select if lock button was clicked
+          if (e.target.closest('.layer-lock-btn')) return;
+          if (!isLocked) {
+            ws.selectNode(node.id);
+          } else {
+            toast(`🔒 Layer "${node.id}" is locked`);
+          }
+        });
+
+        // Wire up lock button
+        const lockBtn = item.querySelector('.layer-lock-btn');
+        lockBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (isDirectlyLocked) {
+            ws.unlockNode(node.id);
+            toast(`🔓 Unlocked "${node.id}"`);
+          } else {
+            ws.lockNode(node.id);
+            toast(`🔒 Locked "${node.id}"`);
+          }
+          refreshLayers();
+        });
+
         container.appendChild(item);
       }
     }

@@ -41,6 +41,29 @@ export interface WorkspaceCallbacks {
      * Fired when a node's pseudo-class state (hover, active, focus) is modified.
      */
     onForcePseudoState?: (nodeId: string, state: "hover" | "active" | "focus", enabled: boolean) => void;
+    /** Fired when a node is registered/added to the workspace tree. */
+    onNodeAdded?: (id: string) => void;
+    /** Fired when a node is removed from the workspace tree. */
+    onNodeRemoved?: (id: string) => void;
+    /** Fired when a node is duplicated, alt-drag cloned, or pasted. */
+    onNodeCloned?: (originalId: string, cloneId: string) => void;
+    /**
+     * Optional host callback to query whether a CSS property on a node is locked
+     * (e.g. driven by a stylesheet class like Tailwind's `p-4` or `w-48`).
+     * Return `true` to block visual adjustment of that property.
+     * @default () => false (always unlocked)
+     */
+    isPropertyLocked?: (nodeId: string, property: string) => boolean;
+    /**
+     * Fired when the user attempts to drag/adjust a property that is currently locked.
+     * The host can use this to show a toast, offer an "unlock" action, etc.
+     */
+    onPropertyLockInteraction?: (nodeId: string, property: string, currentValue: string) => void;
+    /**
+     * Fired when the user clicks/interacts with a locked node.
+     * The host can use this to show a visual indicator (toast, shake animation, etc.).
+     */
+    onLockedNodeInteraction?: (nodeId: string) => void;
 }
 /**
  * The top-level orchestration engine for a Canvus workspace.
@@ -127,6 +150,8 @@ export declare class Workspace {
     private previewMode;
     /** Set of node IDs explicitly marked as containing JavaScript behavior. */
     private readonly jsMarkedNodes;
+    /** Set of node IDs explicitly locked by the host. Locked nodes are non-interactive. */
+    private readonly lockedNodes;
     /** Set of node IDs that were lazily registered (children discovered on selection). */
     private readonly lazyRegisteredIds;
     private lazyChildCounter;
@@ -244,6 +269,40 @@ export declare class Workspace {
      * Returns whether a node is marked as containing JavaScript behavior.
      */
     hasJSMark(nodeId: string): boolean;
+    /**
+     * Locks a node, making it non-interactive on the canvas.
+     * Locked nodes cannot be selected, dragged, resized, or hovered
+     * via user pointer/keyboard interaction. If the node is currently
+     * selected, it will be deselected. Locking a parent node also
+     * locks all of its descendants.
+     */
+    lockNode(nodeId: string): void;
+    /**
+     * Unlocks a previously locked node, restoring interactivity.
+     */
+    unlockNode(nodeId: string): void;
+    /**
+     * Returns whether a node is currently locked (directly or via a locked ancestor).
+     */
+    isNodeLocked(nodeId: string): boolean;
+    /**
+     * Returns the set of directly locked node IDs.
+     * Does not include nodes that are only locked via ancestor inheritance.
+     */
+    getLockedNodeIds(): ReadonlySet<string>;
+    /**
+     * Checks whether a CSS property on a node is locked by the host.
+     * Delegates to the `isPropertyLocked` callback if provided.
+     * Returns `false` (unlocked) when no callback is registered.
+     */
+    isPropertyLocked(nodeId: string, property: string): boolean;
+    /**
+     * Notifies the host that the user attempted to adjust a locked property.
+     * Reads the current computed value from the node's content root and
+     * fires the `onPropertyLockInteraction` callback.
+     * No-op when the callback is not registered.
+     */
+    private notifyPropertyLockInteraction;
     /** Dispatches a synthetic pointer/mouse event (e.g. mouseenter, mouseleave, click) to a node. */
     dispatchInteractionEvent(nodeId: string, eventName: string): void;
     /** Returns a snapshot of all tracked nodes (depth-first order). */
@@ -280,7 +339,12 @@ export declare class Workspace {
     injectCSSLink(href: string): Promise<HTMLLinkElement>;
     /** Tears down the workspace completely. */
     dispose(): void;
-    /** Cursor-anchored zoom on scroll wheel. */
+    /**
+     * Handles wheel events with Figma-style behavior:
+     * - **Trackpad two-finger scroll** → pans the canvas
+     * - **Trackpad pinch-to-zoom** → zooms (browsers report this with ctrlKey=true)
+     * - **Ctrl + mouse wheel** → zooms
+     */
     private handleWheel;
     /** Interaction mode detection on pointer down. */
     private handlePointerDown;

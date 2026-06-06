@@ -75,6 +75,23 @@ export function findDropTarget(
       continue;
     }
 
+    // Sibling-in-layout constraint: if the container is a sibling of the dragged node
+    // in a layout parent (flex or grid), do not drop inside it unless it is a layout container
+    // itself or already has children.
+    if (node.parentId !== null && node.parentId === tree.get(draggedId)?.parentId) {
+      const parentNode = tree.get(node.parentId);
+      if (parentNode) {
+        const pMode = parentNode.layoutMode;
+        const parentIsLayout = pMode === "flex" || pMode === "inline-flex" || pMode === "grid" || pMode === "inline-grid";
+        if (parentIsLayout) {
+          const isTargetLayout = node.layoutMode === "flex" || node.layoutMode === "inline-flex" || node.layoutMode === "grid" || node.layoutMode === "inline-grid";
+          if (!isTargetLayout && node.childIds.length === 0) {
+            continue;
+          }
+        }
+      }
+    }
+
     if (node.currentRect && isPointInElement(canvasPos.x, canvasPos.y, node.currentRect)) {
       targetContainer = node;
       break;

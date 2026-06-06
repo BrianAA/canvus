@@ -1,0 +1,38 @@
+# Installation
+
+## Install Packages
+
+Install both `@canvus/core` and `@canvus/react`:
+
+```bash
+npm install @canvus/core @canvus/react
+```
+
+## Peer Dependencies
+
+`@canvus/react` requires React 18 or later:
+
+| Dependency | Version |
+|---|---|
+| `@canvus/core` | `>=0.1.0` |
+| `react` | `^18 \|\| ^19` |
+| `react-dom` | `^18 \|\| ^19` |
+
+These should already be installed if you're building a React application. If not:
+
+```bash
+npm install react react-dom
+```
+
+## TypeScript
+
+`@canvus/react` ships with full TypeScript declarations (`.d.ts` files). No additional `@types/` packages are needed.
+
+## Verify Installation
+
+```tsx
+import { Canvus, useCanvus } from "@canvus/react";
+
+// If this compiles without errors, you're ready to go!
+console.log("@canvus/react installed successfully");
+```

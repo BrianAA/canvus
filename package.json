@@ -22,6 +22,9 @@
     "docs:build": "npm run build --prefix docs-site",
     "ai:context": "node scripts/generate-ai-context.cjs"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "license": "MIT",
   "devDependencies": {
     "playwright": "^1.60.0",

@@ -111,6 +111,37 @@ export interface WorkspaceCallbacks {
     state: "hover" | "active" | "focus",
     enabled: boolean
   ) => void;
+
+  /** Fired when a node is registered/added to the workspace tree. */
+  onNodeAdded?: (id: string) => void;
+  /** Fired when a node is removed from the workspace tree. */
+  onNodeRemoved?: (id: string) => void;
+  /** Fired when a node is duplicated, alt-drag cloned, or pasted. */
+  onNodeCloned?: (originalId: string, cloneId: string) => void;
+
+  /**
+   * Optional host callback to query whether a CSS property on a node is locked
+   * (e.g. driven by a stylesheet class like Tailwind's `p-4` or `w-48`).
+   * Return `true` to block visual adjustment of that property.
+   * @default () => false (always unlocked)
+   */
+  isPropertyLocked?: (nodeId: string, property: string) => boolean;
+
+  /**
+   * Fired when the user attempts to drag/adjust a property that is currently locked.
+   * The host can use this to show a toast, offer an "unlock" action, etc.
+   */
+  onPropertyLockInteraction?: (
+    nodeId: string,
+    property: string,
+    currentValue: string,
+  ) => void;
+
+  /**
+   * Fired when the user clicks/interacts with a locked node.
+   * The host can use this to show a visual indicator (toast, shake animation, etc.).
+   */
+  onLockedNodeInteraction?: (nodeId: string) => void;
 }
 
 // ── Resize Math ─────────────────────────────────────────────
@@ -173,6 +204,28 @@ function computeResizedRect(
   }
 
   return { x, y, width, height };
+}
+
+// ── Property Lock Helpers ───────────────────────────────────
+
+/**
+ * Maps a resize anchor to the CSS properties it affects.
+ * Used by the property-lock system to determine which properties
+ * must be checked before allowing a resize gesture.
+ */
+function getLockedPropertiesForAnchor(anchor: ResizeAnchor): string[] {
+  const props: string[] = [];
+  const affectsWidth =
+    anchor === "e" || anchor === "w" ||
+    anchor === "ne" || anchor === "nw" ||
+    anchor === "se" || anchor === "sw";
+  const affectsHeight =
+    anchor === "n" || anchor === "s" ||
+    anchor === "ne" || anchor === "nw" ||
+    anchor === "se" || anchor === "sw";
+  if (affectsWidth) props.push("width");
+  if (affectsHeight) props.push("height");
+  return props;
 }
 
 // ── Workspace Class ─────────────────────────────────────────
@@ -289,6 +342,9 @@ export class Workspace {
   /** Set of node IDs explicitly marked as containing JavaScript behavior. */
   private readonly jsMarkedNodes = new Set<string>();
 
+  /** Set of node IDs explicitly locked by the host. Locked nodes are non-interactive. */
+  private readonly lockedNodes = new Set<string>();
+
   /** Set of node IDs that were lazily registered (children discovered on selection). */
   private readonly lazyRegisteredIds = new Set<string>();
   private lazyChildCounter = 0;
@@ -307,6 +363,7 @@ export class Workspace {
     rawMarkup: string;
     rect: Rect | null;
     hasJS: boolean;
+    originalId?: string;
   }> = [];
   private isDragCopy: boolean = false;
 
@@ -458,6 +515,7 @@ export class Workspace {
       this.remeasureSubtree(resolved.parentId);
     }
 
+    this.callbacks.onNodeAdded?.(resolved.id);
     this.render();
     return resolved.currentRect ?? rect;
   }
@@ -469,12 +527,14 @@ export class Workspace {
     for (const did of descendantIds) {
       this.mount.removeNode(did);
       this.selectedIds.delete(did);
+      this.callbacks.onNodeRemoved?.(did);
     }
 
     const removed = this.mount.removeNode(id);
     if (removed) {
       this.tree.removeNode(id); // Also removes descendants from tree.
       this.selectedIds.delete(id);
+      this.callbacks.onNodeRemoved?.(id);
       this.render();
     }
     return removed;
@@ -864,6 +924,8 @@ export class Workspace {
         this.markNodeHasJS(duplicateId);
       }
 
+      this.callbacks.onNodeCloned?.(originalId, duplicateId);
+
       newSelectedIds.push(duplicateId);
 
       const finalIndex = parentId !== null ? this.tree.getChildIndex(duplicateId) : -1;
@@ -882,10 +944,12 @@ export class Workspace {
     }
 
     if (ops.length > 0) {
+      const prevSelection = new Set(this.selectedIds);
       this.selectedIds.clear();
       for (const id of newSelectedIds) {
         this.selectedIds.add(id);
       }
+      this.syncLazyChildren(prevSelection, this.selectedIds);
       this.callbacks.onSelectionChange?.(this.selectedIds);
       this.updateBreadcrumb();
 
@@ -924,6 +988,7 @@ export class Workspace {
           rawMarkup: markup,
           rect: node.currentRect ? { ...node.currentRect } : null,
           hasJS: this.jsMarkedNodes.has(id),
+          originalId: id,
         });
       }
     }
@@ -980,6 +1045,9 @@ export class Workspace {
 
         if (item.hasJS) {
           this.markNodeHasJS(id);
+        }
+        if (item.originalId) {
+          this.callbacks.onNodeCloned?.(item.originalId, id);
         }
         newSelectedIds.push(id);
 
@@ -1049,6 +1117,9 @@ export class Workspace {
           if (item.hasJS) {
             this.markNodeHasJS(id);
           }
+          if (item.originalId) {
+            this.callbacks.onNodeCloned?.(item.originalId, id);
+          }
           newSelectedIds.push(id);
 
           const finalIndex = parentId !== null ? this.tree.getChildIndex(id) : -1;
@@ -1069,10 +1140,12 @@ export class Workspace {
     }
 
     if (ops.length > 0) {
+      const prevSelection = new Set(this.selectedIds);
       this.selectedIds.clear();
       for (const id of newSelectedIds) {
         this.selectedIds.add(id);
       }
+      this.syncLazyChildren(prevSelection, this.selectedIds);
       this.callbacks.onSelectionChange?.(this.selectedIds);
       this.updateBreadcrumb();
 
@@ -1136,6 +1209,92 @@ export class Workspace {
    */
   hasJSMark(nodeId: string): boolean {
     return this.jsMarkedNodes.has(nodeId);
+  }
+
+  // ── Public API: Layer Locking ───────────────────
+
+  /**
+   * Locks a node, making it non-interactive on the canvas.
+   * Locked nodes cannot be selected, dragged, resized, or hovered
+   * via user pointer/keyboard interaction. If the node is currently
+   * selected, it will be deselected. Locking a parent node also
+   * locks all of its descendants.
+   */
+  lockNode(nodeId: string): void {
+    this.lockedNodes.add(nodeId);
+    // Deselect this node and any locked descendants
+    let changed = false;
+    for (const selId of [...this.selectedIds]) {
+      if (this.isNodeLocked(selId)) {
+        this.selectedIds.delete(selId);
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.callbacks.onSelectionChange?.(this.selectedIds);
+      this.updateBreadcrumb();
+    }
+    this.render();
+  }
+
+  /**
+   * Unlocks a previously locked node, restoring interactivity.
+   */
+  unlockNode(nodeId: string): void {
+    this.lockedNodes.delete(nodeId);
+    this.render();
+  }
+
+  /**
+   * Returns whether a node is currently locked (directly or via a locked ancestor).
+   */
+  isNodeLocked(nodeId: string): boolean {
+    if (this.lockedNodes.has(nodeId)) return true;
+    // Walk up the tree checking ancestors
+    let currentId: string | null = this.tree.get(nodeId)?.parentId ?? null;
+    while (currentId !== null) {
+      if (this.lockedNodes.has(currentId)) return true;
+      currentId = this.tree.get(currentId)?.parentId ?? null;
+    }
+    return false;
+  }
+
+  /**
+   * Returns the set of directly locked node IDs.
+   * Does not include nodes that are only locked via ancestor inheritance.
+   */
+  getLockedNodeIds(): ReadonlySet<string> {
+    return this.lockedNodes;
+  }
+
+  // ── Public API: Property Lock Queries ───────────
+
+  /**
+   * Checks whether a CSS property on a node is locked by the host.
+   * Delegates to the `isPropertyLocked` callback if provided.
+   * Returns `false` (unlocked) when no callback is registered.
+   */
+  isPropertyLocked(nodeId: string, property: string): boolean {
+    return this.callbacks.isPropertyLocked?.(nodeId, property) ?? false;
+  }
+
+  /**
+   * Notifies the host that the user attempted to adjust a locked property.
+   * Reads the current computed value from the node's content root and
+   * fires the `onPropertyLockInteraction` callback.
+   * No-op when the callback is not registered.
+   */
+  private notifyPropertyLockInteraction(nodeId: string, property: string): void {
+    if (!this.callbacks.onPropertyLockInteraction) return;
+    const contentRoot = this.mount.getContentRoot(nodeId);
+    let currentValue = "";
+    if (contentRoot) {
+      currentValue =
+        contentRoot.style.getPropertyValue(property) ||
+        window.getComputedStyle(contentRoot).getPropertyValue(property) ||
+        "";
+    }
+    this.callbacks.onPropertyLockInteraction(nodeId, property, currentValue);
   }
 
   // ── Public API: Synthetic Interaction ───────────
@@ -1448,13 +1607,30 @@ export class Workspace {
 
   // ── Event Handlers ──────────────────────────────
 
-  /** Cursor-anchored zoom on scroll wheel. */
+  /**
+   * Handles wheel events with Figma-style behavior:
+   * - **Trackpad two-finger scroll** → pans the canvas
+   * - **Trackpad pinch-to-zoom** → zooms (browsers report this with ctrlKey=true)
+   * - **Ctrl + mouse wheel** → zooms
+   */
   private handleWheel(e: WheelEvent): void {
     e.preventDefault();
     const rect = this.getContainerRect();
-    this.viewport = applyWheelZoom(
-      e.clientX, e.clientY, e.deltaY, this.viewport, rect,
-    );
+
+    // Browsers report trackpad pinch gestures as wheel events with ctrlKey=true.
+    // Regular two-finger scrolling does NOT set ctrlKey.
+    const isPinchOrCtrlWheel = e.ctrlKey || e.metaKey;
+
+    if (isPinchOrCtrlWheel) {
+      // Pinch-to-zoom or Ctrl+scroll → zoom anchored at cursor
+      this.viewport = applyWheelZoom(
+        e.clientX, e.clientY, e.deltaY, this.viewport, rect, true,
+      );
+    } else {
+      // Regular two-finger scroll → pan the canvas
+      this.viewport = applyPan(-e.deltaX, -e.deltaY, this.viewport);
+    }
+
     this.mount.applyViewportTransform(this.viewport);
     this.callbacks.onViewportChange?.(this.viewport);
     this.render();
@@ -1536,6 +1712,16 @@ export class Workspace {
           localX, localY, selNode.currentRect, this.viewport,
         );
         if (anchor) {
+          // ── Property lock check for resize ──────
+          const affectedProps = getLockedPropertiesForAnchor(anchor);
+          const lockedProps = affectedProps.filter(p => this.isPropertyLocked(selId, p));
+          if (lockedProps.length > 0) {
+            for (const prop of lockedProps) {
+              this.notifyPropertyLockInteraction(selId, prop);
+            }
+            return; // Block the resize gesture
+          }
+
           this.isResizing = true;
           this.activeAnchor = anchor;
           this.dragStartCanvas = canvasPos;
@@ -1584,6 +1770,23 @@ export class Workspace {
       }
 
       if (hitRadiusCorner && targetNodeId) {
+        // ── Property lock check for corner-radius (multi-node) ─
+        // If any selected container node has a locked border-radius,
+        // block the entire gesture for layout integrity.
+        let radiusBlocked = false;
+        for (const selId of this.selectedIds) {
+          const selNode = this.tree.get(selId);
+          if (selNode && isContainerNode(selNode)) {
+            if (this.isPropertyLocked(selId, "border-radius")) {
+              this.notifyPropertyLockInteraction(selId, "border-radius");
+              radiusBlocked = true;
+            }
+          }
+        }
+        if (radiusBlocked) {
+          return; // Block the radius gesture
+        }
+
         this.isAdjustingRadius = true;
         this.activeRadiusCorner = hitRadiusCorner;
         this.radiusTargetNodeId = targetNodeId;
@@ -1624,6 +1827,12 @@ export class Workspace {
 
 
       if (hitAdjuster) {
+        // ── Property lock check for spacing adjuster ─
+        if (this.isPropertyLocked(selId, hitAdjuster.type)) {
+          this.notifyPropertyLockInteraction(selId, hitAdjuster.type);
+          return; // Block the spacing adjustment gesture
+        }
+
         this.activeAdjusterType = hitAdjuster.type;
         this.adjusterStartValue = hitAdjuster.value;
         const contentRoot = this.mount.getContentRoot(selId);
@@ -1658,6 +1867,11 @@ export class Workspace {
     if (!clickInsideSelection) {
       this.pointerDownInsideSelection = null;
       if (hitId) {
+        // ── Layer lock guard ──────────────────────
+        if (this.isNodeLocked(hitId)) {
+          this.callbacks.onLockedNodeInteraction?.(hitId);
+          // Treat as click on empty space — fall through to deselect / marquee
+        } else {
         const isCmdClick = e.metaKey || e.ctrlKey;
 
         if (isCmdClick) {
@@ -1706,6 +1920,7 @@ export class Workspace {
             targetSelectId = this.findSelectableNode(hitId, null);
           }
         }
+        } // end of lock guard else-block
       }
 
       if (isDoubleClick && targetSelectId && this.selectedIds.has(targetSelectId)) {
@@ -2001,6 +2216,9 @@ export class Workspace {
         const treeNode = this.tree.get(node.id);
         if (!treeNode) continue;
 
+        // Skip locked nodes in marquee selection
+        if (this.isNodeLocked(node.id)) continue;
+
         // Scoping constraint
         if (this.enteredContainerId !== null) {
           if (treeNode.parentId !== this.enteredContainerId) continue;
@@ -2063,6 +2281,8 @@ export class Workspace {
                   this.markNodeHasJS(duplicateId);
                 }
 
+                this.callbacks.onNodeCloned?.(originalId, duplicateId);
+
                 newSelectedIds.push(duplicateId);
 
                 const duplicateContentRoot = this.mount.getContentRoot(duplicateId);
@@ -2092,10 +2312,12 @@ export class Workspace {
           }
 
           if (newSelectedIds.length > 0) {
+            const prevSelection = new Set(this.selectedIds);
             this.selectedIds.clear();
             for (const id of newSelectedIds) {
               this.selectedIds.add(id);
             }
+            this.syncLazyChildren(prevSelection, this.selectedIds);
             this.callbacks.onSelectionChange?.(this.selectedIds);
             this.updateBreadcrumb();
 
@@ -2118,6 +2340,25 @@ export class Workspace {
 
             this.isDragCopy = true;
           }
+        }
+
+        // ── Multi-node property lock check for drag ──
+        // If any selected node has locked position properties,
+        // abort the entire drag gesture for layout integrity.
+        const dragTopLevelIds = this.getTopLevelSelectedIds();
+        let dragBlocked = false;
+        for (const nodeId of dragTopLevelIds) {
+          const posProps = ["left", "top"];
+          for (const prop of posProps) {
+            if (this.isPropertyLocked(nodeId, prop)) {
+              this.notifyPropertyLockInteraction(nodeId, prop);
+              dragBlocked = true;
+            }
+          }
+        }
+        if (dragBlocked) {
+          this.pointerDownReadyToDrag = false;
+          return; // Block the entire multi-node drag
         }
 
         this.isDragging = true;
@@ -2155,7 +2396,9 @@ export class Workspace {
 
         if (hitRadiusCorner) {
           this.hoveredRadiusCorner = hitRadiusCorner;
-          this.container.style.cursor = "pointer";
+          // ── Lock check: suppress radius cursor if locked ──
+          const radiusLocked = this.isPropertyLocked(hoveredSelectedId!, "border-radius");
+          this.container.style.cursor = radiusLocked ? "default" : "pointer";
           this.hoveredAdjusterType = null;
         } else {
           this.hoveredRadiusCorner = null;
@@ -2163,7 +2406,10 @@ export class Workspace {
             localX, localY, selNode.currentRect!, this.viewport,
           );
           if (anchor) {
-            this.container.style.cursor = anchorCursor(anchor);
+            // ── Lock check: suppress resize cursor if locked ──
+            const affectedProps = getLockedPropertiesForAnchor(anchor);
+            const anyLocked = affectedProps.some(p => this.isPropertyLocked(hoveredSelectedId!, p));
+            this.container.style.cursor = anyLocked ? "default" : anchorCursor(anchor);
             this.hoveredAdjusterType = null;
           } else {
             // Spacing adjusters check
@@ -2176,9 +2422,15 @@ export class Workspace {
             );
 
             if (hoveredAdj) {
-              this.hoveredAdjusterType = hoveredAdj.type;
-              const isVertical = hoveredAdj.type.includes("top") || hoveredAdj.type.includes("bottom");
-              this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
+              // ── Lock check: suppress adjuster cursor if locked ──
+              if (this.isPropertyLocked(hoveredSelectedId!, hoveredAdj.type)) {
+                this.hoveredAdjusterType = null;
+                this.container.style.cursor = "default";
+              } else {
+                this.hoveredAdjusterType = hoveredAdj.type;
+                const isVertical = hoveredAdj.type.includes("top") || hoveredAdj.type.includes("bottom");
+                this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
+              }
             } else {
               this.hoveredAdjusterType = null;
               this.container.style.cursor = "default";
@@ -3391,6 +3643,66 @@ export class Workspace {
       return;
     }
 
+    // ── Single selection: transform the node itself into a flex container ──
+    if (topLevelIds.length === 1) {
+      const nodeId = firstId;
+      const contentRoot = this.mount.getContentRoot(nodeId);
+
+      // Read current style values for undo
+      const oldDisplay = contentRoot?.style.display || null;
+      const oldJustifyContent = contentRoot?.style.justifyContent || null;
+      const oldAlignItems = contentRoot?.style.alignItems || null;
+      const oldGap = contentRoot?.style.gap || null;
+      const oldFlexDirection = contentRoot?.style.flexDirection || null;
+
+      const payload: Record<string, string | null> = {
+        "display": "flex",
+        "justify-content": "center",
+        "align-items": "center",
+        "gap": "10px",
+        "flex-direction": "row",
+      };
+
+      const undoPayload: Record<string, string | null> = {
+        "display": oldDisplay,
+        "justify-content": oldJustifyContent,
+        "align-items": oldAlignItems,
+        "gap": oldGap,
+        "flex-direction": oldFlexDirection,
+      };
+
+      this.mount.setNodeStyles(nodeId, payload);
+
+      // Sync layout mode
+      const updatedContentRoot = this.mount.getContentRoot(nodeId);
+      firstNode.layoutMode = updatedContentRoot ? detectLayout(updatedContentRoot).mode : "flex";
+
+      this.remeasureSubtree(nodeId);
+      if (firstNode.parentId) {
+        this.remeasureSubtree(firstNode.parentId);
+      }
+
+      const ops: any[] = [{
+        type: "update-style" as any,
+        nodeId,
+        payload,
+        undoPayload,
+      }];
+
+      this.callbacks.onOperationsGenerated?.(ops);
+
+      const commitTarget = firstNode.parentId ?? nodeId;
+      const html = this.mount.extractHTML(commitTarget);
+      if (html) {
+        this.callbacks.onHTMLCommit?.(commitTarget, html);
+      }
+
+      this.mount.setTransitionsEnabled(true);
+      this.render();
+      return;
+    }
+
+    // ── Multi selection: wrap all selected nodes in a new flex container ──
     const parentId = firstNode.parentId;
     const index = parentId !== null ? this.tree.getChildIndex(firstId) : -1;
 
@@ -3442,8 +3754,10 @@ export class Workspace {
       this.remeasureSubtree(parentId);
     }
 
+    const prevSelection = new Set(this.selectedIds);
     this.selectedIds.clear();
     this.selectedIds.add(wrapperId);
+    this.syncLazyChildren(prevSelection, this.selectedIds);
     this.callbacks.onSelectionChange?.(this.selectedIds);
     this.updateBreadcrumb();
 
@@ -3529,8 +3843,15 @@ export class Workspace {
     if (!node) return;
  
     const wrapper = this.mount.getWrapper(nodeId);
-    const contentRoot = this.mount.getContentRoot(nodeId);
+    const contentRoot = this.mount.getContentRoot(nodeId) || wrapper;
     if (!wrapper || !contentRoot) return;
+
+    // Disallow inline text editing for React nodes (marked with data-canvus-react)
+    const isReact = contentRoot.hasAttribute("data-canvus-react") || contentRoot.querySelector("[data-canvus-react]") !== null;
+    if (isReact) {
+      this.editAllowedOnDblClick = false;
+      return;
+    }
  
     const path = getDOMPath(contentRoot, targetEl);
     const originalHTML = targetEl.innerHTML;
@@ -3833,7 +4154,16 @@ export class Workspace {
       if (!tag || tag === "script" || tag === "style" || tag === "link") continue;
 
       // Use existing id or generate a stable one
-      const existingId = child.getAttribute("id");
+      let existingId = child.getAttribute("data-canvus-id") || child.getAttribute("id");
+      if (existingId) {
+        const hasNodeInTree = !!this.tree.get(existingId);
+        const trackedWrapper = this.mount.getWrapper(existingId);
+        const trackedContentRoot = this.mount.getContentRoot(existingId);
+        // If the ID is tracked but points to a different DOM element, we have an ID conflict.
+        if (hasNodeInTree && trackedWrapper !== child && trackedContentRoot !== child) {
+          existingId = null;
+        }
+      }
       const id = existingId || `${parentId}__child-${++this.lazyChildCounter}`;
       if (!existingId) {
         child.setAttribute("id", id);
@@ -4093,7 +4423,10 @@ export class Workspace {
     const hitId = hitTestElements(this.lastCanvasPos.x, this.lastCanvasPos.y, nodeList);
     let nextHoveredId: string | null = null;
     if (hitId) {
-      if (isCmdPressed) {
+      // Skip hover on locked nodes
+      if (this.isNodeLocked(hitId)) {
+        nextHoveredId = null;
+      } else if (isCmdPressed) {
         nextHoveredId = hitId;
       } else {
         nextHoveredId = this.findSelectableNode(hitId, this.enteredContainerId);

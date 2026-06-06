@@ -1,0 +1,202 @@
+# Quick Start
+
+Get a Canvus workspace running in your React application in under 5 minutes.
+
+## 1. Create the Workspace
+
+The `<Canvus />` component is your canvas workspace. It handles all the internal plumbing — Shadow DOM, canvas overlay, event binding, and cleanup.
+
+```tsx
+import { Canvus } from "@canvus/react";
+
+function App() {
+  return (
+    <Canvus
+      config={{ snapThreshold: 8 }}
+      style={{ width: "100vw", height: "100vh" }}
+    >
+      <Toolbar />
+    </Canvus>
+  );
+}
+```
+
+> **Note:** Any components rendered as children of `<Canvus />` can access the workspace via the `useCanvus()` hook.
+
+## 2. Add React Nodes to the Canvas
+
+Use the `useCanvus()` hook from any child component to mount live React components on the canvas:
+
+```tsx
+import { useCanvus } from "@canvus/react";
+
+function Toolbar() {
+  const { addReactNode } = useCanvus();
+
+  const handleAdd = () => {
+    addReactNode({
+      id: `card-${Date.now()}`,
+      component: DashboardCard,
+      props: { title: "Revenue", value: "$42,000" },
+      currentRect: { x: 100, y: 100, width: 300, height: 200 },
+    });
+  };
+
+  return <button onClick={handleAdd}>Add Card</button>;
+}
+```
+
+## 3. Define a Component
+
+The component you pass to `addReactNode` is a standard React component. It renders inside the canvas node's frame:
+
+```tsx
+interface DashboardCardProps {
+  title: string;
+  value: string;
+}
+
+function DashboardCard({ title, value }: DashboardCardProps) {
+  return (
+    <div style={{
+      padding: 24,
+      background: "#1e293b",
+      borderRadius: 12,
+      color: "#e2e8f0",
+      height: "100%",
+    }}>
+      <h3>{title}</h3>
+      <p style={{ fontSize: 32, fontWeight: 700 }}>{value}</p>
+    </div>
+  );
+}
+```
+
+The component renders inside a wrapper frame on the canvas. The frame handles positioning and sizing — your component fills the available space.
+
+## 4. Update Props
+
+To update a React node's props (and trigger a re-render), use `updateReactNode`:
+
+```tsx
+const { updateReactNode } = useCanvus();
+
+// Update the card with new data
+updateReactNode("card-123", {
+  value: "$58,000",
+});
+```
+
+The component re-renders in-place with merged props. No remount, no flicker.
+
+## 5. Handle Commits
+
+When a user drags or resizes a React node, the `onReactNodeCommit` callback fires with structured data instead of raw HTML:
+
+```tsx
+<Canvus
+  onReactNodeCommit={(id, snapshot) => {
+    console.log(snapshot.componentName); // "DashboardCard"
+    console.log(snapshot.props);          // { title: "Revenue", value: "$42,000" }
+    console.log(snapshot.rect);           // { x: 150, y: 120, width: 300, height: 200 }
+
+    // Save to your state management
+    saveNodeState(id, snapshot);
+  }}
+  onHTMLCommit={(id, html) => {
+    // Only fires for vanilla HTML nodes — React nodes are filtered out
+    console.log("HTML commit:", id, html);
+  }}
+>
+  {/* ... */}
+</Canvus>
+```
+
+## 6. Mix React and HTML Nodes
+
+React nodes and vanilla HTML nodes coexist on the same canvas:
+
+```tsx
+const { addReactNode, addNode } = useCanvus();
+
+// Add a React component node
+addReactNode({
+  id: "chart-1",
+  component: InteractiveChart,
+  props: { data: [12, 19, 3, 5, 2] },
+  currentRect: { x: 50, y: 50, width: 400, height: 300 },
+});
+
+// Add a vanilla HTML node (uses core API directly)
+addNode({
+  id: "heading-1",
+  rawMarkup: "<h1>Dashboard</h1>",
+  currentRect: { x: 50, y: 370, width: 400, height: 60 },
+});
+```
+
+## 7. Remove Nodes
+
+```tsx
+const { removeReactNode, workspace } = useCanvus();
+
+// Remove a React node (unmounts the component and removes from canvas)
+removeReactNode("chart-1");
+
+// Remove an HTML node (uses core API)
+workspace?.removeNode("heading-1");
+```
+
+## Full Example
+
+```tsx
+import { Canvus, useCanvus } from "@canvus/react";
+import type { ReactNodeSnapshot } from "@canvus/react";
+
+function App() {
+  return (
+    <Canvus
+      config={{ snapThreshold: 8 }}
+      onReactNodeCommit={(id, snapshot) => {
+        console.log(`${snapshot.componentName} moved to`, snapshot.rect);
+      }}
+      style={{ width: "100vw", height: "100vh" }}
+    >
+      <Toolbar />
+    </Canvus>
+  );
+}
+
+function Toolbar() {
+  const { addReactNode, updateReactNode, removeReactNode } = useCanvus();
+
+  return (
+    <div style={{ position: "absolute", top: 16, left: 16, zIndex: 100 }}>
+      <button onClick={() => {
+        addReactNode({
+          id: "my-card",
+          component: MyCard,
+          props: { title: "Hello Canvus!" },
+          currentRect: { x: 100, y: 100, width: 280, height: 180 },
+        });
+      }}>
+        Add
+      </button>
+      <button onClick={() => updateReactNode("my-card", { title: "Updated!" })}>
+        Update
+      </button>
+      <button onClick={() => removeReactNode("my-card")}>
+        Remove
+      </button>
+    </div>
+  );
+}
+
+function MyCard({ title }: { title: string }) {
+  return (
+    <div style={{ padding: 24, background: "#6366f1", borderRadius: 12, color: "#fff", height: "100%" }}>
+      <h2>{title}</h2>
+    </div>
+  );
+}
+```

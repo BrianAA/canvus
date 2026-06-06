@@ -1,0 +1,46 @@
+# @canvus/react
+
+React bindings for the [Canvus SDK](/getting-started) — mount live React components as canvas nodes with full drag, resize, and arrangement support.
+
+## What is `@canvus/react`?
+
+`@canvus/react` is a companion package that wraps the vanilla `@canvus/core` workspace engine in idiomatic React components and hooks. It provides:
+
+- **`<Canvus />`** — A drop-in component that creates and manages a workspace
+- **`useCanvus()`** — A context hook for imperative workspace access
+- **`addReactNode()`** — Mount live React components directly on the canvas
+- **`onReactNodeCommit`** — Structured commit callbacks for React nodes (replaces raw HTML output)
+
+## Architecture
+
+`@canvus/react` is a **leaf package** — it depends on `@canvus/core`, but core knows nothing about it.
+
+```
+┌─────────────────────────────────────────────┐
+│            Your React Application           │
+├─────────────────────────────────────────────┤
+│           @canvus/react                     │
+│  <Canvus />, useCanvus(), addReactNode()    │
+├─────────────────────────────────────────────┤
+│           @canvus/core                      │
+│  Workspace, ShadowMount, OverlayRenderer    │
+└─────────────────────────────────────────────┘
+```
+
+**Zero core changes.** The React package orchestrates `@canvus/core`'s existing public API — creating empty shell nodes via `addNode()`, then mounting React components into them using `createRoot()`. The core's `ResizeObserver` automatically detects when React renders content and updates layout measurements.
+
+## When to Use
+
+| Use Case | Package |
+|---|---|
+| Vanilla TypeScript / any framework | `@canvus/core` only |
+| React application with HTML nodes | `@canvus/core` + `@canvus/react` |
+| React components on the canvas | `@canvus/core` + `@canvus/react` |
+| Both HTML and React nodes together | `@canvus/core` + `@canvus/react` |
+
+## Key Design Decisions
+
+- **React 18+** required (uses `createRoot` API)
+- **Wrapper-as-frame model** — the canvas wrapper constrains the node's position/size, and the React component renders unconstrained inside it
+- **Commit routing** — HTML nodes fire `onHTMLCommit` with clean markup; React nodes fire `onReactNodeCommit` with component + props metadata
+- **Independent lifecycle** — if you stop using React, uninstall `@canvus/react` with zero impact on `@canvus/core`
