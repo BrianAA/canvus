@@ -107,3 +107,11 @@ export type {
 
 export { findDropTarget } from "./drop-zone.js";
 
+// ── Handler Architecture ────────────────────────────────────
+
+export type {
+  InteractionHandler,
+  KeyboardHandler,
+  InteractionDetail,
+  WorkspaceContext,
+} from "./handlers/types.js";

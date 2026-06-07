@@ -68,6 +68,22 @@ _Avoid_: Lasso, rubber band
 Workspace panning initiated by middle-mouse-button drag, aligning with standard design application UX (Figma, Sketch). Alternative to Space+drag panning.
 _Avoid_: Scroll pan, drag pan
 
+**InteractionHandler**:
+An interface for pluggable modules that handle pointer-gesture interactions (like dragging, resizing, or drawing) by claiming event ownership in the workspace's pointer dispatch loop.
+_Avoid_: Pointer listener, gesture controller
+
+**KeyboardHandler**:
+An interface for pluggable modules that handle keyboard-shortcut events (like clipboard commands or arrow nudging) in the workspace's key event dispatch loops.
+_Avoid_: Key listener, key handler
+
+**WorkspaceContext**:
+The boundary interface exposed by the `Workspace` to interaction handlers, providing structured read-only access to subsystems and callbacks, and safe state manipulation controls.
+_Avoid_: Workspace instance, internal state
+
+**Claim-Based Dispatch**:
+The event routing pattern where pointer events are offered to registered handlers in priority order until one claims it, ensuring exclusive handling of drag gestures and preventing overlapping state pollution.
+_Avoid_: Event bubbling, custom routing
+
 ## SDK Boundary
 
 The Canvus SDK enforces a strict **dumb canvas** boundary:

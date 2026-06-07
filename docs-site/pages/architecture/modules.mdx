@@ -13,7 +13,8 @@ src/
 ├── layout.ts       → CSS Introspective Analyzer
 ├── renderer.ts     → 2D Canvas Painter
 ├── drop-zone.ts    → DnD Slot Detector
-├── workspace.ts    → Central Orchestrator
+├── handlers/       → Pluggable Interaction & Keyboard Handlers
+├── workspace.ts    → Thin Event Dispatcher & Orchestrator
 └── index.ts        → Public API Barrel Exports
 ```
 
@@ -49,9 +50,21 @@ Draws selection frames, resize anchors, spacing adjusters, alignment snap guidel
 
 Calculates placement indices inside Flex/Grid layout tracks and Block flows based on current pointer locations, returning insertion coordinates for drag-and-drop operations.
 
-### `workspace.ts` — Central Orchestrator
+### `workspace.ts` — Thin Event Dispatcher & Orchestrator
 
-Integrates all subsystems, binds event handlers (pointer, key, wheel, window), runs the main state machine, and triggers throttled repaints. This is the **public entry point** for consumer integrations.
+Serves as the main entry point for consumer integrations. Binds event listeners (pointer, key, wheel, window) and delegates all gesture and shortcut logic to pluggable interaction handlers using the claim-based dispatch loop. Implements `WorkspaceContext` to provide shared state and API delegation back to the handlers.
+
+### `src/handlers/` — Pluggable Interaction & Keyboard Handlers
+
+Focused behavior modules that claim and handle specific gestures or key shortcuts:
+- `PanHandler`: Trackpad and middle-mouse spacebar panning.
+- `DrawHandler`: Box/text node drawing previews and creation.
+- `ClipboardHandler`: Copy, cut, paste, duplicate, and delete shortcuts.
+- `CommandHandler`: Flex wrapping, nudging, and ungrouping commands.
+- `SpacingHandler`: Margin, padding, and corner radius handle dragging.
+- `ResizeHandler`: 8-anchor node scaling with alignment guides.
+- `DragHandler`: Drag-and-drop movement, reparenting, and Alt-drag cloning.
+- `SelectionHandler`: Fallback marquee drag selection and click-to-select scoping.
 
 ### `index.ts` — Public API Barrel Exports
 
@@ -62,7 +75,10 @@ Re-exports all public types, classes, and functions from the other modules. Cons
 ## Dependency Flow
 
 ```
-workspace.ts (orchestrator)
+workspace.ts (orchestrator / context)
+├── handlers/ (interaction behavior layer)
+│   ├── types.ts (WorkspaceContext, InteractionHandler)
+│   └── (modules: pan, draw, clipboard, command, spacing, resize, drag, selection)
 ├── shadow-mount.ts (DOM layer)
 │   └── types.ts
 ├── renderer.ts (canvas layer)

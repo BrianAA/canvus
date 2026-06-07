@@ -9,6 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Claim-Based Handler Architecture**: Decomposed the monolithic `Workspace` class into 8 focused event handlers using the claim-based pointer dispatch and keyboard dispatch pattern. Handlers communicate with the Workspace via a defined `WorkspaceContext` interface, keeping the Workspace as a thin orchestrator (~2,400 lines down from 4,875).
+  - `PanHandler`: Manages trackpad and middle-mouse spacebar panning.
+  - `DrawHandler`: Manages box and text tool drawing previews and node creation.
+  - `ClipboardHandler`: Manages copy, cut, paste, duplicate, and delete shortcuts.
+  - `CommandHandler`: Manages nudging, parent ungrouping, and Shift+A flex wrapping commands.
+  - `SpacingHandler`: Manages margin, padding, and corner radius adjusters.
+  - `ResizeHandler`: Manages 8-anchor element scaling with snap guides.
+  - `DragHandler`: Manages dragging, reparenting, reordering, and Alt-drag cloning.
+  - `SelectionHandler`: Fallback handler managing marquee selection and click-to-select scoping.
 - Drawing Tools: Added new Box and Text drawing tools (`setActiveTool`, `getActiveTool`, `setDrawingTag`, `getDrawingTag`) with real-time dotted boundary preview, dimensions overlay tooltip, and direct tag customization.
 - Corner Radius Handles: Introduced corner radius adjustment handles on container elements with hit testing, hovering, and resizing capabilities.
 - Clipboard Operations: Added copy, cut, paste, and duplicate APIs (`copySelectedNode()`, `cutSelectedNode()`, `pasteNode()`, `duplicateSelectedNode()`, `deleteSelectedNode()`) with keyboard shortcut bindings.
@@ -26,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Marquee selection for multi-node selection via drag rectangle
 
 ### Changed
+- Spacing Adjuster Bottom Drag: Inverted spacing adjuster drag direction for `padding-bottom` and `margin-bottom` so dragging away from the element center consistently increases values and dragging towards decreases them.
 - Spacing Adjusters Separation: Decoupled spacing adjusters into separate `rect` bounds (for pointer hit-testing handle-bars) and `visualRect` bounds (for drawing exact padding/margin overlays).
 - Refined `NodeTree.isContainer` and `isContainerNode` to inspect tag names in `rawMarkup` to dynamically classify container elements.
 - Refined workspace renderer to remove static child outlines around selected elements to avoid visual clutter.

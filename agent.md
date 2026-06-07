@@ -36,7 +36,7 @@ The project repository is split into two primary operational workspaces:
 
 ---
 
-### B. Directory Folder Structure
+#### B. Directory Folder Structure
 
 ```
 canvus/
@@ -55,7 +55,17 @@ canvus/
 │   ├── layout.ts           # CSS style introspector and flow axis detectors
 │   ├── renderer.ts         # HTML5 Canvas Overlay renderer (anchors, badging, guides)
 │   ├── drop-zone.ts        # Flow placement slot and drop target calculators
-│   └── workspace.ts        # Interaction loop orchestrator & browser event binds
+│   ├── handlers/           # Pluggable gesture and keyboard shortcut handlers
+│   │   ├── types.ts        # WorkspaceContext and handler interfaces
+│   │   ├── pan.handler.ts  # Spacebar and middle mouse panning
+│   │   ├── draw.handler.ts # Box/text tools preview and creation
+│   │   ├── clipboard.handler.ts # Copy/paste/cut/duplicate/delete actions
+│   │   ├── command.handler.ts   # General keyboard actions (nudge, wrap, ungroup)
+│   │   ├── spacing.handler.ts   # Padding, margin, and corner radius adjustment
+│   │   ├── resize.handler.ts    # 8-anchor layout resizing
+│   │   ├── drag.handler.ts      # Move, reparent, reorder, and clone gestures
+│   │   └── selection.handler.ts # Marquee and click scoping fallback selection
+│   └── workspace.ts        # Thin event dispatcher & orchestrator
 ├── package.json            # Repository metadata, workspace scripts, & dependencies
 ├── tsconfig.json           # TypeScript configuration rules
 ├── context.md              # Project technical specifications & milestones status
@@ -75,7 +85,17 @@ Here is the blueprint of what each TypeScript source module inside `src/` owns:
 *   **[layout.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/layout.ts)**: *Layout Introspection*. Reads `getComputedStyle()` of active Shadow DOM content elements. Detects display types (flex, grid, block) and parses flex orientation axes, wrapping, track heights, grid columns/rows, and layout gaps.
 *   **[renderer.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/renderer.ts)**: *Affordance Overlay*. Operates on the HTML5 Canvas 2D Context. Renders primary/secondary element borders, grab handles, margin/padding spacer handles (with coordinate value tooltips), layout mode badges, grid tracks, alignment guides, and marquee selection boundaries.
 *   **[drop-zone.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/drop-zone.ts)**: *Flow Placement Estimator*. Detects logical slots inside flex, grid, or block parent containers when dragging a node. Resolves drop target coordinates and draws insertion guide coordinates.
-*   **[workspace.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/workspace.ts)**: *Central Orchestrator*. The public entry point for consumer integrations. Hooks up mouse/pointer event bindings, handles wheel/keyboard shortcuts, maintains active workspace states (panning, resizing, dragging, reparenting, spacing adjustment, and marquee selection), and manages the *Synchronous Reflow Loop*.
+*   **[workspace.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/workspace.ts)**: *Event Dispatcher & Central Orchestrator*. The public entry point for consumer integrations. Hooks up mouse/pointer event bindings, handles wheel/keyboard shortcuts, implements `WorkspaceContext`, delegates active gesture/shortcut interactions to specialized handlers, and manages the *Synchronous Reflow Loop*.
+*   **`src/handlers/`**: *Pluggable Interaction & Keyboard Handlers*. Contains the modular gesture and shortcut logic:
+    *   [types.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/handlers/types.ts): Defines `WorkspaceContext`, `InteractionHandler`, and `KeyboardHandler` interfaces.
+    *   [pan.handler.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/handlers/pan.handler.ts): spacebar-drag and middle-mouse panning.
+    *   [draw.handler.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/handlers/draw.handler.ts): box and text drawing previews and creation.
+    *   [clipboard.handler.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/handlers/clipboard.handler.ts): cut, copy, paste, duplicate, and delete shortcuts.
+    *   [command.handler.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/handlers/command.handler.ts): nudging, wrap-in-flex (Shift+A), and ungroup (Cmd+Backspace).
+    *   [spacing.handler.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/handlers/spacing.handler.ts): margin, padding, and corner radius dragging.
+    *   [resize.handler.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/handlers/resize.handler.ts): 8-anchor node scaling with alignment guides.
+    *   [drag.handler.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/handlers/drag.handler.ts): layout-aware dragging, reparenting, reordering, and cloning (Alt-drag).
+    *   [selection.handler.ts](file:///Users/balfaro01/Documents/GitHub/canvus/src/handlers/selection.handler.ts): click-selection, deep selection, and marquee drag selection.
 
 ---
 

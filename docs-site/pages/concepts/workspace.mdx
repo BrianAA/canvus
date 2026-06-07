@@ -7,8 +7,7 @@ The **Workspace** is the top-level orchestrating engine in Canvus. It binds inte
 The `Workspace` class is the central orchestrator and the public entry point for consumer integrations. It:
 
 - Hooks up mouse/pointer event bindings
-- Handles wheel/keyboard shortcuts
-- Maintains active workspace states (panning, resizing, dragging, reparenting, spacing adjustment, marquee selection)
+- Delegates gesture and shortcut interactions to specialized, claim-based handlers (panning, resizing, dragging, reparenting, spacing adjustment, marquee selection, and tool drawing)
 - Manages the **Synchronous Reflow Loop**
 - Coordinates between the Shadow DOM layer and the Canvas overlay
 
@@ -24,6 +23,18 @@ const ws = new Workspace(containerElement, {
   },
 })
 ```
+
+### Claim-Based Event Handling
+
+To keep the codebase modular, interaction logic is decomposed into dedicated handlers (found in `src/handlers/`). The `Workspace` acts as a thin event dispatcher:
+- **Pointer Events**: During `pointerdown`, the workspace loops through registered `InteractionHandler`s in priority order and calls `claim()`. The first handler to claim the event becomes the `activeHandler`, and subsequent move/up/cancel events are routed to it until released.
+- **Keyboard Shortcuts**: Key down and up events are forwarded to `KeyboardHandler`s (such as clipboard operations or layout nudging) which consume the key strokes as needed.
+
+#### WorkspaceContext
+
+Handlers interact with the workspace using the `WorkspaceContext` interface. This context provides read-only access to sub-systems (like `NodeTree`, `ShadowMount`, `OverlayRenderer`), mutable state accessors (like the viewport and active selections), and common helper operations (like triggering a canvas redraw or emitting interaction changes), preventing handlers from directly mutating internal workspace state.
+
+
 
 ## Content Nodes
 

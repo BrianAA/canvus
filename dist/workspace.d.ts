@@ -1,8 +1,10 @@
-import type { Rect, ResolvedNode, ViewportMatrix, WebHTMLNode, Operation, CanvusTool } from "./types.js";
+import type { Rect, ResolvedNode, Vec2, ViewportMatrix, WebHTMLNode, Operation, CanvusTool, Command } from "./types.js";
 import { ShadowMount } from "./shadow-mount.js";
 import { NodeTree } from "./tree.js";
-import type { OverlayStyle } from "./renderer.js";
+import type { DropTarget } from "./drop-zone.js";
+import type { Guide, OverlayStyle, SpacingAdjusterType } from "./renderer.js";
 import { OverlayRenderer } from "./renderer.js";
+import type { InteractionHandler, KeyboardHandler, InteractionDetail } from "./handlers/types.js";
 /** Configuration options for the workspace. */
 export interface WorkspaceConfig {
     /** Partial overlay style overrides. */
@@ -103,67 +105,62 @@ export declare class Workspace {
     private readonly renderer;
     private readonly container;
     private readonly canvas;
-    private readonly callbacks;
-    private readonly snapThreshold;
-    private readonly minResizeSize;
-    private readonly enableSnapGuides;
+    readonly callbacks: WorkspaceCallbacks;
+    readonly snapThreshold: number;
+    readonly minResizeSize: number;
+    readonly enableSnapGuides: boolean;
     private viewport;
     private readonly tree;
     private readonly selectedIds;
     private hoveredId;
     private dynamicHoveredId;
     private readonly forcedStates;
-    private activeAnchor;
-    private guides;
-    private enteredContainerId;
-    private lastPointerDownTime;
-    private lastPointerDownId;
-    private lastPointerDownTarget;
-    private editAllowedOnDblClick;
-    private activeDropTarget;
-    private pointerDownInsideSelection;
-    private spaceDown;
-    private isAdjustingRadius;
-    private activeRadiusCorner;
-    private hoveredRadiusCorner;
-    private radiusTargetNodeId;
-    private radiusStartValues;
-    private readonly dragStartNodes;
-    private isPanning;
-    private isDragging;
-    private pointerDownReadyToDrag;
-    private isResizing;
-    private isMarqueeSelecting;
-    private marqueeStartCanvas;
-    private marqueeCurrentCanvas;
-    private preMarqueeSelectedIds;
-    private hoveredAdjusterType;
-    private activeAdjusterType;
-    private adjusterStartValue;
-    private adjusterStartValueStr;
-    private dragStartCanvas;
-    private lastCanvasPos;
-    private resizeStartRect;
-    private dragStartStyles;
+    guides: Guide[];
+    enteredContainerId: string | null;
+    lastPointerDownTime: number;
+    lastPointerDownId: string | null;
+    lastPointerDownTarget: EventTarget | null;
+    editAllowedOnDblClick: boolean;
+    activeDropTarget: DropTarget | null;
+    get hoveredAdjusterType(): SpacingAdjusterType | null;
+    set hoveredAdjusterType(value: SpacingAdjusterType | null);
+    get hoveredRadiusCorner(): string | null;
+    set hoveredRadiusCorner(value: string | null);
+    lastCanvasPos: Vec2 | null;
     private disposed;
     private renderRequested;
     private previewMode;
     /** Set of node IDs explicitly marked as containing JavaScript behavior. */
-    private readonly jsMarkedNodes;
+    readonly jsMarkedNodes: Set<string>;
     /** Set of node IDs explicitly locked by the host. Locked nodes are non-interactive. */
-    private readonly lockedNodes;
+    readonly lockedNodes: Set<string>;
     /** Set of node IDs that were lazily registered (children discovered on selection). */
-    private readonly lazyRegisteredIds;
+    readonly lazyRegisteredIds: Set<string>;
     private lazyChildCounter;
-    private activeTool;
-    private drawingTag;
-    private drawingTextTag;
-    private isDrawingNode;
-    private drawStartCanvas;
-    private drawCurrentCanvas;
+    /** Monotonic counter for generating unique element IDs (shared across draw, clone, paste). */
     private newElementCounter;
-    private clipboardItems;
-    private isDragCopy;
+    /** Registered pointer-gesture handlers in priority order. */
+    private readonly interactionHandlers;
+    /** Registered keyboard handlers in priority order. */
+    private readonly keyboardHandlers;
+    /** The handler that currently owns the active pointer gesture. */
+    private activeHandler;
+    /** Pan handler instance (for direct space-key delegation). */
+    private readonly panHandler;
+    /** Draw handler instance (for public API delegation). */
+    private readonly drawHandler;
+    /** Clipboard handler instance (for public API delegation). */
+    private readonly clipboardHandler;
+    /** Command handler instance (for public API delegation). */
+    private readonly commandHandler;
+    /** Spacing handler instance (for interaction delegation). */
+    private readonly spacingHandler;
+    /** Resize handler instance (for interaction delegation). */
+    private readonly resizeHandler;
+    /** Drag handler instance (for interaction delegation). */
+    private readonly dragHandler;
+    /** Selection handler instance (for interaction delegation). */
+    private readonly selectionHandler;
     private readonly onWheel;
     private readonly onPointerDown;
     private readonly onPointerMove;
@@ -224,6 +221,14 @@ export declare class Workspace {
     deselectAll(): void;
     /** Returns the current selection set (read-only view). */
     getSelectedIds(): ReadonlySet<string>;
+    /** Sets the active drawing tool (box, text, or null to return to selection/idle mode). */
+    setActiveTool(tool: CanvusTool): void;
+    /** Returns the currently active drawing tool. */
+    getActiveTool(): CanvusTool;
+    /** Customizes the HTML tag type for box or text drawing. */
+    setDrawingTag(tag: string): void;
+    /** Returns the active drawing tag based on the selected tool. */
+    getDrawingTag(): string;
     /** Returns the current viewport transform. */
     getViewport(): Readonly<ViewportMatrix>;
     /** Programmatically sets the viewport (e.g. for "fit to content"). */
@@ -234,14 +239,6 @@ export declare class Workspace {
     setPreviewMode(enabled: boolean): void;
     /** Returns whether the workspace is currently in Preview Mode. */
     isPreviewMode(): boolean;
-    /** Sets the active drawing tool (box, text, or null to return to selection/idle mode). */
-    setActiveTool(tool: CanvusTool): void;
-    /** Returns the currently active drawing tool. */
-    getActiveTool(): CanvusTool;
-    /** Customizes the HTML tag type for box or text drawing. */
-    setDrawingTag(tag: string): void;
-    /** Returns the active drawing tag based on the selected tool. */
-    getDrawingTag(): string;
     /** Deletes the currently selected node from the workspace. */
     deleteSelectedNode(): void;
     /** Duplicates the selected node right next to it as a sibling. */
@@ -302,7 +299,7 @@ export declare class Workspace {
      * fires the `onPropertyLockInteraction` callback.
      * No-op when the callback is not registered.
      */
-    private notifyPropertyLockInteraction;
+    notifyPropertyLockInteraction(nodeId: string, property: string): void;
     /** Dispatches a synthetic pointer/mouse event (e.g. mouseenter, mouseleave, click) to a node. */
     dispatchInteractionEvent(nodeId: string, eventName: string): void;
     /** Returns a snapshot of all tracked nodes (depth-first order). */
@@ -337,6 +334,29 @@ export declare class Workspace {
     injectCSS(css: string): HTMLStyleElement;
     /** Loads an external stylesheet into the shadow root. */
     injectCSSLink(href: string): Promise<HTMLLinkElement>;
+    /**
+     * Registers a pointer-gesture handler at the specified priority position.
+     * Lower index = higher priority (checked first on pointerdown).
+     * If no index is given, the handler is appended (lowest priority).
+     */
+    registerInteractionHandler(handler: InteractionHandler, index?: number): void;
+    /**
+     * Registers a keyboard handler at the specified priority position.
+     * Lower index = higher priority (checked first on keydown).
+     * If no index is given, the handler is appended (lowest priority).
+     */
+    registerKeyboardHandler(handler: KeyboardHandler, index?: number): void;
+    /**
+     * Emit an interaction mode change to the host.
+     * Enriches the existing `onInteractionChange` callback with
+     * optional `InteractionDetail` for richer host observability.
+     */
+    emitInteraction(mode: string | null, _detail?: InteractionDetail): void;
+    /**
+     * Increment and return a unique counter for generating element IDs.
+     * Used by handlers that create new nodes (DrawHandler, ClipboardHandler, etc.).
+     */
+    nextElementId(): number;
     /** Tears down the workspace completely. */
     dispose(): void;
     /**
@@ -368,11 +388,9 @@ export declare class Workspace {
      * extracts the clean HTML and fires `onHTMLCommit`.
      */
     private handlePointerUp;
-    /** Spacebar tracking for pan mode. */
     private handleKeyDown;
-    private nudgeOrReorderSelected;
-    private ungroupSelectedOrParent;
-    private wrapSelectedInFlex;
+    /** Registers a custom keyboard command shortcut. */
+    registerCommand(cmd: Command): void;
     private handleKeyUp;
     /** Resize canvas to match container dimensions. */
     private handleResize;
@@ -383,7 +401,7 @@ export declare class Workspace {
     /** Pushes a complete frame to the overlay renderer immediately. */
     private renderSync;
     /** Returns the container's bounding rect as our `Rect`. */
-    private getContainerRect;
+    getContainerRect(): Rect;
     /**
      * Orchestrates lazy child registration on selection changes.
      * When a node is newly selected, its immediate DOM children are
@@ -405,12 +423,12 @@ export declare class Workspace {
      */
     private deregisterLazyChildren;
     /** Returns nodes in depth-first order for hit testing and rendering. */
-    private getOrderedNodeList;
-    private getTopLevelSelectedIds;
+    getOrderedNodeList(): ReadonlyArray<ResolvedNode>;
+    getTopLevelSelectedIds(): string[];
     private hitTestRadiusHandle;
     /** Returns canvas-space rects of all nodes except the given ID. */
-    private getOtherRects;
-    private getOtherRectsMultiple;
+    getOtherRects(excludeId: string): Rect[];
+    getOtherRectsMultiple(excludeIds: string[]): Rect[];
     /**
      * Re-measures a node and all its descendants using
      * canvas-space coordinate extraction.
@@ -426,10 +444,9 @@ export declare class Workspace {
     private setNodeStateClass;
     /** Updates the active breadcrumbs and calls external callback. */
     private updateBreadcrumb;
-    private getDrawingRect;
     private getMarqueeRect;
     private computeSpacingAdjusters;
     private assertNotDisposed;
-    private safeSetPointerCapture;
+    safeSetPointerCapture(pointerId: number): void;
 }
 //# sourceMappingURL=workspace.d.ts.map

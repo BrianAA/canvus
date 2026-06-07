@@ -17,12 +17,12 @@
 import type {
   Rect,
   ResolvedNode,
-  ResizeAnchor,
   Vec2,
   ViewportMatrix,
   WebHTMLNode,
   Operation,
   CanvusTool,
+  Command,
 } from "./types.js";
 
 import { createDefaultViewport, resolveNode } from "./types.js";
@@ -32,25 +32,30 @@ import {
   applyWheelZoom,
   hitTestElements,
   screenToCanvas,
-  rectsIntersect,
   isPointInElement,
 } from "./matrix.js";
 
 import { ShadowMount } from "./shadow-mount.js";
-import { NodeTree, computeAggregateBounds } from "./tree.js";
-import { findDropTarget } from "./drop-zone.js";
+import { NodeTree } from "./tree.js";
 import type { DropTarget } from "./drop-zone.js";
 
 import type { Guide, LayoutBadgeInfo, GridOverlayInfo, OverlayStyle, SpacingAdjusterType, SpacingAdjusterInfo } from "./renderer.js";
 import {
   OverlayRenderer,
   anchorCursor,
-  computeAlignmentGuides,
-  computeSnappedPosition,
   isContainerNode,
 } from "./renderer.js";
 
-import { detectLayout, getLayoutLabel, parseGridTracks, getFlowAxis, GridTrack } from "./layout.js";
+import { detectLayout, getLayoutLabel, parseGridTracks } from "./layout.js";
+import type { InteractionHandler, KeyboardHandler, InteractionDetail } from "./handlers/types.js";
+import { PanHandler } from "./handlers/pan.handler.js";
+import { DrawHandler } from "./handlers/draw.handler.js";
+import { ClipboardHandler } from "./handlers/clipboard.handler.js";
+import { CommandHandler } from "./handlers/command.handler.js";
+import { SpacingHandler } from "./handlers/spacing.handler.js";
+import { ResizeHandler, getLockedPropertiesForAnchor } from "./handlers/resize.handler.js";
+import { DragHandler } from "./handlers/drag.handler.js";
+import { SelectionHandler } from "./handlers/selection.handler.js";
 
 // ── Configuration ───────────────────────────────────────────
 
@@ -144,89 +149,6 @@ export interface WorkspaceCallbacks {
   onLockedNodeInteraction?: (nodeId: string) => void;
 }
 
-// ── Resize Math ─────────────────────────────────────────────
-
-/**
- * Computes a new bounding rect after applying a resize delta
- * from a given anchor direction. Enforces a minimum size.
- */
-function computeResizedRect(
-  start: Readonly<Rect>,
-  anchor: ResizeAnchor,
-  dx: number,
-  dy: number,
-  minSize: number,
-  symmetrical: boolean,
-): Rect {
-  let { x, y, width, height } = start;
-
-  const affectsLeft = anchor === "nw" || anchor === "w" || anchor === "sw";
-  const affectsRight = anchor === "ne" || anchor === "e" || anchor === "se";
-  const affectsTop = anchor === "nw" || anchor === "n" || anchor === "ne";
-  const affectsBottom = anchor === "sw" || anchor === "s" || anchor === "se";
-
-  if (symmetrical) {
-    const centerX = start.x + start.width / 2;
-    const centerY = start.y + start.height / 2;
-
-    if (affectsRight) {
-      width = Math.max(minSize, start.width + 2 * dx);
-    } else if (affectsLeft) {
-      width = Math.max(minSize, start.width - 2 * dx);
-    }
-
-    if (affectsBottom) {
-      height = Math.max(minSize, start.height + 2 * dy);
-    } else if (affectsTop) {
-      height = Math.max(minSize, start.height - 2 * dy);
-    }
-
-    x = centerX - width / 2;
-    y = centerY - height / 2;
-    return { x, y, width, height };
-  }
-
-  if (affectsRight) {
-    width = Math.max(minSize, width + dx);
-  }
-  if (affectsLeft) {
-    const newWidth = Math.max(minSize, width - dx);
-    x = x + (width - newWidth); // Shift origin to compensate.
-    width = newWidth;
-  }
-  if (affectsBottom) {
-    height = Math.max(minSize, height + dy);
-  }
-  if (affectsTop) {
-    const newHeight = Math.max(minSize, height - dy);
-    y = y + (height - newHeight);
-    height = newHeight;
-  }
-
-  return { x, y, width, height };
-}
-
-// ── Property Lock Helpers ───────────────────────────────────
-
-/**
- * Maps a resize anchor to the CSS properties it affects.
- * Used by the property-lock system to determine which properties
- * must be checked before allowing a resize gesture.
- */
-function getLockedPropertiesForAnchor(anchor: ResizeAnchor): string[] {
-  const props: string[] = [];
-  const affectsWidth =
-    anchor === "e" || anchor === "w" ||
-    anchor === "ne" || anchor === "nw" ||
-    anchor === "se" || anchor === "sw";
-  const affectsHeight =
-    anchor === "n" || anchor === "s" ||
-    anchor === "ne" || anchor === "nw" ||
-    anchor === "se" || anchor === "sw";
-  if (affectsWidth) props.push("width");
-  if (affectsHeight) props.push("height");
-  return props;
-}
 
 // ── Workspace Class ─────────────────────────────────────────
 
@@ -273,10 +195,10 @@ export class Workspace {
 
   // ── Configuration ───────────────────────────────
 
-  private readonly callbacks: WorkspaceCallbacks;
-  private readonly snapThreshold: number;
-  private readonly minResizeSize: number;
-  private readonly enableSnapGuides: boolean;
+  public readonly callbacks: WorkspaceCallbacks;
+  public readonly snapThreshold: number;
+  public readonly minResizeSize: number;
+  public readonly enableSnapGuides: boolean;
 
   // ── Workspace State ─────────────────────────────
 
@@ -290,82 +212,83 @@ export class Workspace {
     active: new Set<string>(),
     focus: new Set<string>()
   };
-  private activeAnchor: ResizeAnchor | null = null;
-  private guides: Guide[] = [];
+  public guides: Guide[] = [];
 
   // ── Scoped Selection Scope ──────────────────────
-  private enteredContainerId: string | null = null;
-  private lastPointerDownTime = 0;
-  private lastPointerDownId: string | null = null;
-  private lastPointerDownTarget: EventTarget | null = null;
-  private editAllowedOnDblClick = false;
+  public enteredContainerId: string | null = null;
+  public lastPointerDownTime = 0;
+  public lastPointerDownId: string | null = null;
+  public lastPointerDownTarget: EventTarget | null = null;
+  public editAllowedOnDblClick = false;
 
   // ── Drag & Drop State ───────────────────────────
-  private activeDropTarget: DropTarget | null = null;
-  private pointerDownInsideSelection: string | null = null;
+  public activeDropTarget: DropTarget | null = null;
 
   // ── Interaction State Machine ───────────────────
 
-  private spaceDown = false;
-  private isAdjustingRadius = false;
-  private activeRadiusCorner: string | null = null;
-  private hoveredRadiusCorner: string | null = null;
-  private radiusTargetNodeId: string | null = null;
-  private radiusStartValues = new Map<string, string>();
-  private readonly dragStartNodes = new Map<string, {
-    startPos: Vec2;
-    startParentId: string | null;
-    startIndex: number;
-    startStyles: Record<string, string | null> | null;
-  }>();
-  private isPanning = false;
-  private isDragging = false;
-  private pointerDownReadyToDrag = false;
-  private isResizing = false;
-  private isMarqueeSelecting = false;
-  private marqueeStartCanvas: Vec2 | null = null;
-  private marqueeCurrentCanvas: Vec2 | null = null;
-  private preMarqueeSelectedIds = new Set<string>();
-  private hoveredAdjusterType: SpacingAdjusterType | null = null;
-  private activeAdjusterType: SpacingAdjusterType | null = null;
-  private adjusterStartValue = 0;
-  private adjusterStartValueStr: string | null = null;
-  private dragStartCanvas: Vec2 | null = null;
-  private lastCanvasPos: Vec2 | null = null;
+  get hoveredAdjusterType(): SpacingAdjusterType | null {
+    return this.spacingHandler ? this.spacingHandler.hoveredAdjusterType : null;
+  }
+  set hoveredAdjusterType(value: SpacingAdjusterType | null) {
+    if (this.spacingHandler) {
+      this.spacingHandler.hoveredAdjusterType = value;
+    }
+  }
 
-  private resizeStartRect: Rect | null = null;
-  private dragStartStyles: Record<string, string | null> | null = null;
+  get hoveredRadiusCorner(): string | null {
+    return this.spacingHandler ? this.spacingHandler.hoveredRadiusCorner : null;
+  }
+  set hoveredRadiusCorner(value: string | null) {
+    if (this.spacingHandler) {
+      this.spacingHandler.hoveredRadiusCorner = value;
+    }
+  }
+
+
+  public lastCanvasPos: Vec2 | null = null;
+
   private disposed = false;
   private renderRequested = false;
   private previewMode = false;
 
   /** Set of node IDs explicitly marked as containing JavaScript behavior. */
-  private readonly jsMarkedNodes = new Set<string>();
+  public readonly jsMarkedNodes = new Set<string>();
 
   /** Set of node IDs explicitly locked by the host. Locked nodes are non-interactive. */
-  private readonly lockedNodes = new Set<string>();
+  public readonly lockedNodes = new Set<string>();
 
   /** Set of node IDs that were lazily registered (children discovered on selection). */
-  private readonly lazyRegisteredIds = new Set<string>();
+  public readonly lazyRegisteredIds = new Set<string>();
   private lazyChildCounter = 0;
 
-  // ── Drawing Tool State ──────────────────────────
-  private activeTool: CanvusTool = null;
-  private drawingTag: string = "div";
-  private drawingTextTag: string = "p";
-  private isDrawingNode: boolean = false;
-  private drawStartCanvas: Vec2 | null = null;
-  private drawCurrentCanvas: Vec2 | null = null;
+  // ── Shared Counter ──────────────────────────────
+  /** Monotonic counter for generating unique element IDs (shared across draw, clone, paste). */
   private newElementCounter: number = 0;
 
-  // ── Clipboard State ─────────────────────────────
-  private clipboardItems: Array<{
-    rawMarkup: string;
-    rect: Rect | null;
-    hasJS: boolean;
-    originalId?: string;
-  }> = [];
-  private isDragCopy: boolean = false;
+  // ── Handler Architecture ────────────────────────
+
+  /** Registered pointer-gesture handlers in priority order. */
+  private readonly interactionHandlers: InteractionHandler[] = [];
+  /** Registered keyboard handlers in priority order. */
+  private readonly keyboardHandlers: KeyboardHandler[] = [];
+  /** The handler that currently owns the active pointer gesture. */
+  private activeHandler: InteractionHandler | null = null;
+  /** Pan handler instance (for direct space-key delegation). */
+  private readonly panHandler: PanHandler;
+  /** Draw handler instance (for public API delegation). */
+  private readonly drawHandler: DrawHandler;
+  /** Clipboard handler instance (for public API delegation). */
+  private readonly clipboardHandler: ClipboardHandler;
+  /** Command handler instance (for public API delegation). */
+  private readonly commandHandler: CommandHandler;
+  /** Spacing handler instance (for interaction delegation). */
+  private readonly spacingHandler: SpacingHandler;
+  /** Resize handler instance (for interaction delegation). */
+  private readonly resizeHandler: ResizeHandler;
+  /** Drag handler instance (for interaction delegation). */
+  private readonly dragHandler: DragHandler;
+  /** Selection handler instance (for interaction delegation). */
+  private readonly selectionHandler: SelectionHandler;
 
   // ── Bound Event Handlers (for cleanup) ──────────
 
@@ -467,6 +390,26 @@ export class Workspace {
 
     // ── Initial Sizing ────────────────────────────
     this.handleResize();
+
+    // ── Register Handlers ─────────────────────────
+    // Handlers receive `this` as WorkspaceContext. The Workspace
+    // class implements the context interface implicitly.
+    this.panHandler = new PanHandler(this as any);
+    this.registerInteractionHandler(this.panHandler, 0); // Highest priority
+    this.drawHandler = new DrawHandler(this as any);
+    this.registerInteractionHandler(this.drawHandler, 1); // After pan
+    this.clipboardHandler = new ClipboardHandler(this as any);
+    this.registerKeyboardHandler(this.clipboardHandler);
+    this.commandHandler = new CommandHandler(this as any);
+    this.registerKeyboardHandler(this.commandHandler);
+    this.resizeHandler = new ResizeHandler(this as any);
+    this.registerInteractionHandler(this.resizeHandler, 2);
+    this.spacingHandler = new SpacingHandler(this as any);
+    this.registerInteractionHandler(this.spacingHandler, 3);
+    this.dragHandler = new DragHandler(this as any);
+    this.registerInteractionHandler(this.dragHandler, 4);
+    this.selectionHandler = new SelectionHandler(this as any);
+    this.registerInteractionHandler(this.selectionHandler, 5);
   }
 
   // ── Public API: Node Management ─────────────────
@@ -727,6 +670,28 @@ export class Workspace {
     return this.selectedIds;
   }
 
+  // ── Public API: Drawing Tools ───────────────
+
+  /** Sets the active drawing tool (box, text, or null to return to selection/idle mode). */
+  setActiveTool(tool: CanvusTool): void {
+    this.drawHandler.setActiveTool(tool);
+  }
+
+  /** Returns the currently active drawing tool. */
+  getActiveTool(): CanvusTool {
+    return this.drawHandler.getActiveTool();
+  }
+
+  /** Customizes the HTML tag type for box or text drawing. */
+  setDrawingTag(tag: string): void {
+    this.drawHandler.setDrawingTag(tag);
+  }
+
+  /** Returns the active drawing tag based on the selected tool. */
+  getDrawingTag(): string {
+    return this.drawHandler.getDrawingTag();
+  }
+
   // ── Public API: Viewport ────────────────────────
 
   /** Returns the current viewport transform. */
@@ -765,15 +730,16 @@ export class Workspace {
 
     // Clear selection, hover, and active interactions.
     if (enabled) {
+      if (this.activeHandler) {
+        this.activeHandler.onCancel?.();
+        this.activeHandler = null;
+      }
       this.selectedIds.clear();
       this.clearDynamicHover();
       this.hoveredId = null;
       this.activeDropTarget = null;
-      this.activeAdjusterType = null;
-      this.isDragging = false;
-      this.isResizing = false;
-      this.isMarqueeSelecting = false;
-      this.pointerDownReadyToDrag = false;
+      this.dragHandler.onCancel();
+      this.selectionHandler.onCancel();
       this.callbacks.onSelectionChange?.(this.selectedIds);
       this.callbacks.onInteractionChange?.(null);
     }
@@ -786,388 +752,33 @@ export class Workspace {
     return this.previewMode;
   }
 
-  // ── Public API: Drawing Tools ───────────────────
-
-  /** Sets the active drawing tool (box, text, or null to return to selection/idle mode). */
-  setActiveTool(tool: CanvusTool): void {
-    this.activeTool = tool;
-    this.container.style.cursor = tool ? "crosshair" : "default";
-
-    if (tool !== null) {
-      this.deselectAll();
-    }
-
-    this.callbacks.onInteractionChange?.(tool ? `draw-${tool}` : null);
-    this.render();
-  }
-
-  /** Returns the currently active drawing tool. */
-  getActiveTool(): CanvusTool {
-    return this.activeTool;
-  }
-
-  /** Customizes the HTML tag type for box or text drawing. */
-  setDrawingTag(tag: string): void {
-    const lower = tag.toLowerCase().trim();
-    const textTags = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "span", "a", "strong", "em", "li", "ul", "ol"];
-    if (textTags.includes(lower)) {
-      this.drawingTextTag = lower;
-    } else {
-      this.drawingTag = lower;
-    }
-  }
-
-  /** Returns the active drawing tag based on the selected tool. */
-  getDrawingTag(): string {
-    return this.activeTool === "text" ? this.drawingTextTag : this.drawingTag;
-  }
+  // (Drawing tool API moved — see setActiveTool/getActiveTool/setDrawingTag/getDrawingTag above)
 
   // ── Public API: Clipboard Operations ────────────
 
   /** Deletes the currently selected node from the workspace. */
   deleteSelectedNode(): void {
-    const topLevelIds = this.getTopLevelSelectedIds();
-    if (topLevelIds.length === 0) return;
-
-    this.mount.setTransitionsEnabled(false);
-
-    const ops: any[] = [];
-    const parentsToRemeasure = new Set<string>();
-
-    for (const id of topLevelIds) {
-      const node = this.tree.get(id);
-      if (!node) continue;
-
-      const parentId = node.parentId;
-      const rawMarkup = node.rawMarkup;
-      const rect = node.currentRect;
-
-      const removed = this.removeNode(id);
-      if (removed) {
-        ops.push({
-          type: "delete-node" as any,
-          nodeId: id,
-          payload: { parentId },
-          undoPayload: { parentId, rawMarkup, rect }
-        });
-        if (parentId) {
-          parentsToRemeasure.add(parentId);
-        }
-      }
-    }
-
-    if (ops.length > 0) {
-      this.callbacks.onOperationsGenerated?.(ops);
-
-      // Commit HTML for affected parent containers or root
-      for (const parentId of parentsToRemeasure) {
-        this.remeasureSubtree(parentId);
-        const html = this.mount.extractHTML(parentId);
-        if (html) {
-          this.callbacks.onHTMLCommit?.(parentId, html);
-        }
-      }
-
-      // If any deleted node was a root node, commit HTML for it
-      for (const op of ops) {
-        if (!op.payload.parentId) {
-          this.callbacks.onHTMLCommit?.(op.nodeId, "");
-        }
-      }
-      this.deselectAll();
-    }
-
-    this.mount.setTransitionsEnabled(true);
-    this.render();
+    this.clipboardHandler.deleteSelectedNode();
   }
 
   /** Duplicates the selected node right next to it as a sibling. */
   duplicateSelectedNode(): void {
-    const topLevelIds = this.getTopLevelSelectedIds();
-    if (topLevelIds.length === 0) return;
-
-    this.mount.setTransitionsEnabled(false);
-
-    const newSelectedIds: string[] = [];
-    const ops: any[] = [];
-    const parentsToCommit = new Set<string>();
-    const rootsToCommit: string[] = [];
-
-    for (const originalId of topLevelIds) {
-      const originalNode = this.tree.get(originalId);
-      if (!originalNode) continue;
-
-      const rawMarkup = this.mount.extractHTML(originalId);
-      if (!rawMarkup) continue;
-
-      this.newElementCounter++;
-      const duplicateId = `cloned-${this.newElementCounter}-${Date.now().toString(36)}`;
-      const parentId = originalNode.parentId;
-
-      let rect = originalNode.currentRect ? { ...originalNode.currentRect } : null;
-      let index: number | undefined;
-
-      if (parentId !== null) {
-        index = this.tree.getChildIndex(originalId) + 1;
-      } else if (rect) {
-        rect.x += 20;
-        rect.y += 20;
-      }
-
-      this.addNode({
-        id: duplicateId,
-        rawMarkup,
-        currentRect: rect
-      }, parentId, index);
-
-      if (this.jsMarkedNodes.has(originalId)) {
-        this.markNodeHasJS(duplicateId);
-      }
-
-      this.callbacks.onNodeCloned?.(originalId, duplicateId);
-
-      newSelectedIds.push(duplicateId);
-
-      const finalIndex = parentId !== null ? this.tree.getChildIndex(duplicateId) : -1;
-      ops.push({
-        type: "create-node" as any,
-        nodeId: duplicateId,
-        payload: { parentId, index: finalIndex, rawMarkup, rect },
-        undoPayload: { parentId }
-      });
-
-      if (parentId) {
-        parentsToCommit.add(parentId);
-      } else {
-        rootsToCommit.push(duplicateId);
-      }
-    }
-
-    if (ops.length > 0) {
-      const prevSelection = new Set(this.selectedIds);
-      this.selectedIds.clear();
-      for (const id of newSelectedIds) {
-        this.selectedIds.add(id);
-      }
-      this.syncLazyChildren(prevSelection, this.selectedIds);
-      this.callbacks.onSelectionChange?.(this.selectedIds);
-      this.updateBreadcrumb();
-
-      this.callbacks.onOperationsGenerated?.(ops);
-
-      for (const parentId of parentsToCommit) {
-        const html = this.mount.extractHTML(parentId);
-        if (html) {
-          this.callbacks.onHTMLCommit?.(parentId, html);
-        }
-      }
-
-      for (const rootId of rootsToCommit) {
-        const html = this.mount.extractHTML(rootId);
-        if (html) {
-          this.callbacks.onHTMLCommit?.(rootId, html);
-        }
-      }
-    }
-
-    this.mount.setTransitionsEnabled(true);
-    this.render();
+    this.clipboardHandler.duplicateSelectedNode();
   }
 
   /** Copies the selected node to the internal clipboard. */
   copySelectedNode(): void {
-    const topLevelIds = this.getTopLevelSelectedIds();
-    if (topLevelIds.length === 0) return;
-
-    this.clipboardItems = [];
-    for (const id of topLevelIds) {
-      const node = this.tree.get(id);
-      const markup = this.mount.extractHTML(id);
-      if (node && markup) {
-        this.clipboardItems.push({
-          rawMarkup: markup,
-          rect: node.currentRect ? { ...node.currentRect } : null,
-          hasJS: this.jsMarkedNodes.has(id),
-          originalId: id,
-        });
-      }
-    }
+    this.clipboardHandler.copySelectedNode();
   }
 
   /** Cuts the selected node to the clipboard, removing it from the canvas. */
   cutSelectedNode(): void {
-    this.copySelectedNode();
-    this.deleteSelectedNode();
+    this.clipboardHandler.cutSelectedNode();
   }
 
   /** Pastes the node currently in the clipboard into the canvas. */
   pasteNode(): void {
-    if (this.clipboardItems.length === 0) return;
-
-    this.mount.setTransitionsEnabled(false);
-
-    const newSelectedIds: string[] = [];
-    const ops: any[] = [];
-    const parentsToCommit = new Set<string>();
-    const rootsToCommit: string[] = [];
-
-    const targets = this.selectedIds.size > 0 ? this.getTopLevelSelectedIds() : [];
-
-    if (targets.length === 0) {
-      // Paste all items at root level
-      for (const item of this.clipboardItems) {
-        this.newElementCounter++;
-        const id = `pasted-${this.newElementCounter}-${Date.now().toString(36)}`;
-        
-        let rect: Rect;
-        if (item.rect) {
-          rect = {
-            x: item.rect.x + 20,
-            y: item.rect.y + 20,
-            width: item.rect.width,
-            height: item.rect.height,
-          };
-          item.rect = {
-            x: item.rect.x + 20,
-            y: item.rect.y + 20,
-            width: item.rect.width,
-            height: item.rect.height,
-          };
-        } else {
-          rect = { x: 100, y: 100, width: 120, height: 120 };
-        }
-
-        this.addNode({
-          id,
-          rawMarkup: item.rawMarkup,
-          currentRect: rect,
-        }, null);
-
-        if (item.hasJS) {
-          this.markNodeHasJS(id);
-        }
-        if (item.originalId) {
-          this.callbacks.onNodeCloned?.(item.originalId, id);
-        }
-        newSelectedIds.push(id);
-
-        ops.push({
-          type: "create-node" as any,
-          nodeId: id,
-          payload: { parentId: null, index: undefined, rawMarkup: item.rawMarkup, rect },
-          undoPayload: { parentId: null }
-        });
-        rootsToCommit.push(id);
-      }
-    } else {
-      // Paste next to or inside each target
-      for (const targetId of targets) {
-        const targetNode = this.tree.get(targetId);
-        if (!targetNode) continue;
-
-        const isContainer = this.tree.isContainer(targetId);
-        const parentId = isContainer ? targetId : targetNode.parentId;
-        let startIndex = isContainer ? 0 : this.tree.getChildIndex(targetId) + 1;
-
-        for (const item of this.clipboardItems) {
-          this.newElementCounter++;
-          const id = `pasted-${this.newElementCounter}-${Date.now().toString(36)}`;
-
-          let rect: Rect;
-          if (parentId === null) {
-            if (item.rect) {
-              rect = {
-                x: item.rect.x + 20,
-                y: item.rect.y + 20,
-                width: item.rect.width,
-                height: item.rect.height,
-              };
-              item.rect = {
-                x: item.rect.x + 20,
-                y: item.rect.y + 20,
-                width: item.rect.width,
-                height: item.rect.height,
-              };
-            } else {
-              rect = { x: 100, y: 100, width: 120, height: 120 };
-            }
-          } else {
-            if (item.rect) {
-              rect = {
-                x: 0,
-                y: 0,
-                width: item.rect.width,
-                height: item.rect.height,
-              };
-            } else {
-              rect = { x: 0, y: 0, width: 120, height: 120 };
-            }
-          }
-
-          this.addNode({
-            id,
-            rawMarkup: item.rawMarkup,
-            currentRect: rect,
-          }, parentId, startIndex);
-
-          if (parentId !== null) {
-            startIndex++;
-          }
-
-          if (item.hasJS) {
-            this.markNodeHasJS(id);
-          }
-          if (item.originalId) {
-            this.callbacks.onNodeCloned?.(item.originalId, id);
-          }
-          newSelectedIds.push(id);
-
-          const finalIndex = parentId !== null ? this.tree.getChildIndex(id) : -1;
-          ops.push({
-            type: "create-node" as any,
-            nodeId: id,
-            payload: { parentId, index: finalIndex, rawMarkup: item.rawMarkup, rect },
-            undoPayload: { parentId }
-          });
-
-          if (parentId) {
-            parentsToCommit.add(parentId);
-          } else {
-            rootsToCommit.push(id);
-          }
-        }
-      }
-    }
-
-    if (ops.length > 0) {
-      const prevSelection = new Set(this.selectedIds);
-      this.selectedIds.clear();
-      for (const id of newSelectedIds) {
-        this.selectedIds.add(id);
-      }
-      this.syncLazyChildren(prevSelection, this.selectedIds);
-      this.callbacks.onSelectionChange?.(this.selectedIds);
-      this.updateBreadcrumb();
-
-      this.callbacks.onOperationsGenerated?.(ops);
-
-      for (const parentId of parentsToCommit) {
-        const html = this.mount.extractHTML(parentId);
-        if (html) {
-          this.callbacks.onHTMLCommit?.(parentId, html);
-        }
-      }
-
-      for (const rootId of rootsToCommit) {
-        const html = this.mount.extractHTML(rootId);
-        if (html) {
-          this.callbacks.onHTMLCommit?.(rootId, html);
-        }
-      }
-    }
-
-    this.mount.setTransitionsEnabled(true);
-    this.render();
+    this.clipboardHandler.pasteNode();
   }
 
   // ── Public API: State Forcing ───────────────────
@@ -1284,7 +895,7 @@ export class Workspace {
    * fires the `onPropertyLockInteraction` callback.
    * No-op when the callback is not registered.
    */
-  private notifyPropertyLockInteraction(nodeId: string, property: string): void {
+  public notifyPropertyLockInteraction(nodeId: string, property: string): void {
     if (!this.callbacks.onPropertyLockInteraction) return;
     const contentRoot = this.mount.getContentRoot(nodeId);
     let currentValue = "";
@@ -1577,6 +1188,50 @@ export class Workspace {
   injectCSSLink(href: string): Promise<HTMLLinkElement> {
     return this.mount.injectStylesheetLink(href);
   }
+  // ── Handler Architecture API ─────────────────────
+
+  /**
+   * Registers a pointer-gesture handler at the specified priority position.
+   * Lower index = higher priority (checked first on pointerdown).
+   * If no index is given, the handler is appended (lowest priority).
+   */
+  registerInteractionHandler(handler: InteractionHandler, index?: number): void {
+    if (index !== undefined) {
+      this.interactionHandlers.splice(index, 0, handler);
+    } else {
+      this.interactionHandlers.push(handler);
+    }
+  }
+
+  /**
+   * Registers a keyboard handler at the specified priority position.
+   * Lower index = higher priority (checked first on keydown).
+   * If no index is given, the handler is appended (lowest priority).
+   */
+  registerKeyboardHandler(handler: KeyboardHandler, index?: number): void {
+    if (index !== undefined) {
+      this.keyboardHandlers.splice(index, 0, handler);
+    } else {
+      this.keyboardHandlers.push(handler);
+    }
+  }
+
+  /**
+   * Emit an interaction mode change to the host.
+   * Enriches the existing `onInteractionChange` callback with
+   * optional `InteractionDetail` for richer host observability.
+   */
+  emitInteraction(mode: string | null, _detail?: InteractionDetail): void {
+    this.callbacks.onInteractionChange?.(mode);
+  }
+
+  /**
+   * Increment and return a unique counter for generating element IDs.
+   * Used by handlers that create new nodes (DrawHandler, ClipboardHandler, etc.).
+   */
+  nextElementId(): number {
+    return ++this.newElementCounter;
+  }
 
   // ── Disposal ────────────────────────────────────
 
@@ -1644,393 +1299,24 @@ export class Workspace {
     );
     console.log('DEBUG WORKSPACE DOWN: viewport scale:', this.viewport.scale, 'canvasPos:', canvasPos, 'clientX:', e.clientX, 'clientY:', e.clientY);
 
-    if (this.previewMode) {
-      if (this.spaceDown || e.button === 1) {
-        if (e.button === 1) {
-          e.preventDefault();
-        }
-        this.isPanning = true;
-        this.container.classList.add("canvus-panning");
-        this.safeSetPointerCapture(e.pointerId);
-        this.callbacks.onInteractionChange?.("pan");
-        return;
-      }
-      return;
-    }
+    // ── Handler Dispatch: try registered handlers first ──────
+    if (this.interactionHandlers.length > 0) {
+      const nodeList = this.getOrderedNodeList();
+      const hitId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
+      for (const handler of this.interactionHandlers) {
+        if (handler.claim(e, canvasPos, hitId, rect)) {
+          this.activeHandler = handler;
 
-    this.pointerDownInsideSelection = null;
+          this.lastPointerDownTime = Date.now();
+          this.lastPointerDownId = hitId;
+          this.lastPointerDownTarget = e.composedPath()[0] || null;
 
-    // ── Drawing Tool Interception ─────────────────
-    if (this.activeTool !== null && e.button === 0) {
-      this.isDrawingNode = true;
-      this.drawStartCanvas = canvasPos;
-      this.drawCurrentCanvas = canvasPos;
-      this.activeDropTarget = null;
-      this.guides = [];
-      this.safeSetPointerCapture(e.pointerId);
-      this.callbacks.onInteractionChange?.("draw-node");
-      this.render();
-      return;
-    }
-
-    // ── Space + pointer = Pan ─────────────────────
-    if (this.spaceDown || e.button === 1) {
-      if (e.button === 1) {
-        e.preventDefault();
-      }
-      this.isPanning = true;
-      this.container.classList.add("canvus-panning");
-      this.safeSetPointerCapture(e.pointerId);
-      this.callbacks.onInteractionChange?.("pan");
-      return;
-    }
-
-    // Calculate isDoubleClick early to prevent handles/adjusters from intercepting double-clicks on small/nested nodes
-    const nodeList = this.getOrderedNodeList();
-    const hitId = hitTestElements(canvasPos.x, canvasPos.y, nodeList);
-    const targetEl = e.composedPath()[0] as HTMLElement | null;
-    const now = Date.now();
-    const isSameTarget = targetEl !== null && this.lastPointerDownTarget !== null &&
-      (targetEl === this.lastPointerDownTarget || (this.lastPointerDownTarget as Node).contains(targetEl) || targetEl.contains(this.lastPointerDownTarget as Node));
-    const isDoubleClick = (now - this.lastPointerDownTime < 350) && (
-      hitId !== null && 
-      this.lastPointerDownId !== null && 
-      (hitId === this.lastPointerDownId || isSameTarget || this.tree.isAncestor(this.lastPointerDownId, hitId))
-    );
-    this.lastPointerDownTime = now;
-    this.lastPointerDownId = hitId;
-    this.lastPointerDownTarget = targetEl;
-
-    // ── Handle hit-test (resize) ──────────────────
-    if (!isDoubleClick && this.selectedIds.size === 1) {
-      const selId = this.selectedIds.values().next().value as string;
-      const selNode = this.tree.get(selId);
-      if (selNode?.currentRect) {
-        const localX = e.clientX - rect.x;
-        const localY = e.clientY - rect.y;
-        const anchor = this.renderer.hitTestHandle(
-          localX, localY, selNode.currentRect, this.viewport,
-        );
-        if (anchor) {
-          // ── Property lock check for resize ──────
-          const affectedProps = getLockedPropertiesForAnchor(anchor);
-          const lockedProps = affectedProps.filter(p => this.isPropertyLocked(selId, p));
-          if (lockedProps.length > 0) {
-            for (const prop of lockedProps) {
-              this.notifyPropertyLockInteraction(selId, prop);
-            }
-            return; // Block the resize gesture
-          }
-
-          this.isResizing = true;
-          this.activeAnchor = anchor;
-          this.dragStartCanvas = canvasPos;
-          this.resizeStartRect = { ...selNode.currentRect };
-
-          const contentRoot = this.mount.getContentRoot(selId);
-          if (contentRoot) {
-            this.dragStartStyles = {
-              "grid-column-start": contentRoot.style.gridColumnStart || null,
-              "grid-column-end": contentRoot.style.gridColumnEnd || null,
-              "grid-row-start": contentRoot.style.gridRowStart || null,
-              "grid-row-end": contentRoot.style.gridRowEnd || null,
-              "position": contentRoot.style.position || null,
-              "left": contentRoot.style.left || null,
-              "top": contentRoot.style.top || null,
-              "width": contentRoot.style.width || null,
-              "height": contentRoot.style.height || null,
-            };
-          }
-
-          this.render();
           return;
         }
       }
     }
 
-    // ── Corner Radius handles hit-test ────────────
-    if (!isDoubleClick && this.selectedIds.size > 0) {
-      const localX = e.clientX - rect.x;
-      const localY = e.clientY - rect.y;
-      let hitRadiusCorner: string | null = null;
-      let targetNodeId: string | null = null;
 
-      for (const selId of this.selectedIds) {
-        const selNode = this.tree.get(selId);
-        if (selNode && isContainerNode(selNode) && selNode.currentRect) {
-          const hit = this.hitTestRadiusHandle(
-            localX, localY, selNode.currentRect, this.viewport,
-          );
-          if (hit) {
-            hitRadiusCorner = hit;
-            targetNodeId = selId;
-            break;
-          }
-        }
-      }
-
-      if (hitRadiusCorner && targetNodeId) {
-        // ── Property lock check for corner-radius (multi-node) ─
-        // If any selected container node has a locked border-radius,
-        // block the entire gesture for layout integrity.
-        let radiusBlocked = false;
-        for (const selId of this.selectedIds) {
-          const selNode = this.tree.get(selId);
-          if (selNode && isContainerNode(selNode)) {
-            if (this.isPropertyLocked(selId, "border-radius")) {
-              this.notifyPropertyLockInteraction(selId, "border-radius");
-              radiusBlocked = true;
-            }
-          }
-        }
-        if (radiusBlocked) {
-          return; // Block the radius gesture
-        }
-
-        this.isAdjustingRadius = true;
-        this.activeRadiusCorner = hitRadiusCorner;
-        this.radiusTargetNodeId = targetNodeId;
-
-        this.radiusStartValues.clear();
-        for (const selId of this.selectedIds) {
-          const selNode = this.tree.get(selId);
-          if (selNode && isContainerNode(selNode)) {
-            const contentRoot = this.mount.getContentRoot(selId);
-            let initialRadiusStr = "0px";
-            if (contentRoot) {
-              initialRadiusStr = contentRoot.style.borderRadius || window.getComputedStyle(contentRoot).borderRadius || "0px";
-            }
-            this.radiusStartValues.set(selId, initialRadiusStr);
-          }
-        }
-
-
-        this.dragStartCanvas = canvasPos;
-        this.safeSetPointerCapture(e.pointerId);
-        this.callbacks.onInteractionChange?.("resize-radius");
-        this.render();
-        return;
-      }
-    }
-
-    // ── Spacing Adjusters hit-test ────────────────
-    if (!isDoubleClick && this.selectedIds.size === 1) {
-      const selId = this.selectedIds.values().next().value as string;
-      const adjusters = this.computeSpacingAdjusters(selId);
-      const hitAdjuster = adjusters.find(adj =>
-        canvasPos.x >= adj.rect.x &&
-        canvasPos.x <= adj.rect.x + adj.rect.width &&
-        canvasPos.y >= adj.rect.y &&
-        canvasPos.y <= adj.rect.y + adj.rect.height
-      );
-
-
-
-      if (hitAdjuster) {
-        // ── Property lock check for spacing adjuster ─
-        if (this.isPropertyLocked(selId, hitAdjuster.type)) {
-          this.notifyPropertyLockInteraction(selId, hitAdjuster.type);
-          return; // Block the spacing adjustment gesture
-        }
-
-        this.activeAdjusterType = hitAdjuster.type;
-        this.adjusterStartValue = hitAdjuster.value;
-        const contentRoot = this.mount.getContentRoot(selId);
-        this.adjusterStartValueStr = contentRoot ? (contentRoot.style.getPropertyValue(hitAdjuster.type) || null) : null;
-        this.dragStartCanvas = canvasPos;
-        this.render();
-        return;
-      }
-    }
-
-    // ── Node hit-test (select + drag) ─────────────
-
-    let targetSelectId: string | null = null;
-    let clickInsideSelection = false;
-
-    const hasModifier = e.shiftKey || e.metaKey || e.ctrlKey;
-
-    if (this.selectedIds.size > 0 && !hasModifier && !isDoubleClick) {
-      for (const selId of this.selectedIds) {
-        const selNode = this.tree.get(selId);
-        if (selNode?.currentRect && isPointInElement(canvasPos.x, canvasPos.y, selNode.currentRect)) {
-          clickInsideSelection = true;
-          targetSelectId = selId;
-          this.pointerDownInsideSelection = selId;
-          break;
-        }
-      }
-    }
-
-
-
-    if (!clickInsideSelection) {
-      this.pointerDownInsideSelection = null;
-      if (hitId) {
-        // ── Layer lock guard ──────────────────────
-        if (this.isNodeLocked(hitId)) {
-          this.callbacks.onLockedNodeInteraction?.(hitId);
-          // Treat as click on empty space — fall through to deselect / marquee
-        } else {
-        const isCmdClick = e.metaKey || e.ctrlKey;
-
-        if (isCmdClick) {
-          // Cmd+Click: deep select the hit element directly
-          targetSelectId = hitId;
-          this.enteredContainerId = this.tree.get(hitId)?.parentId ?? null;
-        } else if (isDoubleClick) {
-          // Double click: Figma-like drill down
-          const path = this.tree.getPath(hitId);
-          let foundSelectedIdx = -1;
-          for (let i = 0; i < path.length; i++) {
-            if (this.selectedIds.has(path[i]!.id)) {
-              foundSelectedIdx = i;
-              break;
-            }
-          }
-          if (foundSelectedIdx !== -1 && foundSelectedIdx < path.length - 1) {
-            // Drill down one level
-            const nextParent = path[foundSelectedIdx]!;
-            const nextSelect = path[foundSelectedIdx + 1]!;
-            this.enteredContainerId = nextParent.id;
-            targetSelectId = nextSelect.id;
-          } else if (foundSelectedIdx === path.length - 1) {
-            // Leaf is already selected: keep selection on leaf to trigger text editing
-            targetSelectId = path[path.length - 1]!.id;
-            this.enteredContainerId = path[path.length - 2]?.id ?? null;
-          } else {
-            // Nothing in the path is selected
-            if (path.length > 0) {
-              targetSelectId = path[0]!.id;
-              this.enteredContainerId = null;
-            } else {
-              targetSelectId = hitId;
-            }
-          }
-        } else {
-          // Single Click: resolve based on current entered scope
-          const resolvedId = this.findSelectableNode(hitId, this.enteredContainerId);
-          if (resolvedId) {
-            targetSelectId = resolvedId;
-            const node = this.tree.get(resolvedId);
-            this.enteredContainerId = node?.parentId ?? null;
-          } else {
-            // Clicked outside currently entered container: exit scope, select root ancestor
-            this.enteredContainerId = null;
-            targetSelectId = this.findSelectableNode(hitId, null);
-          }
-        }
-        } // end of lock guard else-block
-      }
-
-      if (isDoubleClick && targetSelectId && this.selectedIds.has(targetSelectId)) {
-        this.editAllowedOnDblClick = true;
-      } else {
-        this.editAllowedOnDblClick = false;
-      }
-    }
-
-    if (targetSelectId) {
-      if (!clickInsideSelection) {
-        const prevSelection = new Set(this.selectedIds);
-        const isShift = e.shiftKey;
-        if (isShift) {
-          if (this.selectedIds.has(targetSelectId)) {
-            this.selectedIds.delete(targetSelectId);
-          } else {
-            this.selectedIds.add(targetSelectId);
-          }
-        } else {
-          this.selectedIds.clear();
-          this.selectedIds.add(targetSelectId);
-        }
-        this.syncLazyChildren(prevSelection, this.selectedIds);
-        this.callbacks.onSelectionChange?.(this.selectedIds);
-        this.updateBreadcrumb();
-      }
-
-      this.isDragging = false;
-      this.pointerDownReadyToDrag = true;
-      this.dragStartCanvas = canvasPos;
-
-      this.dragStartNodes.clear();
-      const topLevelIds = this.getTopLevelSelectedIds();
-      for (const selId of topLevelIds) {
-        const selNode = this.tree.get(selId);
-        if (selNode && selNode.currentRect) {
-          const contentRoot = this.mount.getContentRoot(selId);
-          let startStyles: Record<string, string | null> | null = null;
-          if (contentRoot) {
-            startStyles = {
-              "grid-column-start": contentRoot.style.gridColumnStart || null,
-              "grid-column-end": contentRoot.style.gridColumnEnd || null,
-              "grid-row-start": contentRoot.style.gridRowStart || null,
-              "grid-row-end": contentRoot.style.gridRowEnd || null,
-              "position": contentRoot.style.position || null,
-              "left": contentRoot.style.left || null,
-              "top": contentRoot.style.top || null,
-              "width": contentRoot.style.width || null,
-              "height": contentRoot.style.height || null,
-            };
-          }
-          this.dragStartNodes.set(selId, {
-            startPos: { x: selNode.currentRect.x, y: selNode.currentRect.y },
-            startParentId: selNode.parentId,
-            startIndex: this.tree.getChildIndex(selId),
-            startStyles,
-          });
-        }
-      }
-
-      let primaryId = targetSelectId;
-      if (!topLevelIds.includes(targetSelectId)) {
-        const path = this.tree.getPath(targetSelectId);
-        for (const node of path) {
-          if (topLevelIds.includes(node.id)) {
-            primaryId = node.id;
-            break;
-          }
-        }
-      }
-
-
-
-      const contentRoot = this.mount.getContentRoot(primaryId);
-      if (contentRoot) {
-        this.dragStartStyles = {
-          "grid-column-start": contentRoot.style.gridColumnStart || null,
-          "grid-column-end": contentRoot.style.gridColumnEnd || null,
-          "grid-row-start": contentRoot.style.gridRowStart || null,
-          "grid-row-end": contentRoot.style.gridRowEnd || null,
-          "position": contentRoot.style.position || null,
-          "left": contentRoot.style.left || null,
-          "top": contentRoot.style.top || null,
-          "width": contentRoot.style.width || null,
-          "height": contentRoot.style.height || null,
-        };
-      }
-    } else {
-      // Click on empty space — start marquee selection
-      const isShift = e.shiftKey;
-      if (!isShift) {
-        const prevSelection = new Set(this.selectedIds);
-        this.selectedIds.clear();
-        this.enteredContainerId = null;
-        this.guides = [];
-        this.syncLazyChildren(prevSelection, this.selectedIds);
-        this.callbacks.onSelectionChange?.(this.selectedIds);
-        this.updateBreadcrumb();
-      }
-
-      this.preMarqueeSelectedIds = new Set(this.selectedIds);
-      this.isMarqueeSelecting = true;
-      this.marqueeStartCanvas = canvasPos;
-      this.marqueeCurrentCanvas = canvasPos;
-      this.safeSetPointerCapture(e.pointerId);
-      this.callbacks.onInteractionChange?.("select-marquee");
-    }
-
-    this.render();
   }
 
   /**
@@ -2051,325 +1337,27 @@ export class Workspace {
       e.clientX, e.clientY, this.viewport, rect,
     );
     this.lastCanvasPos = canvasPos;
-    if (this.isDragging) {
-      console.log('DEBUG WORKSPACE MOVE: viewport scale:', this.viewport.scale, 'canvasPos:', canvasPos, 'dragStartCanvas:', this.dragStartCanvas, 'clientX:', e.clientX, 'clientY:', e.clientY);
+
+    // ── Handler Dispatch: route to active handler ────────────
+    if (this.activeHandler) {
+      this.activeHandler.onPointerMove?.(e, canvasPos, rect);
+      return;
     }
 
     if (this.previewMode) {
-      if (this.isPanning) {
-        this.viewport = applyPan(
-          e.movementX, e.movementY, this.viewport,
-        );
-        this.mount.applyViewportTransform(this.viewport);
-        this.callbacks.onViewportChange?.(this.viewport);
-        this.render();
-      }
       return;
     }
 
-    // ── Drawing Tool Dragging ─────────────────────
-    if (this.isDrawingNode && this.drawStartCanvas) {
-      this.drawCurrentCanvas = canvasPos;
+    // (Drawing tool dragging now handled by DrawHandler via dispatch loop)
 
-      // Dynamically resolve target container and placement index to show guidelines preview
-      this.activeDropTarget = findDropTarget(
-        "__new_node__",
-        canvasPos,
-        this.tree,
-        (id) => this.mount.getWrapper(id),
-        (id) => this.mount.getContentRoot(id)
-      );
 
-      this.render();
-      return;
-    }
 
-    // ── Corner Radius Adjusting ───────────────────
-    if (this.isAdjustingRadius && this.dragStartCanvas && this.radiusTargetNodeId) {
-      const targetNode = this.tree.get(this.radiusTargetNodeId);
-      if (targetNode && targetNode.currentRect) {
-        this.safeSetPointerCapture(e.pointerId);
-        this.container.style.cursor = "pointer";
-        this.canvas.style.pointerEvents = "auto";
-        this.callbacks.onInteractionChange?.("resize-radius");
 
-        const bounds = targetNode.currentRect;
-        const s = this.viewport.scale;
-        const ox = this.viewport.offsetX;
-        const oy = this.viewport.offsetY;
 
-        const left = bounds.x * s + ox;
-        const top = bounds.y * s + oy;
-        const right = (bounds.x + bounds.width) * s + ox;
-        const bottom = (bounds.y + bounds.height) * s + oy;
 
-        let dragX = 0;
-        let dragY = 0;
-        if (this.activeRadiusCorner === "tl") {
-          dragX = e.clientX - rect.x - left;
-          dragY = e.clientY - rect.y - top;
-        } else if (this.activeRadiusCorner === "tr") {
-          dragX = right - (e.clientX - rect.x);
-          dragY = e.clientY - rect.y - top;
-        } else if (this.activeRadiusCorner === "bl") {
-          dragX = e.clientX - rect.x - left;
-          dragY = bottom - (e.clientY - rect.y);
-        } else if (this.activeRadiusCorner === "br") {
-          dragX = right - (e.clientX - rect.x);
-          dragY = bottom - (e.clientY - rect.y);
-        }
-
-        const dragDistScreen = (dragX + dragY) / 2;
-        const dragDistCanvas = dragDistScreen / s;
-
-        // Apply to all selected containers
-        for (const selId of this.selectedIds) {
-          const selNode = this.tree.get(selId);
-          if (selNode && isContainerNode(selNode) && selNode.currentRect) {
-            const maxRadius = Math.min(selNode.currentRect.width, selNode.currentRect.height) / 2;
-            const newRadius = Math.max(0, Math.min(maxRadius, Math.round(dragDistCanvas)));
-            this.mount.setNodeStyle(selId, "border-radius", `${newRadius}px`);
-            this.remeasureSubtree(selId);
-          }
-        }
-        this.render();
-      }
-      return;
-    }
-
-    // ── Spacing Adjusters Dragging ────────────────
-    if (this.activeAdjusterType && this.dragStartCanvas) {
-      const selId = this.selectedIds.values().next().value as string;
-      const node = this.tree.get(selId);
-      if (!node) return;
-
-      this.safeSetPointerCapture(e.pointerId);
-      this.canvas.style.pointerEvents = "auto";
-      this.callbacks.onInteractionChange?.("adjust-spacing");
-
-      const isVertical = this.activeAdjusterType.includes("top") || this.activeAdjusterType.includes("bottom");
-      this.container.style.cursor = isVertical ? "ns-resize" : "ew-resize";
-      this.canvas.style.pointerEvents = "auto";
-
-      const dx = canvasPos.x - this.dragStartCanvas.x;
-      const dy = canvasPos.y - this.dragStartCanvas.y;
-
-      let delta = 0;
-      switch (this.activeAdjusterType) {
-        case "padding-top":
-          delta = dy;
-          break;
-        case "padding-bottom":
-          delta = dy;
-          break;
-        case "padding-left":
-          delta = dx;
-          break;
-        case "padding-right":
-          delta = -dx;
-          break;
-        case "margin-top":
-          delta = -dy;
-          break;
-        case "margin-bottom":
-          delta = dy;
-          break;
-        case "margin-left":
-          delta = -dx;
-          break;
-        case "margin-right":
-          delta = -dx;
-          break;
-      }
-
-      const contentRoot = this.mount.getContentRoot(selId);
-      const internalScale = contentRoot ? this.mount.getElementScale(contentRoot) : 1;
-      const safeScale = internalScale && !isNaN(internalScale) ? internalScale : 1;
-
-      const newValue = Math.max(0, Math.round(this.adjusterStartValue + delta / safeScale));
-
-      // Style surgery - direct DOM mutation
-      this.mount.setNodeStyle(selId, this.activeAdjusterType, `${newValue}px`);
-
-      // Synchronous reflow + measurement
-      this.remeasureSubtree(selId);
-      if (node.parentId) {
-        this.remeasureSubtree(node.parentId);
-      }
-
-      this.render();
-      return;
-    }
-
-    // ── Marquee Selection ──────────────────────────
-    if (this.isMarqueeSelecting && this.marqueeStartCanvas) {
-      this.marqueeCurrentCanvas = canvasPos;
-      const mRect = this.getMarqueeRect()!;
-
-      // Find all selectable nodes inside or intersecting the marquee rect
-      const selectableNodes = this.getOrderedNodeList();
-      const currentMarqueeSelection = new Set<string>();
-
-      for (const node of selectableNodes) {
-        if (!node.currentRect) continue;
-
-        const treeNode = this.tree.get(node.id);
-        if (!treeNode) continue;
-
-        // Skip locked nodes in marquee selection
-        if (this.isNodeLocked(node.id)) continue;
-
-        // Scoping constraint
-        if (this.enteredContainerId !== null) {
-          if (treeNode.parentId !== this.enteredContainerId) continue;
-        } else {
-          if (treeNode.parentId !== null) continue;
-        }
-
-        if (rectsIntersect(node.currentRect, mRect)) {
-          currentMarqueeSelection.add(node.id);
-        }
-      }
-
-      this.selectedIds.clear();
-      if (e.shiftKey) {
-        for (const id of this.preMarqueeSelectedIds) {
-          this.selectedIds.add(id);
-        }
-      }
-      for (const id of currentMarqueeSelection) {
-        this.selectedIds.add(id);
-      }
-
-      this.callbacks.onSelectionChange?.(this.selectedIds);
-      this.updateBreadcrumb();
-      this.render();
-      return;
-    }
-
-    // ── Drag initiation ───────────────────────────
-    if (this.pointerDownReadyToDrag && this.dragStartCanvas) {
-      const dx = canvasPos.x - this.dragStartCanvas.x;
-      const dy = canvasPos.y - this.dragStartCanvas.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist >= 3) {
-        if (e.altKey && this.selectedIds.size > 0) {
-          const topLevelIds = this.getTopLevelSelectedIds();
-          
-          this.mount.setTransitionsEnabled(false);
-
-          const newSelectedIds: string[] = [];
-          this.dragStartNodes.clear();
-
-          for (const originalId of topLevelIds) {
-            const originalNode = this.tree.get(originalId);
-            if (originalNode && originalNode.currentRect) {
-              const rawMarkup = this.mount.extractHTML(originalId);
-              if (rawMarkup) {
-                this.newElementCounter++;
-                const duplicateId = `cloned-${this.newElementCounter}-${Date.now().toString(36)}`;
-                const parentId = originalNode.parentId;
-                const index = parentId !== null ? this.tree.getChildIndex(originalId) + 1 : undefined;
-
-                this.addNode({
-                  id: duplicateId,
-                  rawMarkup,
-                  currentRect: { ...originalNode.currentRect }
-                }, parentId, index);
-
-                if (this.jsMarkedNodes.has(originalId)) {
-                  this.markNodeHasJS(duplicateId);
-                }
-
-                this.callbacks.onNodeCloned?.(originalId, duplicateId);
-
-                newSelectedIds.push(duplicateId);
-
-                const duplicateContentRoot = this.mount.getContentRoot(duplicateId);
-                let startStyles: Record<string, string | null> | null = null;
-                if (duplicateContentRoot) {
-                  startStyles = {
-                    "grid-column-start": duplicateContentRoot.style.gridColumnStart || null,
-                    "grid-column-end": duplicateContentRoot.style.gridColumnEnd || null,
-                    "grid-row-start": duplicateContentRoot.style.gridRowStart || null,
-                    "grid-row-end": duplicateContentRoot.style.gridRowEnd || null,
-                    "position": duplicateContentRoot.style.position || null,
-                    "left": duplicateContentRoot.style.left || null,
-                    "top": duplicateContentRoot.style.top || null,
-                    "width": duplicateContentRoot.style.width || null,
-                    "height": duplicateContentRoot.style.height || null,
-                  };
-                }
-
-                this.dragStartNodes.set(duplicateId, {
-                  startPos: { x: originalNode.currentRect.x, y: originalNode.currentRect.y },
-                  startParentId: parentId,
-                  startIndex: parentId !== null ? this.tree.getChildIndex(duplicateId) : -1,
-                  startStyles,
-                });
-              }
-            }
-          }
-
-          if (newSelectedIds.length > 0) {
-            const prevSelection = new Set(this.selectedIds);
-            this.selectedIds.clear();
-            for (const id of newSelectedIds) {
-              this.selectedIds.add(id);
-            }
-            this.syncLazyChildren(prevSelection, this.selectedIds);
-            this.callbacks.onSelectionChange?.(this.selectedIds);
-            this.updateBreadcrumb();
-
-            const primaryId = newSelectedIds[0] as string;
-
-            const contentRoot = this.mount.getContentRoot(primaryId);
-            if (contentRoot) {
-              this.dragStartStyles = {
-                "grid-column-start": contentRoot.style.gridColumnStart || null,
-                "grid-column-end": contentRoot.style.gridColumnEnd || null,
-                "grid-row-start": contentRoot.style.gridRowStart || null,
-                "grid-row-end": contentRoot.style.gridRowEnd || null,
-                "position": contentRoot.style.position || null,
-                "left": contentRoot.style.left || null,
-                "top": contentRoot.style.top || null,
-                "width": contentRoot.style.width || null,
-                "height": contentRoot.style.height || null,
-              };
-            }
-
-            this.isDragCopy = true;
-          }
-        }
-
-        // ── Multi-node property lock check for drag ──
-        // If any selected node has locked position properties,
-        // abort the entire drag gesture for layout integrity.
-        const dragTopLevelIds = this.getTopLevelSelectedIds();
-        let dragBlocked = false;
-        for (const nodeId of dragTopLevelIds) {
-          const posProps = ["left", "top"];
-          for (const prop of posProps) {
-            if (this.isPropertyLocked(nodeId, prop)) {
-              this.notifyPropertyLockInteraction(nodeId, prop);
-              dragBlocked = true;
-            }
-          }
-        }
-        if (dragBlocked) {
-          this.pointerDownReadyToDrag = false;
-          return; // Block the entire multi-node drag
-        }
-
-        this.isDragging = true;
-        this.pointerDownReadyToDrag = false;
-        this.callbacks.onInteractionChange?.("drag-node");
-        this.safeSetPointerCapture(e.pointerId);
-      }
-    }
 
     // ── Hover tracking ────────────────────────────
-    if (!this.isPanning && !this.isDragging && !this.isResizing && !this.isAdjustingRadius) {
+    if (!this.panHandler.isActive && !this.dragHandler.isDragging && !this.resizeHandler.isResizing && !this.spacingHandler.isAdjustingRadius) {
       this.updateHover(e.metaKey || e.ctrlKey);
 
       // Handle hover cursor for multiple elements.
@@ -2448,271 +1436,15 @@ export class Workspace {
     }
 
     // ── Pan ────────────────────────────────────────
-    if (this.isPanning) {
-      this.viewport = applyPan(
-        e.movementX, e.movementY, this.viewport,
-      );
-      this.mount.applyViewportTransform(this.viewport);
-      this.callbacks.onViewportChange?.(this.viewport);
-      this.render();
+    // (Pan is now handled by PanHandler via dispatch loop.
+    //  This block is kept as a guard in case of stale state.)
+    if (this.panHandler.isActive) {
       return;
     }
 
-    // ── Resize (Synchronous Reflow Loop) ──────────
-    if (this.isResizing && this.activeAnchor && this.dragStartCanvas && this.resizeStartRect) {
-      const selId = this.selectedIds.values().next().value as string;
-      const node = this.tree.get(selId);
-      if (!node) return;
 
-      this.safeSetPointerCapture(e.pointerId);
-      this.container.style.cursor = anchorCursor(this.activeAnchor);
-      this.canvas.style.pointerEvents = "auto";
-      this.callbacks.onInteractionChange?.("resize-node");
 
-      const dx = canvasPos.x - this.dragStartCanvas.x;
-      const dy = canvasPos.y - this.dragStartCanvas.y;
 
-      const wrapper = this.mount.getWrapper(selId);
-      let parentIsGrid = false;
-      let gridInfo: any = null;
-      let parentRect: Rect | null = null;
-      let padLeft = 0;
-      let padTop = 0;
-
-      if (node.parentId !== null) {
-        const parentContent = this.mount.getContentRoot(node.parentId);
-        if (parentContent) {
-          gridInfo = detectLayout(parentContent);
-          if (gridInfo.mode === "grid" || gridInfo.mode === "inline-grid") {
-            parentIsGrid = true;
-            const parentNode = this.tree.get(node.parentId);
-            parentRect = parentNode?.currentRect ?? null;
-            const cs = getComputedStyle(parentContent);
-            padLeft = parseFloat(cs.paddingLeft) || 0;
-            padTop = parseFloat(cs.paddingTop) || 0;
-          }
-        }
-      }
-
-      if (parentIsGrid && gridInfo && parentRect && wrapper) {
-        const colTracks = parseGridTracks(gridInfo.gridTemplateColumns || "", gridInfo.gap.column);
-        const rowTracks = parseGridTracks(gridInfo.gridTemplateRows || "", gridInfo.gap.row);
-
-        const contentRoot = this.mount.getContentRoot(selId);
-        if (contentRoot) {
-          const colStart = getGridStart(contentRoot, "column");
-          const rowStart = getGridStart(contentRoot, "row");
-          const colSpan = getGridSpan(contentRoot, "column");
-          const rowSpan = getGridSpan(contentRoot, "row");
-
-          const cx = canvasPos.x - parentRect.x - padLeft;
-          const cy = canvasPos.y - parentRect.y - padTop;
-
-          let newColStart = colStart;
-          let newColSpan = colSpan;
-          let newRowStart = rowStart;
-          let newRowSpan = rowSpan;
-
-          console.log('DEBUG WORKSPACE RESIZE GRID templateRows:', gridInfo.gridTemplateRows, 'templateCols:', gridInfo.gridTemplateColumns);
-          console.log('DEBUG WORKSPACE RESIZE GRID: colTracks:', JSON.stringify(colTracks), 'rowTracks:', JSON.stringify(rowTracks), 'colStart:', colStart, 'colSpan:', colSpan, 'rowStart:', rowStart, 'rowSpan:', rowSpan, 'cx:', cx, 'cy:', cy);
-
-          const anchor = this.activeAnchor;
-
-          // West / East column resizing
-          if (anchor.includes("w")) {
-            const colEndIndex = colStart + colSpan;
-            for (let i = 0; i < colTracks.length; i++) {
-              const c = colTracks[i]!;
-              if (cx <= c.start + c.size + gridInfo.gap.column / 2) {
-                newColStart = Math.min(i + 1, colEndIndex - 1);
-                newColSpan = colEndIndex - newColStart;
-                break;
-              }
-            }
-          } else if (anchor.includes("e")) {
-            for (let i = 0; i < colTracks.length; i++) {
-              const c = colTracks[i]!;
-              if (cx <= c.start + c.size + gridInfo.gap.column / 2) {
-                newColSpan = Math.max(1, (i + 1) - colStart + 1);
-                break;
-              }
-              newColSpan = Math.max(1, (i + 1) - colStart + 1);
-            }
-          }
-
-          // North / South row resizing
-          if (anchor.includes("n")) {
-            const rowEndIndex = rowStart + rowSpan;
-            for (let i = 0; i < rowTracks.length; i++) {
-              const r = rowTracks[i]!;
-              if (cy <= r.start + r.size + gridInfo.gap.row / 2) {
-                newRowStart = Math.min(i + 1, rowEndIndex - 1);
-                newRowSpan = rowEndIndex - newRowStart;
-                break;
-              }
-            }
-          } else if (anchor.includes("s")) {
-            for (let i = 0; i < rowTracks.length; i++) {
-              const r = rowTracks[i]!;
-              if (cy <= r.start + r.size + gridInfo.gap.row / 2) {
-                newRowSpan = Math.max(1, (i + 1) - rowStart + 1);
-                break;
-              }
-              newRowSpan = Math.max(1, (i + 1) - rowStart + 1);
-            }
-          }
-
-          console.log('DEBUG WORKSPACE RESIZE GRID result:', 'colStart:', newColStart, 'colSpan:', newColSpan, 'rowStart:', newRowStart, 'rowSpan:', newRowSpan);
-
-          this.mount.setNodeStyles(selId, {
-            "grid-column-start": `${newColStart}`,
-            "grid-column-end": `span ${newColSpan}`,
-            "grid-row-start": `${newRowStart}`,
-            "grid-row-end": `span ${newRowSpan}`,
-          });
-
-          this.remeasureSubtree(selId);
-          if (node.parentId) {
-            this.remeasureSubtree(node.parentId);
-          }
-        }
-      } else {
-        // 1. Compute new rect from anchor delta.
-        const newRect = computeResizedRect(
-          this.resizeStartRect, this.activeAnchor, dx, dy, this.minResizeSize, e.altKey,
-        );
-
-        // 2. Style surgery — direct DOM mutation.
-        this.mount.setNodeRect(selId, newRect);
-
-        // 3. Synchronous reflow + measurement.
-        //    Reading dimensions forces the browser to reflow NOW.
-        this.remeasureSubtree(selId);
-      }
-
-      // 4. Compute alignment guides.
-      if (this.enableSnapGuides && node.currentRect) {
-        const otherRects = this.getOtherRects(selId);
-        this.guides = computeAlignmentGuides(
-          node.currentRect, otherRects, this.snapThreshold,
-        );
-      }
-
-      // 5. Notify.
-      if (node.currentRect) {
-        this.callbacks.onNodeRectChange?.(selId, node.currentRect);
-      }
-
-      // 6. Render overlay.
-      this.container.style.cursor = anchorCursor(this.activeAnchor);
-      this.canvas.style.pointerEvents = "auto";
-      this.render();
-      return;
-    }
-
-    // ── Drag (Synchronous Reflow Loop) ────────────
-    if (this.isDragging && this.dragStartCanvas && this.dragStartNodes.size > 0) {
-      const topLevelIds = this.getTopLevelSelectedIds();
-      const primaryId = this.dragStartNodes.keys().next().value as string;
-      const primaryStart = this.dragStartNodes.get(primaryId)!;
-
-      const dx = canvasPos.x - this.dragStartCanvas.x;
-      const dy = canvasPos.y - this.dragStartCanvas.y;
-
-      let snapDx = dx;
-      let snapDy = dy;
-
-      if (primaryStart.startParentId === null) {
-        // Absolute Root dragging
-        let newX = primaryStart.startPos.x + dx;
-        let newY = primaryStart.startPos.y + dy;
-
-        // Snap-to-align
-        if (this.enableSnapGuides) {
-          const primaryNode = this.tree.get(primaryId);
-          if (primaryNode && primaryNode.currentRect) {
-            const candidateRect: Rect = {
-              x: newX, y: newY,
-              width: primaryNode.currentRect.width,
-              height: primaryNode.currentRect.height,
-            };
-            const otherRects = this.getOtherRectsMultiple(topLevelIds);
-            const snapped = computeSnappedPosition(
-              candidateRect, otherRects, this.snapThreshold,
-            );
-            snapDx = snapped.x - primaryStart.startPos.x;
-            snapDy = snapped.y - primaryStart.startPos.y;
-
-            const snappedRect: Rect = {
-              x: snapped.x, y: snapped.y,
-              width: primaryNode.currentRect.width,
-              height: primaryNode.currentRect.height,
-            };
-            this.guides = computeAlignmentGuides(
-              snappedRect, otherRects, this.snapThreshold,
-            );
-          }
-        }
-
-        // Apply translations on all dragged nodes
-        for (const [id, start] of this.dragStartNodes.entries()) {
-          if (start.startParentId === null) {
-            this.mount.setNodePosition(id, start.startPos.x + snapDx, start.startPos.y + snapDy);
-            this.remeasureSubtree(id);
-          } else {
-            const wrapper = this.mount.getWrapper(id);
-            if (wrapper) {
-              wrapper.style.transform = `translate3d(${snapDx}px, ${snapDy}px, 0)`;
-            }
-            const node = this.tree.get(id);
-            if (node && node.currentRect) {
-              node.currentRect = {
-                x: start.startPos.x + snapDx,
-                y: start.startPos.y + snapDy,
-                width: node.currentRect.width,
-                height: node.currentRect.height,
-              };
-            }
-          }
-        }
-      } else {
-        // Flow child dragging (visual translation)
-        for (const [id, start] of this.dragStartNodes.entries()) {
-          const wrapper = this.mount.getWrapper(id);
-          if (wrapper) {
-            wrapper.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
-          }
-          const node = this.tree.get(id);
-          if (node && node.currentRect) {
-            node.currentRect = {
-              x: start.startPos.x + dx,
-              y: start.startPos.y + dy,
-              width: node.currentRect.width,
-              height: node.currentRect.height,
-            };
-          }
-        }
-      }
-
-      // Detect active drop target container & flow position based on the primary node / canvasPos
-      this.activeDropTarget = findDropTarget(
-        primaryId,
-        canvasPos,
-        this.tree,
-        (id) => this.mount.getWrapper(id),
-        (id) => this.mount.getContentRoot(id)
-      );
-
-      // Notify node rect changes
-      for (const id of this.selectedIds) {
-        const node = this.tree.get(id);
-        if (node?.currentRect) {
-          this.callbacks.onNodeRectChange?.(id, node.currentRect);
-        }
-      }
-
-      this.render();
-    }
   }
 
   /**
@@ -2722,584 +1454,23 @@ export class Workspace {
    * extracts the clean HTML and fires `onHTMLCommit`.
    */
   private handlePointerUp(e: PointerEvent): void {
-    if (this.isDragging) {
-      console.log('DEBUG WORKSPACE UP: viewport scale:', this.viewport.scale, 'dragStartNodes:', Array.from(this.dragStartNodes.entries()).map(([id, s]) => ({ id, startPos: s.startPos, startParentId: s.startParentId })), 'clientX:', e.clientX, 'clientY:', e.clientY);
+    // ── Handler Dispatch: route to active handler ────────────
+    if (this.activeHandler) {
+      const rect = this.getContainerRect();
+      const canvasPos = screenToCanvas(e.clientX, e.clientY, this.viewport, rect);
+      this.activeHandler.onPointerUp?.(e, canvasPos, rect);
+      this.activeHandler = null;
+      return;
     }
+
     if (this.previewMode) {
-      if (this.isPanning) {
-        this.isPanning = false;
-        this.container.classList.remove("canvus-panning");
-      }
       return;
     }
 
-    // ── Drawing Tool Completion ──────────────────
-    if (this.isDrawingNode && this.drawStartCanvas && this.drawCurrentCanvas) {
-      this.isDrawingNode = false;
-      const start = this.drawStartCanvas;
-      const end = this.drawCurrentCanvas;
-      this.drawStartCanvas = null;
-      this.drawCurrentCanvas = null;
+    // (Drawing tool completion now handled by DrawHandler via dispatch loop)
 
-      try {
-        this.container.releasePointerCapture(e.pointerId);
-      } catch {}
 
-      // Calculate drawn dimensions
-      let x = Math.min(start.x, end.x);
-      let y = Math.min(start.y, end.y);
-      let width = Math.abs(start.x - end.x);
-      let height = Math.abs(start.y - end.y);
 
-      // Apply defaults if users did a simple click-to-draw instead of drag-to-draw
-      if (width < 8 && height < 8) {
-        if (this.activeTool === "box") {
-          width = 120;
-          height = 120;
-        } else {
-          width = 180;
-          height = 40; // Let text height be auto/placeholder size
-        }
-      }
-
-      const parentTarget = this.activeDropTarget;
-      this.activeDropTarget = null;
-
-      // Determine final placement
-      let parentId = parentTarget?.parentId ?? null;
-      let index = parentTarget?.insertionIndex;
-
-      this.newElementCounter++;
-      const id = `${this.activeTool || "node"}-${this.newElementCounter}-${Date.now().toString(36)}`;
-
-      let rawMarkup = "";
-      if (this.activeTool === "box") {
-        const tag = this.drawingTag;
-        rawMarkup = `<${tag} style="background:rgba(99, 102, 241, 0.05);border:1.5px dashed #6366f1;border-radius:8px;box-sizing:border-box;width:100%;height:100%;min-width:40px;min-height:40px;"></${tag}>`;
-      } else {
-        const tag = this.drawingTextTag;
-        let fontSize = "16px";
-        let fontWeight = "400";
-        if (tag.match(/^h[1-6]$/)) {
-          fontWeight = "700";
-          if (tag === "h1") fontSize = "28px";
-          else if (tag === "h2") fontSize = "24px";
-          else if (tag === "h3") fontSize = "20px";
-          else fontSize = "18px";
-        }
-        rawMarkup = `<${tag} style="margin:0;font-family:sans-serif;font-size:${fontSize};font-weight:${fontWeight};color:#e8e8f0;line-height:1.5;outline:none;min-width:100px;">Double-click to edit text</${tag}>`;
-      }
-
-      let rect: Rect = { x, y, width, height };
-
-      // Temporary disable transitions during mount
-      this.mount.setTransitionsEnabled(false);
-
-      // Perform addition
-      if (parentId !== null && parentTarget?.gridPlacement) {
-        const gp = parentTarget.gridPlacement;
-        // Construct grid position styles directly
-        const gridStyles = {
-          "grid-column-start": `${gp.colStart}`,
-          "grid-column-end": `span ${gp.colSpan}`,
-          "grid-row-start": `${gp.rowStart}`,
-          "grid-row-end": `span ${gp.rowSpan}`,
-        };
-
-        this.addNode({ id, rawMarkup, currentRect: gp.rect }, parentId, 0);
-        this.setNodeStyles(id, gridStyles);
-        rect = gp.rect;
-      } else {
-        this.addNode({ id, rawMarkup, currentRect: rect }, parentId, index);
-      }
-
-      this.selectNode(id);
-
-      // Operations
-      this.callbacks.onOperationsGenerated?.([{
-        type: "create-node" as any,
-        nodeId: id,
-        payload: { parentId, index, rawMarkup, rect },
-        undoPayload: { parentId }
-      }]);
-
-      // HTML commit
-      const commitTarget = parentId ?? id;
-      const html = this.mount.extractHTML(commitTarget);
-      if (html) {
-        this.callbacks.onHTMLCommit?.(commitTarget, html);
-      }
-
-      // Clear active tool (resets back to selection/idle mode)
-      this.setActiveTool(null);
-      this.mount.setTransitionsEnabled(true);
-
-      this.render();
-      return;
-    }
-
-    // Identify the node that was being manipulated.
-    let commitId: string | null = null;
-    const operations: Operation[] = [];
-
-    if (this.isDragging || this.isResizing || this.isAdjustingRadius) {
-      if (this.selectedIds.size === 1) {
-        commitId = this.selectedIds.values().next().value as string;
-      }
-    }
-
-    if (this.activeAdjusterType) {
-      if (this.selectedIds.size === 1) {
-        const selId = this.selectedIds.values().next().value as string;
-        const contentRoot = this.mount.getContentRoot(selId);
-        if (contentRoot && this.activeAdjusterType) {
-          const finalValueStr = contentRoot.style.getPropertyValue(this.activeAdjusterType) || null;
-          if (finalValueStr !== this.adjusterStartValueStr) {
-            operations.push({
-              type: "update-style",
-              nodeId: selId,
-              payload: { [this.activeAdjusterType]: finalValueStr },
-              undoPayload: { [this.activeAdjusterType]: this.adjusterStartValueStr }
-            });
-          }
-        }
-        const node = this.tree.get(selId);
-        commitId = (node && node.parentId !== null) ? node.parentId : selId;
-      }
-      this.activeAdjusterType = null;
-      this.dragStartCanvas = null;
-      this.container.style.cursor = "default";
-      this.adjusterStartValueStr = null;
-    }
-
-    if (this.isAdjustingRadius) {
-      const parentsToCommit = new Set<string>();
-      for (const selId of this.selectedIds) {
-        const selNode = this.tree.get(selId);
-        if (selNode && isContainerNode(selNode)) {
-          const contentRoot = this.mount.getContentRoot(selId);
-          if (contentRoot) {
-            const finalRadiusStr = contentRoot.style.borderRadius || "";
-            const initialRadiusStr = this.radiusStartValues.get(selId) || "0px";
-            if (finalRadiusStr !== initialRadiusStr) {
-              operations.push({
-                type: "update-style",
-                nodeId: selId,
-                payload: { "border-radius": finalRadiusStr },
-                undoPayload: { "border-radius": initialRadiusStr }
-              });
-              if (selNode.parentId) {
-                parentsToCommit.add(selNode.parentId);
-              } else {
-                parentsToCommit.add(selId);
-              }
-            }
-          }
-        }
-      }
-
-      for (const commitId of parentsToCommit) {
-        const html = this.mount.extractHTML(commitId);
-        if (html) {
-          this.callbacks.onHTMLCommit?.(commitId, html);
-        }
-      }
-
-      this.isAdjustingRadius = false;
-      this.activeRadiusCorner = null;
-      this.radiusTargetNodeId = null;
-      this.radiusStartValues.clear();
-      this.dragStartCanvas = null;
-      this.container.style.cursor = "default";
-    }
-
-    if (this.isMarqueeSelecting) {
-      this.isMarqueeSelecting = false;
-      this.marqueeStartCanvas = null;
-      this.marqueeCurrentCanvas = null;
-      this.preMarqueeSelectedIds.clear();
-    }
-
-    // Reset interaction state.
-    if (this.isPanning) {
-      this.isPanning = false;
-      this.container.classList.remove("canvus-panning");
-    }
-
-    if (this.isDragging) {
-      this.isDragging = false;
-      this.dragStartCanvas = null;
-
-      this.mount.setTransitionsEnabled(false);
-
-      if (this.dragStartNodes.size > 0) {
-        if (this.isDragCopy) {
-          this.isDragCopy = false;
-          const parentsToCommit = new Set<string>();
-          const rootsToCommit: string[] = [];
-
-          for (const clonedId of this.dragStartNodes.keys()) {
-            const node = this.tree.get(clonedId);
-            if (!node || !node.currentRect) continue;
-
-            const wrapper = this.mount.getWrapper(clonedId);
-            if (wrapper) {
-              wrapper.style.transform = "";
-            }
-
-            const rawMarkup = this.mount.extractHTML(clonedId) || "";
-            let rect = { ...node.currentRect };
-
-            if (this.activeDropTarget) {
-              const { parentId, gridPlacement } = this.activeDropTarget;
-              if (gridPlacement) {
-                const gridStyles = {
-                  "grid-column-start": `${gridPlacement.colStart}`,
-                  "grid-column-end": `span ${gridPlacement.colSpan}`,
-                  "grid-row-start": `${gridPlacement.rowStart}`,
-                  "grid-row-end": `span ${gridPlacement.rowSpan}`,
-                };
-                this.setNodeStyles(clonedId, gridStyles);
-                rect = gridPlacement.rect;
-              }
-
-              const insertionIndex = this.activeDropTarget.insertionIndex;
-              if (node.parentId !== parentId) {
-                this.reparentNode(clonedId, parentId, insertionIndex !== undefined ? insertionIndex : 0);
-              }
-
-              operations.push({
-                type: "create-node" as any,
-                nodeId: clonedId,
-                payload: { parentId, index: this.tree.getChildIndex(clonedId), rawMarkup, rect },
-                undoPayload: { parentId }
-              });
-
-              if (parentId) {
-                parentsToCommit.add(parentId);
-              }
-            } else {
-              if (node.parentId !== null) {
-                this.reparentNode(clonedId, null);
-                this.mount.setNodePosition(clonedId, rect.x, rect.y);
-              }
-
-              operations.push({
-                type: "create-node" as any,
-                nodeId: clonedId,
-                payload: { parentId: null, index: -1, rawMarkup, rect },
-                undoPayload: { parentId: null }
-              });
-
-              rootsToCommit.push(clonedId);
-            }
-          }
-
-          this.activeDropTarget = null;
-          this.dragStartNodes.clear();
-          this.dragStartStyles = null;
-          this.mount.setTransitionsEnabled(true);
-
-          if (operations.length > 0) {
-            this.callbacks.onOperationsGenerated?.(operations);
-          }
-
-          for (const id of this.selectedIds) {
-            this.remeasureSubtree(id);
-            const node = this.tree.get(id);
-            if (node?.currentRect) {
-              this.callbacks.onNodeRectChange?.(id, node.currentRect);
-            }
-          }
-
-          for (const parentId of parentsToCommit) {
-            const html = this.mount.extractHTML(parentId);
-            if (html) {
-              this.callbacks.onHTMLCommit?.(parentId, html);
-            }
-          }
-
-          for (const rootId of rootsToCommit) {
-            const html = this.mount.extractHTML(rootId);
-            if (html) {
-              this.callbacks.onHTMLCommit?.(rootId, html);
-            }
-          }
-
-          this.canvas.style.pointerEvents = "none";
-          this.callbacks.onInteractionChange?.(null);
-          this.render();
-          return;
-        }
-
-        if (this.activeDropTarget) {
-          const { parentId, insertionIndex, gridPlacement } = this.activeDropTarget;
-          let currentInsertion = insertionIndex !== undefined ? insertionIndex : 0;
-
-          for (const [id, start] of this.dragStartNodes.entries()) {
-            const node = this.tree.get(id);
-            if (!node) continue;
-
-            const oldParentId = start.startParentId;
-            const oldIndex = start.startIndex;
-
-            const wrapper = this.mount.getWrapper(id);
-            if (wrapper) {
-              wrapper.style.transform = "";
-            }
-
-            if (gridPlacement) {
-              const payloadStyles = {
-                "grid-column-start": `${gridPlacement.colStart}`,
-                "grid-column-end": `span ${gridPlacement.colSpan}`,
-                "grid-row-start": `${gridPlacement.rowStart}`,
-                "grid-row-end": `span ${gridPlacement.rowSpan}`,
-                "position": null, "left": null, "top": null, "width": null, "height": null,
-              };
-              this.mount.setNodeStyles(id, payloadStyles);
-
-              const undoPayloadStyles: Record<string, string | null> = {};
-              for (const prop of Object.keys(payloadStyles)) {
-                undoPayloadStyles[prop] = (start.startStyles && start.startStyles[prop] !== undefined) ? start.startStyles[prop] : null;
-              }
-
-              operations.push({
-                type: "update-style",
-                nodeId: id,
-                payload: payloadStyles,
-                undoPayload: undoPayloadStyles
-              });
-
-              if (parentId !== node.parentId) {
-                this.reparentNode(id, parentId, 0);
-                operations.push({
-                  type: "reparent",
-                  nodeId: id,
-                  payload: { newParentId: parentId, index: 0 },
-                  undoPayload: { newParentId: oldParentId, index: oldIndex }
-                });
-              } else {
-                this.remeasureSubtree(parentId);
-                const html = this.mount.extractHTML(parentId);
-                if (html) {
-                  this.callbacks.onHTMLCommit?.(parentId, html);
-                }
-              }
-            } else {
-              let styleChanged = false;
-              const payloadStyles: any = {};
-              const undoPayloadStyles: any = {};
-              for (const prop of ["grid-column-start", "grid-column-end", "grid-row-start", "grid-row-end"]) {
-                const orig = start.startStyles ? start.startStyles[prop] : null;
-                if (orig !== null) {
-                  payloadStyles[prop] = null;
-                  undoPayloadStyles[prop] = orig;
-                  styleChanged = true;
-                }
-              }
-              if (styleChanged) {
-                this.mount.setNodeStyles(id, payloadStyles);
-                operations.push({
-                  type: "update-style",
-                  nodeId: id,
-                  payload: payloadStyles,
-                  undoPayload: undoPayloadStyles
-                });
-              }
-
-              if (parentId === node.parentId) {
-                this.reorderChild(id, currentInsertion);
-                const newIndex = this.tree.getChildIndex(id);
-                if (newIndex !== oldIndex) {
-                  operations.push({
-                    type: "reorder",
-                    nodeId: id,
-                    payload: { index: newIndex },
-                    undoPayload: { index: oldIndex }
-                  });
-                }
-                currentInsertion = newIndex + 1;
-              } else {
-                this.reparentNode(id, parentId, currentInsertion);
-                const newIndex = this.tree.getChildIndex(id);
-                operations.push({
-                  type: "reparent",
-                  nodeId: id,
-                  payload: { newParentId: parentId, index: newIndex },
-                  undoPayload: { newParentId: oldParentId, index: oldIndex }
-                });
-                currentInsertion = newIndex + 1;
-              }
-            }
-          }
-        } else {
-          for (const [id, start] of this.dragStartNodes.entries()) {
-            const node = this.tree.get(id);
-            if (!node) continue;
-
-            const oldParentId = start.startParentId;
-            const oldIndex = start.startIndex;
-            const oldPos = start.startPos;
-
-            const wrapper = this.mount.getWrapper(id);
-            if (wrapper) {
-              wrapper.style.transform = "";
-            }
-
-            if (node.parentId !== null) {
-              this.reparentNode(id, null);
-              if (node.currentRect) {
-                this.mount.setNodePosition(id, node.currentRect.x, node.currentRect.y);
-                this.remeasureSubtree(id);
-              }
-              operations.push({
-                type: "reparent",
-                nodeId: id,
-                payload: { newParentId: null, index: -1 },
-                undoPayload: { newParentId: oldParentId, index: oldIndex }
-              });
-
-              let styleChanged = false;
-              const payloadStyles: any = {};
-              const undoPayloadStyles: any = {};
-              for (const prop of ["grid-column-start", "grid-column-end", "grid-row-start", "grid-row-end"]) {
-                const orig = start.startStyles ? start.startStyles[prop] : null;
-                if (orig !== null) {
-                  payloadStyles[prop] = null;
-                  undoPayloadStyles[prop] = orig;
-                  styleChanged = true;
-                }
-              }
-              if (styleChanged) {
-                this.mount.setNodeStyles(id, payloadStyles);
-                operations.push({
-                  type: "update-style",
-                  nodeId: id,
-                  payload: payloadStyles,
-                  undoPayload: undoPayloadStyles
-                });
-              }
-            } else if (oldParentId === null && oldPos) {
-              const newX = node.currentRect ? node.currentRect.x : oldPos.x;
-              const newY = node.currentRect ? node.currentRect.y : oldPos.y;
-              if (newX !== oldPos.x || newY !== oldPos.y) {
-                operations.push({
-                  type: "update-style",
-                  nodeId: id,
-                  payload: { left: `${newX}px`, top: `${newY}px` },
-                  undoPayload: { left: `${oldPos.x}px`, top: `${oldPos.y}px` }
-                });
-              }
-            }
-          }
-        }
-      }
-
-      this.activeDropTarget = null;
-      this.dragStartStyles = null;
-      this.dragStartNodes.clear();
-
-      for (const id of this.selectedIds) {
-        this.remeasureSubtree(id);
-        const node = this.tree.get(id);
-        if (node?.currentRect) {
-          this.callbacks.onNodeRectChange?.(id, node.currentRect);
-        }
-      }
-
-      this.mount.setTransitionsEnabled(true);
-    }
-
-    this.pointerDownReadyToDrag = false;
-
-    if (this.isResizing) {
-      this.isResizing = false;
-      this.activeAnchor = null;
-      this.dragStartCanvas = null;
-
-      if (commitId && this.resizeStartRect) {
-        const node = this.tree.get(commitId);
-        if (node?.currentRect) {
-          let parentIsGrid = false;
-          if (node.parentId !== null) {
-            const parentContent = this.mount.getContentRoot(node.parentId);
-            if (parentContent) {
-              const info = detectLayout(parentContent);
-              parentIsGrid = info.mode === "grid" || info.mode === "inline-grid";
-            }
-          }
-
-          if (parentIsGrid) {
-            const contentRoot = this.mount.getContentRoot(commitId);
-            if (contentRoot && this.dragStartStyles) {
-              const payload: any = {};
-              const undoPayload: any = {};
-              let styleChanged = false;
-
-              const styleProps = [
-                "grid-column-start",
-                "grid-column-end",
-                "grid-row-start",
-                "grid-row-end",
-              ];
-
-              for (const prop of styleProps) {
-                const val = contentRoot.style.getPropertyValue(prop) || null;
-                const origVal = this.dragStartStyles[prop] || null;
-                if (val !== origVal) {
-                  payload[prop] = val;
-                  undoPayload[prop] = origVal;
-                  styleChanged = true;
-                }
-              }
-
-              if (styleChanged) {
-                operations.push({
-                  type: "update-style",
-                  nodeId: commitId,
-                  payload,
-                  undoPayload
-                });
-              }
-            }
-          } else {
-            const finalRect = node.currentRect;
-            const startRect = this.resizeStartRect;
-            if (finalRect.width !== startRect.width || finalRect.height !== startRect.height ||
-                finalRect.x !== startRect.x || finalRect.y !== startRect.y) {
-              
-              const payload: any = {
-                width: `${finalRect.width}px`,
-                height: `${finalRect.height}px`
-              };
-              const undoPayload: any = {
-                width: `${startRect.width}px`,
-                height: `${startRect.height}px`
-              };
-
-              if (node.parentId === null) {
-                payload.left = `${finalRect.x}px`;
-                payload.top = `${finalRect.y}px`;
-                undoPayload.left = `${startRect.x}px`;
-                undoPayload.top = `${startRect.y}px`;
-              }
-
-              operations.push({
-                type: "update-style",
-                nodeId: commitId,
-                payload,
-                undoPayload
-              });
-            }
-          }
-          this.callbacks.onNodeRectChange?.(commitId, node.currentRect);
-        }
-      }
-      this.resizeStartRect = null;
-      this.dragStartStyles = null;
-    }
-
-    // Clear guides.
     this.guides = [];
 
     // Release pointer capture.
@@ -3309,479 +1480,50 @@ export class Workspace {
       // Ignore if capture was already released or lost
     }
 
-    if (operations.length > 0) {
-      this.callbacks.onOperationsGenerated?.(operations);
-    }
-
     this.canvas.style.pointerEvents = "none";
     this.callbacks.onInteractionChange?.(null);
     this.render();
 
-    // ── Flat String Bridge ────────────────────────
-    // Extract clean HTML and fire commit callback.
-    if (commitId) {
-      const node = this.tree.get(commitId);
-      const commitTarget = (node && node.parentId !== null) ? node.parentId : commitId;
-      const html = this.mount.extractHTML(commitTarget);
-      if (html) {
-        this.callbacks.onHTMLCommit?.(commitTarget, html);
-      }
-    }
 
-    // Cycle overlapping elements on simple click inside selection
-    if (!this.isDragging && !this.isResizing && !this.isPanning && this.pointerDownInsideSelection) {
-      const rect = this.getContainerRect();
-      const canvasPos = screenToCanvas(
-        e.clientX, e.clientY, this.viewport, rect,
-      );
-      const nodeList = this.getOrderedNodeList();
-      // Find all selectable nodes under the cursor in the current selection scope
-      const hitNodes = nodeList.filter(n => {
-        if (!n.currentRect || !isPointInElement(canvasPos.x, canvasPos.y, n.currentRect)) {
-          return false;
-        }
-        const treeNode = this.tree.get(n.id);
-        return treeNode && treeNode.parentId === this.enteredContainerId;
-      });
-
-      if (hitNodes.length > 1) {
-        const idx = hitNodes.findIndex(n => n.id === this.pointerDownInsideSelection);
-        if (idx !== -1) {
-          const nextIdx = (idx - 1 + hitNodes.length) % hitNodes.length;
-          const nextNode = hitNodes[nextIdx];
-          if (nextNode) {
-            const nextId = nextNode.id;
-
-            this.selectedIds.clear();
-            this.selectedIds.add(nextId);
-            this.callbacks.onSelectionChange?.(this.selectedIds);
-            this.updateBreadcrumb();
-            this.render();
-          }
-        }
-      }
-    }
-    this.pointerDownInsideSelection = null;
   }
 
-  /** Spacebar tracking for pan mode. */
   private handleKeyDown(e: KeyboardEvent): void {
     const target = e.composedPath()[0] || null;
     if (isEditableTarget(target)) return;
 
+    for (const handler of this.keyboardHandlers) {
+      if (handler.onKeyDown?.(e)) {
+        return;
+      }
+    }
+
     if (e.code === "Space" && !e.repeat) {
       e.preventDefault();
-      this.spaceDown = true;
-      this.container.classList.add("canvus-panning");
+      this.panHandler.onSpaceDown();
     } else if (e.code === "Escape") {
       this.handleEscapeKey();
     } else if (e.key === "Meta" || e.key === "Control") {
       this.updateHover(true);
-    } else if (e.key === "Delete" || e.key === "Backspace") {
-      if (e.metaKey || e.ctrlKey) {
-        e.preventDefault();
-        this.ungroupSelectedOrParent();
-      } else {
-        this.deleteSelectedNode();
-      }
-    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") {
-      e.preventDefault();
-      this.duplicateSelectedNode();
-    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
-      this.copySelectedNode();
-    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "x") {
-      this.cutSelectedNode();
-    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
-      this.pasteNode();
-    } else if (e.shiftKey && e.key.toLowerCase() === "a") {
-      e.preventDefault();
-      this.wrapSelectedInFlex();
-    } else if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-      if (this.selectedIds.size > 0) {
-        e.preventDefault();
-        this.nudgeOrReorderSelected(e.key, e.shiftKey);
-      }
     }
   }
 
-  private nudgeOrReorderSelected(key: string, shiftKey: boolean): void {
-    const topLevelIds = this.getTopLevelSelectedIds();
-    if (topLevelIds.length === 0) return;
-
-    const rootNodes: ResolvedNode[] = [];
-    const groupedByParent = new Map<string, ResolvedNode[]>();
-
-    for (const id of topLevelIds) {
-      const node = this.tree.get(id);
-      if (!node) continue;
-      if (node.parentId === null) {
-        rootNodes.push(node);
-      } else {
-        if (!groupedByParent.has(node.parentId)) {
-          groupedByParent.set(node.parentId, []);
-        }
-        groupedByParent.get(node.parentId)!.push(node);
-      }
-    }
-
-    this.mount.setTransitionsEnabled(false);
-
-    const ops: any[] = [];
-
-    // ── Absolute Nudging (Root Nodes) ─────────────
-    if (rootNodes.length > 0) {
-      const nudgeAmount = shiftKey ? 10 : 1;
-      for (const node of rootNodes) {
-        const currentX = node.currentRect ? node.currentRect.x : 0;
-        const currentY = node.currentRect ? node.currentRect.y : 0;
-
-        let newX = currentX;
-        let newY = currentY;
-
-        if (key === "ArrowLeft") newX -= nudgeAmount;
-        if (key === "ArrowRight") newX += nudgeAmount;
-        if (key === "ArrowUp") newY -= nudgeAmount;
-        if (key === "ArrowDown") newY += nudgeAmount;
-
-        if (newX !== currentX || newY !== currentY) {
-          const payload = { left: `${newX}px`, top: `${newY}px` };
-          const undoPayload = { left: `${currentX}px`, top: `${currentY}px` };
-
-          this.setNodeStyles(node.id, payload);
-
-          ops.push({
-            type: "update-style",
-            nodeId: node.id,
-            payload,
-            undoPayload
-          });
-
-          if (node.currentRect) {
-            this.callbacks.onNodeRectChange?.(node.id, node.currentRect);
-          }
-        }
-      }
-    }
-
-    // ── Flow Child Reordering (Grouped by Parent) ──
-    for (const [parentId, nodes] of groupedByParent.entries()) {
-      const parentContent = this.mount.getContentRoot(parentId);
-      if (!parentContent) continue;
-
-      const layoutInfo = detectLayout(parentContent);
-      const flowAxis = getFlowAxis(layoutInfo); // "x" or "y"
-      const siblings = this.tree.getChildren(parentId);
-      const maxIndex = siblings.length - 1;
-
-      let direction = 0;
-      if (layoutInfo.mode === "grid" || layoutInfo.mode === "inline-grid") {
-        if (key === "ArrowLeft" || key === "ArrowUp") direction = -1;
-        else if (key === "ArrowRight" || key === "ArrowDown") direction = 1;
-      } else if (flowAxis === "x") {
-        if (key === "ArrowLeft") direction = -1;
-        else if (key === "ArrowRight") direction = 1;
-      } else {
-        if (key === "ArrowUp") direction = -1;
-        else if (key === "ArrowDown") direction = 1;
-      }
-
-      if (direction !== 0) {
-        const sortedNodes = nodes.slice().sort((a, b) => {
-          return this.tree.getChildIndex(a.id) - this.tree.getChildIndex(b.id);
-        });
-
-        if (direction === -1) {
-          for (const node of sortedNodes) {
-            const currentIndex = this.tree.getChildIndex(node.id);
-            const oldIndex = currentIndex;
-            const newIndex = Math.max(0, currentIndex - 1);
-            if (newIndex !== currentIndex) {
-              this.reorderChild(node.id, newIndex);
-              ops.push({
-                type: "reorder",
-                nodeId: node.id,
-                payload: { index: newIndex },
-                undoPayload: { index: oldIndex }
-              });
-            }
-          }
-        } else {
-          for (let i = sortedNodes.length - 1; i >= 0; i--) {
-            const node = sortedNodes[i] as ResolvedNode;
-            const currentIndex = this.tree.getChildIndex(node.id);
-            const oldIndex = currentIndex;
-            const newIndex = Math.min(maxIndex, currentIndex + 1);
-            if (newIndex !== currentIndex) {
-              this.reorderChild(node.id, newIndex);
-              ops.push({
-                type: "reorder",
-                nodeId: node.id,
-                payload: { index: newIndex },
-                undoPayload: { index: oldIndex }
-              });
-            }
-          }
-        }
-
-        const html = this.mount.extractHTML(parentId);
-        if (html) {
-          this.callbacks.onHTMLCommit?.(parentId, html);
-        }
-      }
-    }
-
-    if (ops.length > 0) {
-      this.callbacks.onOperationsGenerated?.(ops);
-    }
-
-    this.mount.setTransitionsEnabled(true);
-    this.render();
-  }
-
-  private ungroupSelectedOrParent(): void {
-    const targetContainers = new Set<string>();
-    for (const id of this.selectedIds) {
-      const node = this.tree.get(id);
-      if (!node) continue;
-      if (this.tree.isContainer(id)) {
-        if (node.parentId !== null) {
-          targetContainers.add(id);
-        }
-      } else {
-        if (node.parentId !== null) {
-          targetContainers.add(node.parentId);
-        }
-      }
-    }
-
-    if (targetContainers.size === 0) return;
-
-    this.mount.setTransitionsEnabled(false);
-
-    const ops: any[] = [];
-    const parentsToCommit = new Set<string>();
-    const rootsToCommit = new Set<string>();
-
-    for (const containerId of targetContainers) {
-      const containerNode = this.tree.get(containerId);
-      if (!containerNode) continue;
-
-      const parentId = containerNode.parentId;
-      const index = parentId !== null ? this.tree.getChildIndex(containerId) : -1;
-      const children = this.tree.getChildren(containerId);
-
-      let childIndexOffset = 0;
-      for (const child of children) {
-        const childId = child.id;
-        const oldParentId = containerId;
-        const oldIndex = this.tree.getChildIndex(childId);
-
-        const newIndex = parentId !== null ? index + childIndexOffset : undefined;
-        this.mount.reparentNodeDOM(childId, parentId, newIndex);
-        this.tree.reparentNode(childId, parentId, newIndex);
-        this.remeasureSubtree(childId);
-
-        ops.push({
-          type: "reparent",
-          nodeId: childId,
-          payload: { newParentId: parentId, index: newIndex !== undefined ? this.tree.getChildIndex(childId) : undefined },
-          undoPayload: { newParentId: oldParentId, index: oldIndex }
-        });
-
-        childIndexOffset++;
-      }
-
-      const rawMarkup = this.mount.extractHTML(containerId);
-      const rect = containerNode.currentRect;
-
-      this.removeNode(containerId);
-
-      ops.push({
-        type: "delete-node" as any,
-        nodeId: containerId,
-        payload: { parentId },
-        undoPayload: { parentId, rawMarkup, rect }
-      });
-
-      if (parentId) {
-        parentsToCommit.add(parentId);
-        this.remeasureSubtree(parentId);
-      } else {
-        rootsToCommit.add(containerId);
-      }
-    }
-
-    if (ops.length > 0) {
-      this.deselectAll();
-      this.callbacks.onOperationsGenerated?.(ops);
-
-      for (const parentId of parentsToCommit) {
-        const html = this.mount.extractHTML(parentId);
-        if (html) {
-          this.callbacks.onHTMLCommit?.(parentId, html);
-        }
-      }
-      for (const rootId of rootsToCommit) {
-        this.callbacks.onHTMLCommit?.(rootId, "");
-      }
-    }
-
-    this.mount.setTransitionsEnabled(true);
-    this.render();
-  }
-
-  private wrapSelectedInFlex(): void {
-    const topLevelIds = this.getTopLevelSelectedIds();
-    if (topLevelIds.length === 0) return;
-
-    this.mount.setTransitionsEnabled(false);
-
-    const firstId = topLevelIds[0] as string;
-    const firstNode = this.tree.get(firstId);
-    if (!firstNode) {
-      this.mount.setTransitionsEnabled(true);
-      return;
-    }
-
-    // ── Single selection: transform the node itself into a flex container ──
-    if (topLevelIds.length === 1) {
-      const nodeId = firstId;
-      const contentRoot = this.mount.getContentRoot(nodeId);
-
-      // Read current style values for undo
-      const oldDisplay = contentRoot?.style.display || null;
-      const oldJustifyContent = contentRoot?.style.justifyContent || null;
-      const oldAlignItems = contentRoot?.style.alignItems || null;
-      const oldGap = contentRoot?.style.gap || null;
-      const oldFlexDirection = contentRoot?.style.flexDirection || null;
-
-      const payload: Record<string, string | null> = {
-        "display": "flex",
-        "justify-content": "center",
-        "align-items": "center",
-        "gap": "10px",
-        "flex-direction": "row",
-      };
-
-      const undoPayload: Record<string, string | null> = {
-        "display": oldDisplay,
-        "justify-content": oldJustifyContent,
-        "align-items": oldAlignItems,
-        "gap": oldGap,
-        "flex-direction": oldFlexDirection,
-      };
-
-      this.mount.setNodeStyles(nodeId, payload);
-
-      // Sync layout mode
-      const updatedContentRoot = this.mount.getContentRoot(nodeId);
-      firstNode.layoutMode = updatedContentRoot ? detectLayout(updatedContentRoot).mode : "flex";
-
-      this.remeasureSubtree(nodeId);
-      if (firstNode.parentId) {
-        this.remeasureSubtree(firstNode.parentId);
-      }
-
-      const ops: any[] = [{
-        type: "update-style" as any,
-        nodeId,
-        payload,
-        undoPayload,
-      }];
-
-      this.callbacks.onOperationsGenerated?.(ops);
-
-      const commitTarget = firstNode.parentId ?? nodeId;
-      const html = this.mount.extractHTML(commitTarget);
-      if (html) {
-        this.callbacks.onHTMLCommit?.(commitTarget, html);
-      }
-
-      this.mount.setTransitionsEnabled(true);
-      this.render();
-      return;
-    }
-
-    // ── Multi selection: wrap all selected nodes in a new flex container ──
-    const parentId = firstNode.parentId;
-    const index = parentId !== null ? this.tree.getChildIndex(firstId) : -1;
-
-    const nodesToWrap = topLevelIds.map(id => this.tree.get(id)).filter((n): n is ResolvedNode => n !== undefined);
-    const bounds = computeAggregateBounds(nodesToWrap);
-
-    this.newElementCounter++;
-    const wrapperId = `flex-wrapper-${this.newElementCounter}-${Date.now().toString(36)}`;
-    const rawMarkup = `<div style="display: flex; justify-content: center; align-items: center; gap: 10px; flex-direction: row; box-sizing: border-box;"></div>`;
-
-    let rect = bounds ? { ...bounds } : null;
-    this.addNode({
-      id: wrapperId,
-      rawMarkup,
-      currentRect: rect
-    }, parentId, index === -1 ? undefined : index);
-
-    const ops: any[] = [];
-    ops.push({
-      type: "create-node" as any,
-      nodeId: wrapperId,
-      payload: { parentId, index: index === -1 ? undefined : this.tree.getChildIndex(wrapperId), rawMarkup, rect },
-      undoPayload: { parentId }
-    });
-
-    let childIdx = 0;
-    for (const nodeId of topLevelIds) {
-      const node = this.tree.get(nodeId);
-      if (!node) continue;
-      const oldParentId = node.parentId;
-      const oldIndex = this.tree.getChildIndex(nodeId);
-
-      this.mount.reparentNodeDOM(nodeId, wrapperId, childIdx);
-      this.tree.reparentNode(nodeId, wrapperId, childIdx);
-      this.remeasureSubtree(nodeId);
-
-      ops.push({
-        type: "reparent",
-        nodeId: nodeId,
-        payload: { newParentId: wrapperId, index: childIdx },
-        undoPayload: { newParentId: oldParentId, index: oldIndex }
-      });
-
-      childIdx++;
-    }
-
-    this.remeasureSubtree(wrapperId);
-    if (parentId) {
-      this.remeasureSubtree(parentId);
-    }
-
-    const prevSelection = new Set(this.selectedIds);
-    this.selectedIds.clear();
-    this.selectedIds.add(wrapperId);
-    this.syncLazyChildren(prevSelection, this.selectedIds);
-    this.callbacks.onSelectionChange?.(this.selectedIds);
-    this.updateBreadcrumb();
-
-    this.callbacks.onOperationsGenerated?.(ops);
-
-    const commitTarget = parentId ?? wrapperId;
-    const html = this.mount.extractHTML(commitTarget);
-    if (html) {
-      this.callbacks.onHTMLCommit?.(commitTarget, html);
-    }
-
-    this.mount.setTransitionsEnabled(true);
-    this.render();
+  /** Registers a custom keyboard command shortcut. */
+  registerCommand(cmd: Command): void {
+    this.commandHandler.registerCommand(cmd);
   }
 
   private handleKeyUp(e: KeyboardEvent): void {
     const target = e.composedPath()[0] || null;
     if (isEditableTarget(target)) return;
 
-    if (e.code === "Space") {
-      this.spaceDown = false;
-      if (!this.isPanning) {
-        this.container.classList.remove("canvus-panning");
+    for (const handler of this.keyboardHandlers) {
+      if (handler.onKeyUp?.(e)) {
+        return;
       }
+    }
+
+    if (e.code === "Space") {
+      this.panHandler.onSpaceUp();
     } else if (e.key === "Meta" || e.key === "Control") {
       this.updateHover(e.metaKey || e.ctrlKey);
     }
@@ -4069,7 +1811,7 @@ export class Workspace {
 
     // Compute spacing adjusters if a single node is selected
     let spacingAdjusters: SpacingAdjusterInfo[] | undefined;
-    if (this.selectedIds.size === 1 && !this.isMarqueeSelecting) {
+    if (this.selectedIds.size === 1 && !this.selectionHandler.isMarqueeSelecting) {
       const selId = this.selectedIds.values().next().value as string;
       spacingAdjusters = this.computeSpacingAdjusters(selId);
     }
@@ -4079,25 +1821,25 @@ export class Workspace {
       nodes: this.getOrderedNodeList(),
       selectedIds: this.selectedIds,
       hoveredId: this.hoveredId,
-      activeAnchor: this.activeAnchor,
+      activeAnchor: this.resizeHandler.activeAnchor,
       guides: this.guides,
       layoutBadges: layoutBadges.length > 0 ? layoutBadges : undefined,
       gridOverlays: gridOverlays.length > 0 ? gridOverlays : undefined,
       activeDropTarget: this.activeDropTarget,
       marqueeRect: this.getMarqueeRect(),
       spacingAdjusters,
-      draggedNodeId: this.isDragging && this.selectedIds.size === 1 ? this.selectedIds.values().next().value : null,
-      resizedNodeId: this.isResizing && this.selectedIds.size === 1 ? this.selectedIds.values().next().value : null,
-      drawingRect: this.getDrawingRect(),
-      drawingTag: this.isDrawingNode ? this.getDrawingTag() : null,
-      activeRadiusCorner: this.isAdjustingRadius ? this.activeRadiusCorner : this.hoveredRadiusCorner,
+      draggedNodeId: this.dragHandler.isDragging && this.selectedIds.size === 1 ? this.selectedIds.values().next().value : null,
+      resizedNodeId: this.resizeHandler.isResizing && this.selectedIds.size === 1 ? this.selectedIds.values().next().value : null,
+      drawingRect: this.drawHandler.getDrawingRect(),
+      drawingTag: this.drawHandler.isDrawing ? this.drawHandler.getDrawingTag() : null,
+      activeRadiusCorner: this.spacingHandler.isAdjustingRadius ? this.spacingHandler.activeRadiusCorner : this.hoveredRadiusCorner,
     });
   }
 
   // ── Private Helpers ─────────────────────────────
 
   /** Returns the container's bounding rect as our `Rect`. */
-  private getContainerRect(): Rect {
+  public getContainerRect(): Rect {
     const b = this.container.getBoundingClientRect();
     return { x: b.x, y: b.y, width: b.width, height: b.height };
   }
@@ -4231,11 +1973,11 @@ export class Workspace {
   }
 
   /** Returns nodes in depth-first order for hit testing and rendering. */
-  private getOrderedNodeList(): ReadonlyArray<ResolvedNode> {
+  public getOrderedNodeList(): ReadonlyArray<ResolvedNode> {
     return this.tree.flatten();
   }
 
-  private getTopLevelSelectedIds(): string[] {
+  public getTopLevelSelectedIds(): string[] {
     const list: string[] = [];
     for (const id of this.selectedIds) {
       let currentId: string | null = id;
@@ -4299,7 +2041,7 @@ export class Workspace {
   }
 
   /** Returns canvas-space rects of all nodes except the given ID. */
-  private getOtherRects(excludeId: string): Rect[] {
+  public getOtherRects(excludeId: string): Rect[] {
     const rects: Rect[] = [];
     for (const node of this.tree.values()) {
       if (node.id !== excludeId && node.currentRect) {
@@ -4309,7 +2051,7 @@ export class Workspace {
     return rects;
   }
 
-  private getOtherRectsMultiple(excludeIds: string[]): Rect[] {
+  public getOtherRectsMultiple(excludeIds: string[]): Rect[] {
     const excludeSet = new Set(excludeIds);
     const rects: Rect[] = [];
     for (const node of this.tree.values()) {
@@ -4414,7 +2156,7 @@ export class Workspace {
 
   /** Updates the hovered node ID based on current pointer position and Cmd/Ctrl modifier. */
   private updateHover(isCmdPressed: boolean): void {
-    if (!this.lastCanvasPos || this.isPanning || this.isDragging || this.isResizing) {
+    if (!this.lastCanvasPos || this.panHandler.isActive || this.dragHandler.isDragging || this.resizeHandler.isResizing) {
       this.clearDynamicHover();
       this.hoveredId = null;
       return;
@@ -4500,28 +2242,10 @@ export class Workspace {
     }
   }
 
-  private getDrawingRect(): Rect | null {
-    if (!this.isDrawingNode || !this.drawStartCanvas || !this.drawCurrentCanvas) {
-      return null;
-    }
-    return {
-      x: Math.min(this.drawStartCanvas.x, this.drawCurrentCanvas.x),
-      y: Math.min(this.drawStartCanvas.y, this.drawCurrentCanvas.y),
-      width: Math.abs(this.drawStartCanvas.x - this.drawCurrentCanvas.x),
-      height: Math.abs(this.drawStartCanvas.y - this.drawCurrentCanvas.y),
-    };
-  }
+  // (getDrawingRect moved to DrawHandler)
 
   private getMarqueeRect(): Rect | null {
-    if (!this.isMarqueeSelecting || !this.marqueeStartCanvas || !this.marqueeCurrentCanvas) {
-      return null;
-    }
-    return {
-      x: Math.min(this.marqueeStartCanvas.x, this.marqueeCurrentCanvas.x),
-      y: Math.min(this.marqueeStartCanvas.y, this.marqueeCurrentCanvas.y),
-      width: Math.abs(this.marqueeStartCanvas.x - this.marqueeCurrentCanvas.x),
-      height: Math.abs(this.marqueeStartCanvas.y - this.marqueeCurrentCanvas.y),
-    };
+    return this.selectionHandler ? this.selectionHandler.getMarqueeRect() : null;
   }
 
   private computeSpacingAdjusters(id: string): SpacingAdjusterInfo[] {
@@ -4553,14 +2277,14 @@ export class Workspace {
     const adjusters: SpacingAdjusterInfo[] = [];
 
     const addAdjuster = (type: SpacingAdjusterType, rect: Rect, visualRect: Rect, value: number) => {
-      if (value > 0 || this.activeAdjusterType === type) {
+      if (value > 0 || this.spacingHandler.activeAdjusterType === type) {
         adjusters.push({
           type,
           rect,
           visualRect,
           value,
           isHovered: this.hoveredAdjusterType === type,
-          isActive: this.activeAdjusterType === type,
+          isActive: this.spacingHandler.activeAdjusterType === type,
         });
       }
     };
@@ -4696,7 +2420,7 @@ export class Workspace {
     }
   }
 
-  private safeSetPointerCapture(pointerId: number): void {
+  public safeSetPointerCapture(pointerId: number): void {
     if (navigator.webdriver || /HeadlessChrome/.test(navigator.userAgent) || /Electron/.test(navigator.userAgent)) {
       return;
     }
@@ -4757,118 +2481,5 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-// ── Layout Grid Helpers ─────────────────────────────────────
 
-function getGridStart(element: HTMLElement, dimension: "column" | "row"): number {
-  const cs = getComputedStyle(element);
-  const startVal = cs.getPropertyValue(`grid-${dimension}-start`);
-  const val = cs.getPropertyValue(`grid-${dimension}`);
-  
-  const startNum = parseInt(startVal, 10);
-  if (!isNaN(startNum)) return startNum;
-
-  if (val) {
-    const match = val.match(/^\s*(\d+)/);
-    if (match && match[1]) {
-      return parseInt(match[1], 10);
-    }
-  }
-
-  return getRealGridStart(element, dimension);
-}
-
-function getRealGridStart(element: HTMLElement, dimension: "column" | "row"): number {
-  const parent = element.parentElement;
-  if (!parent) return 1;
-
-  let current: HTMLElement | null = parent;
-  let offset = 0;
-  let gap = 0;
-  let tracks: GridTrack[] = [];
-  let definingGrid: HTMLElement | null = null;
-
-  while (current) {
-    const cs = getComputedStyle(current);
-    const display = cs.display;
-    if (display.includes("grid")) {
-      const template = cs.getPropertyValue(`grid-template-${dimension}s`);
-      if (template && !template.includes("subgrid")) {
-        definingGrid = current;
-        gap = parseFloat(cs.getPropertyValue(`${dimension}-gap`)) || 0;
-        tracks = parseGridTracks(template, gap);
-        break;
-      }
-    }
-
-    const nextParent: HTMLElement | null = current.parentElement;
-    if (!nextParent) break;
-
-    const currentRect = current.getBoundingClientRect();
-    const parentRect = nextParent.getBoundingClientRect();
-    const pcs = getComputedStyle(nextParent);
-    const padLeft = parseFloat(pcs.paddingLeft) || 0;
-    const padTop = parseFloat(pcs.paddingTop) || 0;
-
-    offset += (dimension === "column")
-      ? (currentRect.left - parentRect.left - padLeft)
-      : (currentRect.top - parentRect.top - padTop);
-
-    current = nextParent;
-  }
-
-  if (!definingGrid || tracks.length === 0) return 1;
-
-  const elRect = element.getBoundingClientRect();
-  const defRect = definingGrid.getBoundingClientRect();
-  const defStyle = getComputedStyle(definingGrid);
-  const defPadLeft = parseFloat(defStyle.paddingLeft) || 0;
-  const defPadTop = parseFloat(defStyle.paddingTop) || 0;
-
-  const elOffset = (dimension === "column")
-    ? (elRect.left - defRect.left - defPadLeft)
-    : (elRect.top - defRect.top - defPadTop);
-
-  const cellIndex = getCellIndexAtOffset(elOffset, tracks, gap);
-
-  if (parent !== definingGrid) {
-    const parentRect = parent.getBoundingClientRect();
-    const parentOffset = (dimension === "column")
-      ? (parentRect.left - defRect.left - defPadLeft)
-      : (parentRect.top - defRect.top - defPadTop);
-    const parentCellIndex = getCellIndexAtOffset(parentOffset, tracks, gap);
-    return Math.max(1, cellIndex - parentCellIndex + 1);
-  }
-
-  return cellIndex;
-}
-
-function getCellIndexAtOffset(offset: number, tracks: GridTrack[], gap: number): number {
-  for (let i = 0; i < tracks.length; i++) {
-    const t = tracks[i]!;
-    if (offset <= t.start + t.size + gap / 2) {
-      return i + 1;
-    }
-  }
-  return tracks.length;
-}
-
-function getGridSpan(element: HTMLElement, dimension: "column" | "row"): number {
-  const cs = getComputedStyle(element);
-  const startVal = cs.getPropertyValue(`grid-${dimension}-start`);
-  const endVal = cs.getPropertyValue(`grid-${dimension}-end`);
-  const val = cs.getPropertyValue(`grid-${dimension}`);
-
-  const spanMatch = (startVal + " " + endVal + " " + val).match(/span\s+(\d+)/i);
-  if (spanMatch && spanMatch[1]) {
-    return parseInt(spanMatch[1], 10);
-  }
-
-  const startNum = parseInt(startVal, 10);
-  const endNum = parseInt(endVal, 10);
-  if (!isNaN(startNum) && !isNaN(endNum) && endNum > startNum) {
-    return endNum - startNum;
-  }
-
-  return 1;
-}
 

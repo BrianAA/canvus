@@ -41,8 +41,11 @@ The Canvus SDK enforces a strict **dumb canvas** architecture.
 │         Projection Mutation Layer           │  ← Shadow DOM
 │  user HTML/CSS, browser-native reflow       │     (shadow-mount.ts)
 ├─────────────────────────────────────────────┤
-│            Workspace Orchestrator           │  ← Event binding, state machine
-│  pointer, key, wheel handlers              │     (workspace.ts)
+│            Workspace Orchestrator           │  ← Event dispatcher & callbacks
+│  delegates gesture & shortcut logic         │     (workspace.ts)
+├─────────────────────────────────────────────┤
+│         Interaction Handlers Layer          │  ← Claim-based behavior modules
+│  pan, draw, spacing, resize, drag, selection│     (src/handlers/*)
 ├──────────────┬──────────────┬───────────────┤
 │   NodeTree   │    Layout    │   DropZone    │
 │   tree.ts    │  layout.ts   │  drop-zone.ts │
@@ -66,7 +69,8 @@ The Canvus SDK enforces a strict **dumb canvas** architecture.
 | **Layout** | `layout.ts` | CSS display detection, flex/grid analysis, child slot measurement |
 | **Renderer** | `renderer.ts` | Canvas 2D overlay: selections, handles, guides, badges, spacing adjusters |
 | **DropZone** | `drop-zone.ts` | Drag-and-drop placement: flex/grid/block-aware insertion calculation |
-| **Workspace** | `workspace.ts` | Central orchestrator: events, state machine, public API |
+| **Workspace** | `workspace.ts` | Thin event dispatcher: coordinates gesture routing, implements callbacks |
+| **Handlers** | `src/handlers/*` | Pluggable gestures: pan, draw, spacing, resize, drag, selection, commands |
 | **Index** | `index.ts` | Public API barrel exports |
 
 ---
@@ -541,6 +545,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Claim-Based Handler Architecture**: Decomposed the monolithic `Workspace` class into 8 focused event handlers using the claim-based pointer dispatch and keyboard dispatch pattern. Handlers communicate with the Workspace via a defined `WorkspaceContext` interface, keeping the Workspace as a thin orchestrator (~2,400 lines down from 4,875).
+  - `PanHandler`: Manages trackpad and middle-mouse spacebar panning.
+  - `DrawHandler`: Manages box and text tool drawing previews and node creation.
+  - `ClipboardHandler`: Manages copy, cut, paste, duplicate, and delete shortcuts.
+  - `CommandHandler`: Manages nudging, parent ungrouping, and Shift+A flex wrapping commands.
+  - `SpacingHandler`: Manages margin, padding, and corner radius adjusters.
+  - `ResizeHandler`: Manages 8-anchor element scaling with snap guides.
+  - `DragHandler`: Manages dragging, reparenting, reordering, and Alt-drag cloning.
+  - `SelectionHandler`: Fallback handler managing marquee selection and click-to-select scoping.
 - Drawing Tools: Added new Box and Text drawing tools (`setActiveTool`, `getActiveTool`, `setDrawingTag`, `getDrawingTag`) with real-time dotted boundary preview, dimensions overlay tooltip, and direct tag customization.
 - Corner Radius Handles: Introduced corner radius adjustment handles on container elements with hit testing, hovering, and resizing capabilities.
 - Clipboard Operations: Added copy, cut, paste, and duplicate APIs (`copySelectedNode()`, `cutSelectedNode()`, `pasteNode()`, `duplicateSelectedNode()`, `deleteSelectedNode()`) with keyboard shortcut bindings.
@@ -632,6 +645,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 | What | Path |
 |------|------|
 | SDK Source | `src/` |
+| Interaction Handlers | `src/handlers/` |
 | Public API | `src/index.ts` |
 | Type Definitions | `src/types.ts` |
 | Demo Workbench | `demo/index.html` |

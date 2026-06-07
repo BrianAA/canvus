@@ -12,4 +12,5 @@ export type { WorkspaceConfig, WorkspaceCallbacks, } from "./workspace.js";
 export { Workspace } from "./workspace.js";
 export type { DropTarget, InsertionIndicator, } from "./drop-zone.js";
 export { findDropTarget } from "./drop-zone.js";
+export type { InteractionHandler, KeyboardHandler, InteractionDetail, WorkspaceContext, } from "./handlers/types.js";
 //# sourceMappingURL=index.d.ts.map
