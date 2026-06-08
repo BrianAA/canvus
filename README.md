@@ -5,6 +5,10 @@
 
 Canvus is a headless, framework-agnostic vanilla TypeScript SDK for building visual layout editing workspaces. By separating rendering and visual handles, it enables developers to construct CMS page-builder canvases, A/B testing editors, and high-performance visual IDE tools with web-native performance.
 
+[Documentation](https://canvus.io/)
+
+[Demo](https://canvus.io/playground)
+
 ---
 
 ## 🚀 Key Features
