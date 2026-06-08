@@ -13,6 +13,10 @@ export default {
       <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: '0.5rem' }}>SDK Docs</span>
     </span>
   ),
+  banner: {
+    key: 'beta-v0.1.2',
+    text: '⚠️ Canvus is currently in public beta (v0.1.2). APIs are subject to change.',
+  },
   project: {
     link: 'https://github.com/BrianAA/canvus',
   },

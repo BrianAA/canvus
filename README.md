@@ -3,6 +3,8 @@
 [![npm version](https://img.shields.io/npm/v/@canvus/core.svg)](https://www.npmjs.com/package/@canvus/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+> ⚠️ **Beta Release (v0.1.2)**: Canvus is currently in active development (public beta). APIs and configuration options may evolve before the v1.0.0 stable release.
+
 Canvus is a headless, framework-agnostic vanilla TypeScript SDK for building visual layout editing workspaces. By separating rendering and visual handles, it enables developers to construct CMS page-builder canvases, A/B testing editors, and high-performance visual IDE tools with web-native performance.
 
 [Documentation](https://canvus.io/)
