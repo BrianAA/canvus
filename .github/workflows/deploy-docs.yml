@@ -43,8 +43,6 @@ jobs:
 
       - name: Build docs
         working-directory: docs-site
-        env:
-          BASE_PATH: /canvus
         run: npm run build
 
       - name: Add .nojekyll
