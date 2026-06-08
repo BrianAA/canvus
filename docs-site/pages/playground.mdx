@@ -4,9 +4,14 @@ Experience the Canvus SDK in action — a fully interactive design editor runnin
 
 import { Callout } from 'nextra/components'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/router'
 
 export function PlaygroundEmbed() {
+  const router = useRouter()
+  const basePath = router.basePath || ''
   const [isMobile, setIsMobile] = useState(false)
+  const [hovered, setHovered] = useState(false)
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768)
     check()
@@ -51,8 +56,40 @@ export function PlaygroundEmbed() {
       boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
       position: 'relative',
     }}>
+      <a
+        href={`${basePath}/playground/index.html`}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          position: 'absolute',
+          top: '12px',
+          right: '12px',
+          zIndex: 20,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '8px 14px',
+          borderRadius: '8px',
+          background: hovered ? 'rgba(39, 39, 42, 0.9)' : 'rgba(24, 24, 27, 0.75)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          color: '#f4f4f5',
+          fontSize: '13px',
+          fontWeight: 500,
+          textDecoration: 'none',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+          cursor: 'pointer',
+          transform: hovered ? 'translateY(-1px)' : 'none',
+          transition: 'all 0.15s ease-in-out',
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <span>Open Fullscreen</span>
+        <span style={{ fontSize: '12px' }}>↗</span>
+      </a>
       <iframe
-        src="/playground/index.html"
+        src={`${basePath}/playground/index.html`}
         style={{
           width: '100%',
           height: '100%',
