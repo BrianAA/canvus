@@ -3,6 +3,7 @@ node_modules/
 
 # Build outputs
 dist/
+!docs-site/public/playground/dist/
 docs-site/.next/
 docs-site/out/
 
