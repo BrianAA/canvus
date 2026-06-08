@@ -1,0 +1,452 @@
+import type { Rect, ResolvedNode, Vec2, ViewportMatrix, WebHTMLNode, Operation, CanvusTool, Command } from "./types.js";
+import { ShadowMount } from "./shadow-mount.js";
+import { NodeTree } from "./tree.js";
+import type { DropTarget } from "./drop-zone.js";
+import type { Guide, OverlayStyle, SpacingAdjusterType } from "./renderer.js";
+import { OverlayRenderer } from "./renderer.js";
+import type { InteractionHandler, KeyboardHandler, InteractionDetail } from "./handlers/types.js";
+/** Configuration options for the workspace. */
+export interface WorkspaceConfig {
+    /** Partial overlay style overrides. */
+    overlayStyle?: Partial<OverlayStyle>;
+    /** Snap threshold for alignment guides (canvas-space px). @default 5 */
+    snapThreshold?: number;
+    /** Minimum element dimension during resize (canvas-space px). @default 40 */
+    minResizeSize?: number;
+    /** Enable snap-to-align guides during drag/resize. @default true */
+    enableSnapGuides?: boolean;
+}
+/** Callback signatures for workspace lifecycle events. */
+export interface WorkspaceCallbacks {
+    /**
+     * **Flat String Bridge output.**
+     * Fired on `pointerup` after a drag or resize gesture completes.
+     * Receives the node's clean inner HTML string ready for AST commit.
+     */
+    onHTMLCommit?: (id: string, html: string) => void;
+    /** Fired whenever any node's canvas-space bounding rect changes. */
+    onNodeRectChange?: (id: string, rect: Rect) => void;
+    /** Fired whenever the viewport transform changes (pan/zoom). */
+    onViewportChange?: (viewport: Readonly<ViewportMatrix>) => void;
+    /** Fired when the selection set changes. */
+    onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
+    /** Fired when the active selection parent hierarchy path changes (breadcrumbs). */
+    onBreadcrumbChange?: (path: string[]) => void;
+    /** Fired when the interaction mode changes (idle/pan/drag/resize). */
+    onInteractionChange?: (mode: string | null) => void;
+    /** Fired when visual editor gestures complete and generate history operations. */
+    onOperationsGenerated?: (operations: Operation[]) => void;
+    /** Fired when double-clicking a text node to delegate rich-text editing to the host. */
+    onTextEditRequest?: (nodeId: string, element: HTMLElement, commit: (newHTML: string) => void) => void;
+    /**
+     * Optional custom handler to delegate pseudo-class forcing.
+     * Fired when a node's pseudo-class state (hover, active, focus) is modified.
+     */
+    onForcePseudoState?: (nodeId: string, state: "hover" | "active" | "focus", enabled: boolean) => void;
+    /** Fired when a node is registered/added to the workspace tree. */
+    onNodeAdded?: (id: string) => void;
+    /** Fired when a node is removed from the workspace tree. */
+    onNodeRemoved?: (id: string) => void;
+    /** Fired when a node is duplicated, alt-drag cloned, or pasted. */
+    onNodeCloned?: (originalId: string, cloneId: string) => void;
+    /**
+     * Optional host callback to query whether a CSS property on a node is locked
+     * (e.g. driven by a stylesheet class like Tailwind's `p-4` or `w-48`).
+     * Return `true` to block visual adjustment of that property.
+     * @default () => false (always unlocked)
+     */
+    isPropertyLocked?: (nodeId: string, property: string) => boolean;
+    /**
+     * Fired when the user attempts to drag/adjust a property that is currently locked.
+     * The host can use this to show a toast, offer an "unlock" action, etc.
+     */
+    onPropertyLockInteraction?: (nodeId: string, property: string, currentValue: string) => void;
+    /**
+     * Fired when the user clicks/interacts with a locked node.
+     * The host can use this to show a visual indicator (toast, shake animation, etc.).
+     */
+    onLockedNodeInteraction?: (nodeId: string) => void;
+}
+/**
+ * The top-level orchestration engine for a Canvus workspace.
+ *
+ * ### What it owns
+ * - A `ShadowMount` for the HTML projection layer.
+ * - An `OverlayRenderer` for the canvas affordance layer.
+ * - All pointer, wheel, and keyboard event bindings.
+ * - The complete interaction state machine (pan / drag / resize).
+ *
+ * ### Synchronous Reflow Loop (per pointermove frame)
+ * ```
+ * pointer delta
+ *   → style surgery (setNodeRect / setNodePosition)
+ *   → browser synchronous reflow
+ *   → measureNode() reads updated layout
+ *   → rect cache updated
+ *   → alignment guides computed
+ *   → OverlayRenderer.render()
+ * ```
+ *
+ * ### Flat String Bridge
+ * On `pointerup` after any mutating gesture, calls
+ * `ShadowMount.extractHTML()` and fires `onHTMLCommit`
+ * with the pristine semantic HTML string.
+ *
+ * ### Usage
+ * ```ts
+ * const ws = new Workspace(document.getElementById('editor')!, {
+ *   onHTMLCommit: (id, html) => console.log(id, html),
+ * });
+ * ws.addNode({ id: 'card-1', rawMarkup: '<div>Hello</div>', currentRect: null });
+ * ```
+ */
+export declare class Workspace {
+    private readonly mount;
+    private readonly renderer;
+    private readonly container;
+    private readonly canvas;
+    readonly callbacks: WorkspaceCallbacks;
+    readonly snapThreshold: number;
+    readonly minResizeSize: number;
+    readonly enableSnapGuides: boolean;
+    private viewport;
+    private readonly tree;
+    private readonly selectedIds;
+    private hoveredId;
+    private dynamicHoveredId;
+    private readonly forcedStates;
+    guides: Guide[];
+    enteredContainerId: string | null;
+    lastPointerDownTime: number;
+    lastPointerDownId: string | null;
+    lastPointerDownTarget: EventTarget | null;
+    editAllowedOnDblClick: boolean;
+    activeDropTarget: DropTarget | null;
+    get hoveredAdjusterType(): SpacingAdjusterType | null;
+    set hoveredAdjusterType(value: SpacingAdjusterType | null);
+    get hoveredRadiusCorner(): string | null;
+    set hoveredRadiusCorner(value: string | null);
+    lastCanvasPos: Vec2 | null;
+    private disposed;
+    private renderRequested;
+    private previewMode;
+    /** Set of node IDs explicitly marked as containing JavaScript behavior. */
+    readonly jsMarkedNodes: Set<string>;
+    /** Set of node IDs explicitly locked by the host. Locked nodes are non-interactive. */
+    readonly lockedNodes: Set<string>;
+    /** Set of node IDs that were lazily registered (children discovered on selection). */
+    readonly lazyRegisteredIds: Set<string>;
+    private lazyChildCounter;
+    /** Monotonic counter for generating unique element IDs (shared across draw, clone, paste). */
+    private newElementCounter;
+    /** Registered pointer-gesture handlers in priority order. */
+    private readonly interactionHandlers;
+    /** Registered keyboard handlers in priority order. */
+    private readonly keyboardHandlers;
+    /** The handler that currently owns the active pointer gesture. */
+    private activeHandler;
+    /** Pan handler instance (for direct space-key delegation). */
+    private readonly panHandler;
+    /** Draw handler instance (for public API delegation). */
+    private readonly drawHandler;
+    /** Clipboard handler instance (for public API delegation). */
+    private readonly clipboardHandler;
+    /** Command handler instance (for public API delegation). */
+    private readonly commandHandler;
+    /** Spacing handler instance (for interaction delegation). */
+    private readonly spacingHandler;
+    /** Resize handler instance (for interaction delegation). */
+    private readonly resizeHandler;
+    /** Drag handler instance (for interaction delegation). */
+    private readonly dragHandler;
+    /** Selection handler instance (for interaction delegation). */
+    private readonly selectionHandler;
+    private readonly onWheel;
+    private readonly onPointerDown;
+    private readonly onPointerMove;
+    private readonly onPointerUp;
+    private readonly onKeyDown;
+    private readonly onKeyUp;
+    private readonly onWindowResize;
+    private readonly onDblClick;
+    private readonly onDragStart;
+    constructor(container: HTMLElement, callbacks?: WorkspaceCallbacks, config?: WorkspaceConfig);
+    /**
+     * Mounts a new HTML node into the workspace.
+     *
+     * Performs the **Geometry Extraction Loop**: injects the markup
+     * into the Shadow DOM, forces a synchronous layout read, and
+     * returns the measured canvas-space bounding rect.
+     *
+     * @param node     - The node descriptor.
+     * @param parentId - Optional parent node ID for nested mounting.
+     * @param index    - Optional insertion index within the parent's children.
+     * @returns The initial bounding rect after browser layout.
+     */
+    addNode(node: Readonly<WebHTMLNode>, parentId?: string | null, index?: number): Rect;
+    /** Removes a node and all its descendants from the workspace. */
+    removeNode(id: string): boolean;
+    /** Hot-swaps the inner HTML of a mounted node. */
+    updateMarkup(id: string, markup: string): Rect | null;
+    /**
+     * Moves a node to a new parent (or to root level).
+     * Handles both DOM reparenting and tree model update.
+     * Fires `onHTMLCommit` with the new parent's HTML.
+     */
+    reparentNode(nodeId: string, newParentId: string | null, index?: number): void;
+    /**
+     * Reorders a child within its current parent.
+     */
+    reorderChild(nodeId: string, newIndex: number): void;
+    /** Returns the NodeTree for advanced tree queries. */
+    getNodeTree(): NodeTree;
+    /** Returns the wrapper DOM element for a node ID. */
+    getWrapper(id: string): HTMLElement | null;
+    /** Returns the user's content root element for a node ID. */
+    getContentRoot(id: string): HTMLElement | null;
+    /**
+     * Mutates a single CSS style property on the specified node's content element.
+     * Automatically triggers browser reflow, updates internal tree boundaries,
+     * re-renders visual overlays, and commits clean HTML back to AST.
+     */
+    setNodeStyle(id: string, property: string, value: string | null): void;
+    /**
+     * Mutates multiple CSS style properties on the specified node's content element.
+     * Batch-updates styles, triggers a single reflow/remeasure loop, and commits changes.
+     */
+    setNodeStyles(id: string, styles: Record<string, string | null>): void;
+    /** Selects a node by ID, clearing previous selection. */
+    selectNode(id: string): void;
+    /** Clears all selection. */
+    deselectAll(): void;
+    /** Returns the current selection set (read-only view). */
+    getSelectedIds(): ReadonlySet<string>;
+    /** Sets the active drawing tool (box, text, or null to return to selection/idle mode). */
+    setActiveTool(tool: CanvusTool): void;
+    /** Returns the currently active drawing tool. */
+    getActiveTool(): CanvusTool;
+    /** Customizes the HTML tag type for box or text drawing. */
+    setDrawingTag(tag: string): void;
+    /** Returns the active drawing tag based on the selected tool. */
+    getDrawingTag(): string;
+    /** Returns the current viewport transform. */
+    getViewport(): Readonly<ViewportMatrix>;
+    /** Programmatically sets the viewport (e.g. for "fit to content"). */
+    setViewport(vp: ViewportMatrix): void;
+    /** Resets viewport to 1:1 scale, zero offset. */
+    resetViewport(): void;
+    /** Sets whether the workspace is in Preview Mode (disables editing overlays and events). */
+    setPreviewMode(enabled: boolean): void;
+    /** Returns whether the workspace is currently in Preview Mode. */
+    isPreviewMode(): boolean;
+    /** Deletes the currently selected node from the workspace. */
+    deleteSelectedNode(): void;
+    /** Duplicates the selected node right next to it as a sibling. */
+    duplicateSelectedNode(): void;
+    /** Copies the selected node to the internal clipboard. */
+    copySelectedNode(): void;
+    /** Cuts the selected node to the clipboard, removing it from the canvas. */
+    cutSelectedNode(): void;
+    /** Pastes the node currently in the clipboard into the canvas. */
+    pasteNode(): void;
+    /** Forces a pseudo-class state (hover, active, focus) on the specified node element. */
+    forceNodeState(nodeId: string, state: "hover" | "active" | "focus", enabled: boolean): void;
+    /**
+     * Explicitly marks a node as containing JavaScript behavior.
+     * Renders the ⚡️ JS badge on the canvas overlay when the node is selected.
+     * The host application calls this based on its own analysis (static analysis,
+     * CDP, source maps, etc.) rather than the SDK auto-detecting scripts.
+     */
+    markNodeHasJS(nodeId: string): void;
+    /**
+     * Clears the JS badge from a node.
+     */
+    unmarkNodeHasJS(nodeId: string): void;
+    /**
+     * Returns whether a node is marked as containing JavaScript behavior.
+     */
+    hasJSMark(nodeId: string): boolean;
+    /**
+     * Locks a node, making it non-interactive on the canvas.
+     * Locked nodes cannot be selected, dragged, resized, or hovered
+     * via user pointer/keyboard interaction. If the node is currently
+     * selected, it will be deselected. Locking a parent node also
+     * locks all of its descendants.
+     */
+    lockNode(nodeId: string): void;
+    /**
+     * Unlocks a previously locked node, restoring interactivity.
+     */
+    unlockNode(nodeId: string): void;
+    /**
+     * Returns whether a node is currently locked (directly or via a locked ancestor).
+     */
+    isNodeLocked(nodeId: string): boolean;
+    /**
+     * Returns the set of directly locked node IDs.
+     * Does not include nodes that are only locked via ancestor inheritance.
+     */
+    getLockedNodeIds(): ReadonlySet<string>;
+    /**
+     * Checks whether a CSS property on a node is locked by the host.
+     * Delegates to the `isPropertyLocked` callback if provided.
+     * Returns `false` (unlocked) when no callback is registered.
+     */
+    isPropertyLocked(nodeId: string, property: string): boolean;
+    /**
+     * Notifies the host that the user attempted to adjust a locked property.
+     * Reads the current computed value from the node's content root and
+     * fires the `onPropertyLockInteraction` callback.
+     * No-op when the callback is not registered.
+     */
+    notifyPropertyLockInteraction(nodeId: string, property: string): void;
+    /** Dispatches a synthetic pointer/mouse event (e.g. mouseenter, mouseleave, click) to a node. */
+    dispatchInteractionEvent(nodeId: string, eventName: string): void;
+    /** Returns a snapshot of all tracked nodes (depth-first order). */
+    getNodes(): ReadonlyArray<Readonly<ResolvedNode>>;
+    /** Returns the underlying ShadowMount for advanced access. */
+    getShadowMount(): ShadowMount;
+    /** Returns the underlying OverlayRenderer for advanced access. */
+    getOverlayRenderer(): OverlayRenderer;
+    /**
+     * Extracts the clean inner HTML of a node.
+     * This is the **Flat String Bridge** — call it at any time
+     * to read the current semantic HTML string.
+     */
+    extractHTML(id: string): string | null;
+    /**
+     * Programmatically replays an Operation (mutation payload) onto the workspace.
+     * This is the core API used for Undo/Redo replay and collaboration sync.
+     */
+    applyOperation(op: Operation): void;
+    /** Adds a CSS class name directly to the content root of a node. */
+    addClass(id: string, className: string): void;
+    /** Removes a CSS class name directly from the content root of a node. */
+    removeClass(id: string, className: string): void;
+    /** Toggles a CSS class name directly on the content root of a node. */
+    toggleClass(id: string, className: string): void;
+    /**
+     * Forces a synchronous geometry measurement of all nodes
+     * and updates the internal rect cache.
+     */
+    measureAll(): Map<string, Rect>;
+    /** Injects a CSS string into the shadow root. */
+    injectCSS(css: string): HTMLStyleElement;
+    /** Loads an external stylesheet into the shadow root. */
+    injectCSSLink(href: string): Promise<HTMLLinkElement>;
+    /**
+     * Registers a pointer-gesture handler at the specified priority position.
+     * Lower index = higher priority (checked first on pointerdown).
+     * If no index is given, the handler is appended (lowest priority).
+     */
+    registerInteractionHandler(handler: InteractionHandler, index?: number): void;
+    /**
+     * Registers a keyboard handler at the specified priority position.
+     * Lower index = higher priority (checked first on keydown).
+     * If no index is given, the handler is appended (lowest priority).
+     */
+    registerKeyboardHandler(handler: KeyboardHandler, index?: number): void;
+    /**
+     * Emit an interaction mode change to the host.
+     * Enriches the existing `onInteractionChange` callback with
+     * optional `InteractionDetail` for richer host observability.
+     */
+    emitInteraction(mode: string | null, _detail?: InteractionDetail): void;
+    /**
+     * Increment and return a unique counter for generating element IDs.
+     * Used by handlers that create new nodes (DrawHandler, ClipboardHandler, etc.).
+     */
+    nextElementId(): number;
+    /** Tears down the workspace completely. */
+    dispose(): void;
+    /**
+     * Handles wheel events with Figma-style behavior:
+     * - **Trackpad two-finger scroll** → pans the canvas
+     * - **Trackpad pinch-to-zoom** → zooms (browsers report this with ctrlKey=true)
+     * - **Ctrl + mouse wheel** → zooms
+     */
+    private handleWheel;
+    /** Interaction mode detection on pointer down. */
+    private handlePointerDown;
+    /**
+     * The core **Synchronous Reflow Loop**.
+     *
+     * On each pointer move during an active gesture:
+     *   1. Compute canvas-space delta.
+     *   2. Style surgery (setNodeRect / setNodePosition).
+     *   3. Browser reflows synchronously.
+     *   4. measureNode() reads updated dimensions.
+     *   5. Rect cache updated.
+     *   6. Alignment guides computed.
+     *   7. Overlay re-rendered.
+     */
+    private handlePointerMove;
+    /**
+     * Gesture completion.
+     *
+     * **Flat String Bridge**: on mouseup after a mutating gesture,
+     * extracts the clean HTML and fires `onHTMLCommit`.
+     */
+    private handlePointerUp;
+    private handleKeyDown;
+    /** Registers a custom keyboard command shortcut. */
+    registerCommand(cmd: Command): void;
+    private handleKeyUp;
+    /** Resize canvas to match container dimensions. */
+    private handleResize;
+    /** Double-click text editing handler. */
+    private handleDblClick;
+    /** Throttles redrawing using requestAnimationFrame to prevent layout thrashing. */
+    private render;
+    /** Pushes a complete frame to the overlay renderer immediately. */
+    private renderSync;
+    /** Returns the container's bounding rect as our `Rect`. */
+    getContainerRect(): Rect;
+    /**
+     * Orchestrates lazy child registration on selection changes.
+     * When a node is newly selected, its immediate DOM children are
+     * registered for tracking. When deselected, its lazy children
+     * are unregistered (DOM left untouched).
+     */
+    private syncLazyChildren;
+    /**
+     * Registers the immediate DOM children of a node as tracked
+     * workspace nodes. Uses `trackExistingElement` — no wrapper
+     * divs, no DOM structure changes. Children get hover states,
+     * selection handles, resize, and drag for free.
+     */
+    private registerImmediateChildren;
+    /**
+     * Deregisters all lazily-registered children of a node.
+     * Removes tracking (ResizeObserver, data-canvus-id attribute,
+     * tree entry) but leaves the DOM element in place.
+     */
+    private deregisterLazyChildren;
+    /** Returns nodes in depth-first order for hit testing and rendering. */
+    getOrderedNodeList(): ReadonlyArray<ResolvedNode>;
+    getTopLevelSelectedIds(): string[];
+    private hitTestRadiusHandle;
+    /** Returns canvas-space rects of all nodes except the given ID. */
+    getOtherRects(excludeId: string): Rect[];
+    getOtherRectsMultiple(excludeIds: string[]): Rect[];
+    /**
+     * Re-measures a node and all its descendants using
+     * canvas-space coordinate extraction.
+     */
+    private remeasureSubtree;
+    /** Ascends selection and scope when Escape key is pressed. */
+    private handleEscapeKey;
+    /** Resolves which node is selectable based on click position and scope depth. */
+    private findSelectableNode;
+    /** Updates the hovered node ID based on current pointer position and Cmd/Ctrl modifier. */
+    private updateHover;
+    private clearDynamicHover;
+    private setNodeStateClass;
+    /** Updates the active breadcrumbs and calls external callback. */
+    private updateBreadcrumb;
+    private getMarqueeRect;
+    private computeSpacingAdjusters;
+    private assertNotDisposed;
+    safeSetPointerCapture(pointerId: number): void;
+}
+//# sourceMappingURL=workspace.d.ts.map
