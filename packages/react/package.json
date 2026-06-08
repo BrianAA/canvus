@@ -1,6 +1,6 @@
 {
   "name": "@canvus/react",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "React bindings for the Canvus visual layout SDK",
   "type": "module",
   "main": "dist/index.js",
@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {

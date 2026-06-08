@@ -31,6 +31,9 @@ canvus/
 ├── demo/                   # Dev Workbench (Interactive local testing site)
 ├── dist/                   # Compiled SDK ESM build and type declarations
 ├── docs/                   # Developer documentation & Architecture Decision Records (ADRs)
+├── packages/               # Workspace monorepo packages
+│   ├── react/              # React bindings (@canvus/react)
+│   └── react-demo/         # React Demo App
 ├── src/                    # SDK Core source code (TypeScript)
 ├── skills/                 # Custom Agent/AI skills for codebase tasks
 └── package.json            # Scripts, build rules, and dependencies
@@ -43,12 +46,20 @@ For a detailed walkthrough of each source file and their individual roles, see t
 ## 🛠️ Quick Start
 
 ### 1. Installation
-Install via npm:
+
+Install the core SDK:
 ```bash
 npm install @canvus/core
 ```
 
+Or install the React bindings:
+```bash
+npm install @canvus/react @canvus/core
+```
+
 ### 2. Basic Usage
+
+#### Vanilla TS/JS
 Import and initialize a workspace in your project:
 ```ts
 import { Workspace } from "@canvus/core";
@@ -59,6 +70,20 @@ const workspace = new Workspace(container, {
     console.log("Operations:", ops);
   },
 });
+```
+
+#### React
+See the [@canvus/react README](packages/react/README.md) for full instructions:
+```tsx
+import { Canvus } from "@canvus/react";
+
+function App() {
+  return (
+    <Canvus style={{ width: "100%", height: "100vh" }}>
+      {/* Canvas workspace children */}
+    </Canvus>
+  );
+}
 ```
 
 The SDK exports all core primitives — see the [API Reference](docs/api.md) for the full surface.

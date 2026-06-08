@@ -1,6 +1,6 @@
 {
   "name": "@canvus/core",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "High-performance HTML-in-Canvas Interactive Workspace SDK",
   "type": "module",
   "main": "dist/index.js",
@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit",
     "demo": "npx -y serve . -l 3000 --no-clipboard",
     "demo:electron": "npm start --prefix demo-electron",
