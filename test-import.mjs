@@ -15,34 +15,21 @@ import path from 'path';
     console.log("Navigating to Canvus demo page...");
     await page.goto('http://localhost:3000/demo/index.html');
 
-    // Read the test-page.html file
-    const testPagePath = path.resolve('demo/test-page.html');
-    const testPageHTML = fs.readFileSync(testPagePath, 'utf8');
-
-    console.log("Setting HTML content in textarea...");
-    await page.fill('#import-html-text', testPageHTML);
-
-    console.log("Clicking Import...");
-    await page.click('#btn-import-html');
-
-    // Wait a bit for layout reflow and rendering
-    await page.waitForTimeout(1000);
-
     // Check if nodes are mounted
-    console.log("Verifying node list contains imported nodes...");
-    const nodeListText = await page.textContent('#node-list');
+    console.log("Verifying layer list contains pre-seeded nodes...");
+    const layersListText = await page.textContent('#layers-list');
 
-    if (!nodeListText.includes('main-container') || !nodeListText.includes('card-1') || !nodeListText.includes('banner')) {
-      console.error("FAIL: Imported nodes not found in the list!");
+    if (!layersListText.includes('hero-section') || !layersListText.includes('hero-heading') || !layersListText.includes('features-grid')) {
+      console.error("FAIL: Pre-seeded nodes not found in the list!");
       process.exit(1);
     }
 
     // Toggle to Preview Mode and back to Edit Mode to get fresh state
     console.log("Switching to Preview Mode...");
-    await page.click('#btn-preview-mode');
+    await page.click('#btn-preview');
     await page.waitForTimeout(300);
     console.log("Switching back to Edit Mode...");
-    await page.click('#btn-preview-mode');
+    await page.click('#btn-preview');
     await page.waitForTimeout(300);
 
     const getSelectionState = async (stepName) => {
@@ -56,34 +43,29 @@ import path from 'path';
       console.log(`State after ${stepName}:`, JSON.stringify(state));
     };
 
-    // Locate H3 element inside Shadow DOM
-    const heading = page.locator('h3:has-text("Feature Analysis")');
+    // Locate H1 element inside Shadow DOM
+    const heading = page.locator('h1:has-text("Build stunning visual editors")');
     await getSelectionState("Initial");
 
-    // Double-click multiple times to drill down to H3 element
-    console.log("Double-clicking H3 to drill down from main-container to layout-grid...");
+    // Double-click multiple times to drill down to H1 element
+    console.log("Double-clicking H1 to drill down to hero-section...");
     await heading.dblclick({ force: true });
     await page.waitForTimeout(400);
     await getSelectionState("DblClick 1");
 
-    console.log("Double-clicking H3 to drill down from layout-grid to card-1...");
+    console.log("Double-clicking H1 to drill down to hero-heading...");
     await heading.dblclick({ force: true });
     await page.waitForTimeout(400);
     await getSelectionState("DblClick 2");
 
-    console.log("Double-clicking H3 to drill down from card-1 to H3 wrapper node...");
+    console.log("Double-clicking H1 to enter text editing mode...");
     await heading.dblclick({ force: true });
     await page.waitForTimeout(400);
     await getSelectionState("DblClick 3");
 
-    console.log("Double-clicking H3 to enter text editing mode on H3 wrapper node...");
-    await heading.dblclick({ force: true });
-    await page.waitForTimeout(400);
-    await getSelectionState("DblClick 4");
-
     // Check if the contenteditable attribute is set
     const contentEditableVal = await heading.getAttribute('contenteditable');
-    console.log("H3 contenteditable attribute value:", contentEditableVal);
+    console.log("H1 contenteditable attribute value:", contentEditableVal);
 
     if (contentEditableVal !== 'plaintext-only') {
       console.error("FAIL: contenteditable attribute is not set to 'plaintext-only'!");

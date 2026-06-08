@@ -1018,9 +1018,10 @@ export class Workspace {
             for (const handler of this.interactionHandlers) {
                 if (handler.claim(e, canvasPos, hitId, rect)) {
                     this.activeHandler = handler;
-                    this.lastPointerDownTime = Date.now();
-                    this.lastPointerDownId = hitId;
-                    this.lastPointerDownTarget = e.composedPath()[0] || null;
+                    const isDoubleClick = (Date.now() - this.lastPointerDownTime < 350);
+                    this.lastPointerDownTime = isDoubleClick ? 0 : Date.now();
+                    this.lastPointerDownId = isDoubleClick ? null : hitId;
+                    this.lastPointerDownTarget = isDoubleClick ? null : (e.composedPath()[0] || null);
                     return;
                 }
             }

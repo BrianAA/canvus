@@ -23,30 +23,7 @@ function App() {
 
 > **Note:** Any components rendered as children of `<Canvus />` can access the workspace via the `useCanvus()` hook.
 
-## 2. Add React Nodes to the Canvas
-
-Use the `useCanvus()` hook from any child component to mount live React components on the canvas:
-
-```tsx
-import { useCanvus } from "@canvus/react";
-
-function Toolbar() {
-  const { addReactNode } = useCanvus();
-
-  const handleAdd = () => {
-    addReactNode({
-      id: `card-${Date.now()}`,
-      component: DashboardCard,
-      props: { title: "Revenue", value: "$42,000" },
-      currentRect: { x: 100, y: 100, width: 300, height: 200 },
-    });
-  };
-
-  return <button onClick={handleAdd}>Add Card</button>;
-}
-```
-
-## 3. Define a Component
+## 2. Define a Component
 
 The component you pass to `addReactNode` is a standard React component. It renders inside the canvas node's frame:
 
@@ -58,13 +35,15 @@ interface DashboardCardProps {
 
 function DashboardCard({ title, value }: DashboardCardProps) {
   return (
-    <div style={{
-      padding: 24,
-      background: "#1e293b",
-      borderRadius: 12,
-      color: "#e2e8f0",
-      height: "100%",
-    }}>
+    <div
+      style={{
+        padding: 24,
+        background: "#1e293b",
+        borderRadius: 12,
+        color: "#e2e8f0",
+        height: "100%",
+      }}
+    >
       <h3>{title}</h3>
       <p style={{ fontSize: 32, fontWeight: 700 }}>{value}</p>
     </div>
@@ -74,6 +53,29 @@ function DashboardCard({ title, value }: DashboardCardProps) {
 
 The component renders inside a wrapper frame on the canvas. The frame handles positioning and sizing — your component fills the available space.
 
+## 3. Add React Nodes to the Canvas
+
+Use the `useCanvus()` hook from any child component to mount live React components on the canvas:
+
+```tsx
+import { useCanvus } from "@canvus/react";
+
+function Toolbar() {
+  const { addReactNode } = useCanvus();
+
+  const handleAdd = () => {
+    addReactNode({
+      id: "revenue-card",
+      component: DashboardCard,
+      props: { title: "Revenue", value: "$42,000" },
+      currentRect: { x: 100, y: 100, width: 300, height: 200 },
+    });
+  };
+
+  return <button onClick={handleAdd}>Add Card</button>;
+}
+```
+
 ## 4. Update Props
 
 To update a React node's props (and trigger a re-render), use `updateReactNode`:
@@ -82,7 +84,7 @@ To update a React node's props (and trigger a re-render), use `updateReactNode`:
 const { updateReactNode } = useCanvus();
 
 // Update the card with new data
-updateReactNode("card-123", {
+updateReactNode("revenue-card", {
   value: "$58,000",
 });
 ```
@@ -97,8 +99,8 @@ When a user drags or resizes a React node, the `onReactNodeCommit` callback fire
 <Canvus
   onReactNodeCommit={(id, snapshot) => {
     console.log(snapshot.componentName); // "DashboardCard"
-    console.log(snapshot.props);          // { title: "Revenue", value: "$42,000" }
-    console.log(snapshot.rect);           // { x: 150, y: 120, width: 300, height: 200 }
+    console.log(snapshot.props); // { title: "Revenue", value: "$42,000" }
+    console.log(snapshot.rect); // { x: 150, y: 120, width: 300, height: 200 }
 
     // Save to your state management
     saveNodeState(id, snapshot);
@@ -121,17 +123,17 @@ const { addReactNode, addNode } = useCanvus();
 
 // Add a React component node
 addReactNode({
-  id: "chart-1",
-  component: InteractiveChart,
-  props: { data: [12, 19, 3, 5, 2] },
-  currentRect: { x: 50, y: 50, width: 400, height: 300 },
+  id: "revenue-card",
+  component: DashboardCard,
+  props: { title: "Revenue", value: "$42,000" },
+  currentRect: { x: 100, y: 100, width: 300, height: 200 },
 });
 
 // Add a vanilla HTML node (uses core API directly)
 addNode({
   id: "heading-1",
   rawMarkup: "<h1>Dashboard</h1>",
-  currentRect: { x: 50, y: 370, width: 400, height: 60 },
+  currentRect: { x: 100, y: 320, width: 300, height: 60 },
 });
 ```
 
@@ -141,7 +143,7 @@ addNode({
 const { removeReactNode, workspace } = useCanvus();
 
 // Remove a React node (unmounts the component and removes from canvas)
-removeReactNode("chart-1");
+removeReactNode("revenue-card");
 
 // Remove an HTML node (uses core API)
 workspace?.removeNode("heading-1");
@@ -151,14 +153,13 @@ workspace?.removeNode("heading-1");
 
 ```tsx
 import { Canvus, useCanvus } from "@canvus/react";
-import type { ReactNodeSnapshot } from "@canvus/react";
 
 function App() {
   return (
     <Canvus
       config={{ snapThreshold: 8 }}
       onReactNodeCommit={(id, snapshot) => {
-        console.log(`${snapshot.componentName} moved to`, snapshot.rect);
+        console.log(`${snapshot.componentName} committed:`, snapshot.props, snapshot.rect);
       }}
       style={{ width: "100vw", height: "100vh" }}
     >
@@ -172,30 +173,44 @@ function Toolbar() {
 
   return (
     <div style={{ position: "absolute", top: 16, left: 16, zIndex: 100 }}>
-      <button onClick={() => {
-        addReactNode({
-          id: "my-card",
-          component: MyCard,
-          props: { title: "Hello Canvus!" },
-          currentRect: { x: 100, y: 100, width: 280, height: 180 },
-        });
-      }}>
-        Add
+      <button
+        onClick={() => {
+          addReactNode({
+            id: "revenue-card",
+            component: DashboardCard,
+            props: { title: "Revenue", value: "$42,000" },
+            currentRect: { x: 100, y: 100, width: 300, height: 200 },
+          });
+        }}
+      >
+        Add Card
       </button>
-      <button onClick={() => updateReactNode("my-card", { title: "Updated!" })}>
-        Update
+      <button onClick={() => updateReactNode("revenue-card", { value: "$58,000" })}>
+        Update Value
       </button>
-      <button onClick={() => removeReactNode("my-card")}>
-        Remove
-      </button>
+      <button onClick={() => removeReactNode("revenue-card")}>Remove Card</button>
     </div>
   );
 }
 
-function MyCard({ title }: { title: string }) {
+interface DashboardCardProps {
+  title: string;
+  value: string;
+}
+
+function DashboardCard({ title, value }: DashboardCardProps) {
   return (
-    <div style={{ padding: 24, background: "#6366f1", borderRadius: 12, color: "#fff", height: "100%" }}>
-      <h2>{title}</h2>
+    <div
+      style={{
+        padding: 24,
+        background: "#1e293b",
+        borderRadius: 12,
+        color: "#e2e8f0",
+        height: "100%",
+      }}
+    >
+      <h3>{title}</h3>
+      <p style={{ fontSize: 32, fontWeight: 700 }}>{value}</p>
     </div>
   );
 }

@@ -67,13 +67,11 @@ The Flat String Bridge guarantees that exported HTML is **completely clean** —
 
 ---
 
-## Non-Functional Requirements
+## Technical Invariants
 
-These invariants must be maintained across all SDK development:
+These core constraints must be maintained across all SDK development. For full implementation details, see the [Developer Guidelines](/architecture/guidelines):
 
 1. **Zero Runtime Dependencies** — Pure vanilla TypeScript, ESM output only
 2. **Strict Styling Isolation** — SDK wrapper styles remain inside the Shadow Root
-3. **Pristine Flat String Bridge** — Exported HTML stripped of all SDK markers
-4. **Throttled Redraws** — Canvas repaints use `requestAnimationFrame` scheduling
-5. **Coordinate Clarity** — Screen space vs. canvas space conversions must be explicit
-6. **Framework Independence** — No React, Vue, Svelte, or other UI framework dependencies
+3. **Pristine Flat String Bridge** — Exported HTML is completely stripped of all SDK markers
+4. **rAF-Throttled Redraws** — Canvas overlay repaints are scheduled via `requestAnimationFrame`

@@ -69,8 +69,8 @@ export class SpacingHandler implements InteractionHandler {
       (targetEl === this.ctx.lastPointerDownTarget || (this.ctx.lastPointerDownTarget as Node).contains(targetEl) || targetEl.contains(this.ctx.lastPointerDownTarget as Node));
     const isDoubleClick = (now - this.ctx.lastPointerDownTime < 350) && (
       hitNodeId !== null &&
-      this.ctx.lastPointerDownId === hitNodeId &&
-      isSameTarget
+      this.ctx.lastPointerDownId !== null &&
+      (hitNodeId === this.ctx.lastPointerDownId || isSameTarget || this.ctx.tree.isAncestor(this.ctx.lastPointerDownId, hitNodeId))
     );
 
     if (isDoubleClick) return false;

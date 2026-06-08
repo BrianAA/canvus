@@ -11,31 +11,13 @@ React bindings for the [Canvus SDK](/getting-started) — mount live React compo
 - **`addReactNode()`** — Mount live React components directly on the canvas
 - **`onReactNodeCommit`** — Structured commit callbacks for React nodes (replaces raw HTML output)
 
-## Architecture
-
-`@canvus/react` is a **leaf package** — it depends on `@canvus/core`, but core knows nothing about it.
-
-```
-┌─────────────────────────────────────────────┐
-│            Your React Application           │
-├─────────────────────────────────────────────┤
-│           @canvus/react                     │
-│  <Canvus />, useCanvus(), addReactNode()    │
-├─────────────────────────────────────────────┤
-│           @canvus/core                      │
-│  Workspace, ShadowMount, OverlayRenderer    │
-└─────────────────────────────────────────────┘
-```
-
-**Zero core changes.** The React package orchestrates `@canvus/core`'s existing public API — creating empty shell nodes via `addNode()`, then mounting React components into them using `createRoot()`. The core's `ResizeObserver` automatically detects when React renders content and updates layout measurements.
-
 ## When to Use
 
-| Use Case | Package |
-|---|---|
-| Vanilla TypeScript / any framework | `@canvus/core` only |
-| React application with HTML nodes | `@canvus/core` + `@canvus/react` |
-| React components on the canvas | `@canvus/core` + `@canvus/react` |
+| Use Case                           | Package                          |
+| ---------------------------------- | -------------------------------- |
+| Vanilla TypeScript / any framework | `@canvus/core` only              |
+| React application with HTML nodes  | `@canvus/core` + `@canvus/react` |
+| React components on the canvas     | `@canvus/core` + `@canvus/react` |
 | Both HTML and React nodes together | `@canvus/core` + `@canvus/react` |
 
 ## Key Design Decisions

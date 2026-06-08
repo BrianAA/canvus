@@ -19,6 +19,7 @@ export class SelectionHandler implements InteractionHandler {
   private _marqueeStartCanvas: Vec2 | null = null;
   private _marqueeCurrentCanvas: Vec2 | null = null;
   private readonly _preMarqueeSelectedIds = new Set<string>();
+  private _marqueeEnteredContainerId: string | null = null;
 
   constructor(ctx: WorkspaceContext) {
     this.ctx = ctx;
@@ -178,6 +179,7 @@ export class SelectionHandler implements InteractionHandler {
         this.ctx.updateBreadcrumb();
       }
 
+      this._marqueeEnteredContainerId = this.ctx.enteredContainerId;
       this._preMarqueeSelectedIds.clear();
       for (const id of this.ctx.selectedIds) {
         this._preMarqueeSelectedIds.add(id);
@@ -203,6 +205,7 @@ export class SelectionHandler implements InteractionHandler {
       const selectableNodes = this.ctx.getOrderedNodeList();
       const currentMarqueeSelection = new Set<string>();
 
+      const scopeId = this._marqueeEnteredContainerId;
       for (const node of selectableNodes) {
         if (!node.currentRect) continue;
 
@@ -213,8 +216,8 @@ export class SelectionHandler implements InteractionHandler {
         if (this.ctx.isNodeLocked(node.id)) continue;
 
         // Scoping constraint
-        if (this.ctx.enteredContainerId !== null) {
-          if (treeNode.parentId !== this.ctx.enteredContainerId) continue;
+        if (scopeId !== null) {
+          if (treeNode.parentId !== scopeId) continue;
         } else {
           if (treeNode.parentId !== null) continue;
         }
@@ -252,6 +255,9 @@ export class SelectionHandler implements InteractionHandler {
       this._marqueeStartCanvas = null;
       this._marqueeCurrentCanvas = null;
       this._preMarqueeSelectedIds.clear();
+      // Restore entered container scope
+      this.ctx.enteredContainerId = this._marqueeEnteredContainerId;
+      this.ctx.updateBreadcrumb();
     }
 
     this.ctx.guides = [];
@@ -272,5 +278,6 @@ export class SelectionHandler implements InteractionHandler {
     this._marqueeStartCanvas = null;
     this._marqueeCurrentCanvas = null;
     this._preMarqueeSelectedIds.clear();
+    this._marqueeEnteredContainerId = null;
   }
 }

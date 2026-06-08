@@ -2,21 +2,18 @@
 
 When extending or writing code for Canvus, adhere to these rules to maintain codebase integrity and consistency.
 
----
+## Core Constraints
 
-## 1. Framework Independence
+Many of our core architecture constraints are defined in [Design Philosophy & Goals](/overview/goals). When developing the SDK:
 
-Do not introduce React, Vue, Svelte, or other UI framework dependencies. Write clean, vanilla, highly optimized TypeScript.
-
-import { Callout } from 'nextra/components'
-
-<Callout type="warning">
-  The SDK must remain a **zero-dependency** vanilla TypeScript library. Any framework-specific code belongs in the host application, not the SDK.
-</Callout>
+- **Framework Independence**: Ensure the SDK core remains 100% vanilla TypeScript. No React, Vue, Svelte, or other UI framework dependencies are permitted.
+- **Strict Styling Isolation**: Never apply styles directly inside `ShadowMount` that could bleed or pollute the host. All reset rules belong in `SHADOW_RESET_CSS`.
+- **Pristine Flat String Exports**: Any new wrapper classes, metadata attributes, or alignment markers must be filtered out in `ShadowMount.extractHTML` to ensure the consumer receives clean user markup.
+- **rAF-Throttled Rendering**: Canvas overlay drawings must never run synchronously; queue them on the next animation frame to prevent redraw bottlenecks.
 
 ---
 
-## 2. Coordinate Clarity
+## Coordinate Space Clarity
 
 Two coordinate systems exist in the workspace:
 
@@ -25,55 +22,24 @@ Two coordinate systems exist in the workspace:
 | **Screen space** | Client pixels (`clientX`/`clientY`) | Raw mouse events, DOM overlay alignments |
 | **Canvas space (World)** | Scaled/translated viewport units | `NodeTree` caches, bounding boxes (`Rect`), snapping, drawing |
 
-Always use `screenToCanvas` and `canvasToScreen` from `matrix.ts` for conversions. **Never mix coordinate spaces.**
+Use `screenToCanvas` and `canvasToScreen` from `matrix.ts` for all conversions. **Never mix coordinate spaces.**
 
 ---
 
-## 3. Strict Styling Isolation
+## Geometry and Tree Synchronization
 
-Never apply styles directly inside `ShadowMount` that could bleed or pollute the host. Use `SHADOW_RESET_CSS` inside `shadow-mount.ts` to reset the mount's environment.
-
----
-
-## 4. Geometry and Tree Synchronization
-
-- **Never mutate** `parentId` or `childIds` of a node directly
-- Always use the mutation APIs in `NodeTree` (`addNode`, `removeNode`, `reparentNode`, `reorderChild`)
-- When mutating DOM structures (e.g., reparenting), update **both** the `ShadowMount` DOM tree wrappers and the `NodeTree` model
+- **Never mutate** `parentId` or `childIds` of a node directly. Always use the mutation APIs in `NodeTree` (`addNode`, `removeNode`, `reparentNode`, `reorderChild`).
+- When mutating DOM structures (e.g., reparenting), update **both** the `ShadowMount` DOM tree wrappers and the `NodeTree` model.
 
 ---
 
-## 5. Minimize Layout Thrashing
+## Minimize Layout Thrashing
 
-- Avoid calling `getBoundingClientRect()` repeatedly in hot loops
-- Use cached values from `currentRect` inside `WebHTMLNode` whenever possible
-- Use `suppressObserver` flags in `ShadowMount` during programmatic node manipulations to avoid observer feedback loops
-
----
-
-## 6. Pristine Flat String Exports
-
-Ensure any new wrapper classes, metadata attributes, or alignment markers are properly cleaned and excluded from `ShadowMount.extractHTML` so the consumer receives completely clean user markup.
+- Avoid calling `getBoundingClientRect()` repeatedly in hot loops. Use cached values from `currentRect` inside `WebHTMLNode` whenever possible.
+- Use `suppressObserver` flags in `ShadowMount` during programmatic node manipulations to avoid observer feedback loops.
 
 ---
 
-## 7. rAF-Throttled Rendering
+## Local Development
 
-When `Workspace.render()` is called:
-- Queue a redraw pass for the next animation frame
-- Do not execute canvas draws synchronously
-- Multiple mutations within a single tick render as a single redraw
-
----
-
-## 8. Local Development
-
-To view changes in real-time:
-
-1. Run `npm run build` to compile the TypeScript sources
-2. Run `npm run demo` to host the test workbench locally (`http://localhost:3000`)
-3. The demo workspace allows you to test:
-   - Multi-direction panning and cursor-anchored zooming
-   - Node resizing, flow reflow, alignment snapping guides
-   - Display style hot-swapping (Flexbox, CSS Grid, block layouts)
-   - The flat string bridge output logs
+For details on setting up the contributor workflow and launching the local Dev Workbench, see the [Installation & Setup](/getting-started/installation) guide.
