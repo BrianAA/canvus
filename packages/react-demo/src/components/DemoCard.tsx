@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 // ── Variant Styles ──────────────────────────────────────────
 
@@ -43,6 +43,11 @@ export function DemoCard({
   variant = "primary",
 }: DemoCardProps) {
   const [localCount, setLocalCount] = useState(count);
+
+  useEffect(() => {
+    setLocalCount(count);
+  }, [count]);
+
   const styles = VARIANT_STYLES[variant] ?? VARIANT_STYLES.primary;
 
   const handleClick = useCallback((e: React.MouseEvent) => {
