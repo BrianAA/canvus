@@ -119,57 +119,63 @@ export interface ImportResultLog {
   scriptsExecuted: { src?: string; codeLength: number; status: "scoped-executed" }[];
 }
 
-/**
- * Imports an HTML document into a Canvus workspace.
- *
- * Philosophy: "Let the browser handle it."
- * - CSS is injected AS-IS with zero processing (no @property extraction,
- *   no @scope desugaring, no selector rewriting).
- * - The SDK's `injectCSS` only does the minimal `:root`/`body`/`html` → `:host`
- *   rewrite needed for Shadow DOM base styles.
- * - Each top-level HTML block is ONE root node on the canvas.
- * - Children are never registered as separate workspace nodes — the browser
- *   handles all internal layout, selectors, and rendering natively.
- */
-export async function importHTMLDocument(
-  workspace: Workspace,
-  htmlString: string,
-  options: ImportHTMLOptions = {},
-): Promise<ImportResultLog> {
-  let baseUrl = options.baseUrl;
-  if (baseUrl && !baseUrl.startsWith("http://") && !baseUrl.startsWith("https://") && !baseUrl.startsWith("file://")) {
-    baseUrl = "file://" + (baseUrl.startsWith("/") ? "" : "/") + baseUrl.replace(/\\/g, "/");
+function injectOrExecuteScript(
+  script: HTMLScriptElement,
+  baseUrl: string | undefined,
+  shadowRoot: Node,
+  scriptsLog: ImportResultLog["scriptsExecuted"],
+  workspace?: Workspace,
+  useScopedExecution: boolean = false,
+): void {
+  const src = script.getAttribute("src");
+  if (src) {
+    const resolvedSrc = resolveUrl(src, baseUrl);
+    const newScript = document.createElement("script");
+    for (const attr of Array.from(script.attributes)) {
+      newScript.setAttribute(attr.name, attr.value);
+    }
+    newScript.setAttribute("src", resolvedSrc);
+    shadowRoot.appendChild(newScript);
+    scriptsLog.push({ src: src, codeLength: 0, status: "scoped-executed" });
+  } else {
+    const code = script.textContent || "";
+    if (useScopedExecution && workspace) {
+      workspace.getShadowMount().executeScopedScript(code);
+    } else {
+      const newScript = document.createElement("script");
+      newScript.textContent = code;
+      shadowRoot.appendChild(newScript);
+    }
+    scriptsLog.push({ codeLength: code.length, status: "scoped-executed" });
   }
+}
 
-  const externalStylesheetsLog: ImportResultLog["externalStylesheets"] = [];
-  const scriptsLog: ImportResultLog["scriptsExecuted"] = [];
-  let styleTagsCount = 0;
-
-  // Clean up any leftover extracted properties from the old importer
+function cleanOldExtractedStyleTags(): void {
   const oldExtracted = document.querySelectorAll("style[data-canvus-extracted-properties]");
   for (const el of Array.from(oldExtracted)) {
     el.remove();
   }
+}
 
-  // 1. Clear Workspace if requested
-  if (options.clearWorkspace !== false) {
+function clearWorkspaceNodes(workspace: Workspace, clearWorkspace?: boolean): void {
+  if (clearWorkspace !== false) {
     workspace.deselectAll();
     const roots = workspace.getNodeTree().getRoots();
     for (const root of roots) {
       workspace.removeNode(root.id);
     }
   }
+}
 
-  // 2. Parse HTML string
-  const parser = new DOMParser();
-  const parsedDoc = parser.parseFromString(htmlString, "text/html");
-
-  // 3. Extract and Inject Stylesheets
-  //    CSS goes straight to the shadow DOM untouched, EXCEPT for @property rules.
-  //    @property doesn't work inside Shadow DOM <style> elements (Chromium limitation) —
-  //    we extract them to document.head so they register globally and cascade in.
+async function extractAndInjectStyles(
+  workspace: Workspace,
+  parsedDoc: Document,
+  baseUrl: string | undefined,
+  externalStylesheetsLog: ImportResultLog["externalStylesheets"],
+): Promise<number> {
   const styleTags = parsedDoc.querySelectorAll("style");
   const globalProperties: string[] = [];
+  let styleTagsCount = 0;
 
   for (const style of Array.from(styleTags)) {
     let rawCSS = style.textContent || "";
@@ -214,40 +220,17 @@ export async function importHTMLDocument(
     }
   }
 
-  // 4. Extract and inject head-level scripts
-  const headScripts = parsedDoc.head ? parsedDoc.head.querySelectorAll("script") : [];
-  const shadowRoot = workspace.getShadowMount().getShadowRoot();
-  for (const script of Array.from(headScripts)) {
-    const src = script.getAttribute("src");
-    if (src) {
-      const resolvedSrc = resolveUrl(src, baseUrl);
-      const newScript = document.createElement("script");
-      for (const attr of Array.from(script.attributes)) {
-        newScript.setAttribute(attr.name, attr.value);
-      }
-      newScript.setAttribute("src", resolvedSrc);
-      shadowRoot.appendChild(newScript);
-      scriptsLog.push({ src: src, codeLength: 0, status: "scoped-executed" });
-    } else {
-      const code = script.textContent || "";
-      const newScript = document.createElement("script");
-      newScript.textContent = code;
-      shadowRoot.appendChild(newScript);
-      scriptsLog.push({ codeLength: code.length, status: "scoped-executed" });
-    }
-  }
+  return styleTagsCount;
+}
 
-  // 5. Process body — ONE root node per top-level element
-  const body = parsedDoc.body;
-  if (!body) {
-    return {
-      filePath: baseUrl,
-      styleTagsCount,
-      externalStylesheets: externalStylesheetsLog,
-      scriptsExecuted: scriptsLog
-    };
-  }
-
+function processBodyElements(
+  workspace: Workspace,
+  body: HTMLElement,
+  shadowRoot: Node,
+  baseUrl: string | undefined,
+  defaultPageWidth: number,
+  scriptsLog: ImportResultLog["scriptsExecuted"],
+): void {
   // Pre-mark any element containing a script tag as having JS behavior
   const allElements = body.querySelectorAll("*");
   for (const el of Array.from(allElements)) {
@@ -280,7 +263,6 @@ export async function importHTMLDocument(
 
   // Wrap each top-level element in a canvas-positioned wrapper
   // and append to shadow DOM — no child registration
-  const defaultPageWidth = options.defaultPageWidth ?? 1200;
   let currentY = 0;
 
   for (const el of topLevelElements) {
@@ -336,21 +318,60 @@ export async function importHTMLDocument(
 
   // Run global body scripts
   for (const script of globalBodyScripts) {
-    const src = script.getAttribute("src");
-    if (src) {
-      const resolvedSrc = resolveUrl(src, baseUrl);
-      const newScript = document.createElement("script");
-      for (const attr of Array.from(script.attributes)) {
-        newScript.setAttribute(attr.name, attr.value);
-      }
-      newScript.setAttribute("src", resolvedSrc);
-      shadowRoot.appendChild(newScript);
-      scriptsLog.push({ src: src, codeLength: 0, status: "scoped-executed" });
-    } else {
-      const code = script.textContent || "";
-      workspace.getShadowMount().executeScopedScript(code);
-      scriptsLog.push({ codeLength: code.length, status: "scoped-executed" });
-    }
+    injectOrExecuteScript(script, baseUrl, shadowRoot, scriptsLog, workspace, true);
+  }
+}
+
+/**
+ * Imports an HTML document into a Canvus workspace.
+ *
+ * Philosophy: "Let the browser handle it."
+ * - CSS is injected AS-IS with zero processing (no @property extraction,
+ *   no @scope desugaring, no selector rewriting).
+ * - The SDK's `injectCSS` only does the minimal `:root`/`body`/`html` → `:host`
+ *   rewrite needed for Shadow DOM base styles.
+ * - Each top-level HTML block is ONE root node on the canvas.
+ * - Children are never registered as separate workspace nodes — the browser
+ *   handles all internal layout, selectors, and rendering natively.
+ */
+export async function importHTMLDocument(
+  workspace: Workspace,
+  htmlString: string,
+  options: ImportHTMLOptions = {},
+): Promise<ImportResultLog> {
+  let baseUrl = options.baseUrl;
+  if (baseUrl && !baseUrl.startsWith("http://") && !baseUrl.startsWith("https://") && !baseUrl.startsWith("file://")) {
+    baseUrl = "file://" + (baseUrl.startsWith("/") ? "" : "/") + baseUrl.replace(/\\/g, "/");
+  }
+
+  const externalStylesheetsLog: ImportResultLog["externalStylesheets"] = [];
+  const scriptsLog: ImportResultLog["scriptsExecuted"] = [];
+
+  // Clean up any leftover extracted properties from the old importer
+  cleanOldExtractedStyleTags();
+
+  // 1. Clear Workspace if requested
+  clearWorkspaceNodes(workspace, options.clearWorkspace);
+
+  // 2. Parse HTML string
+  const parser = new DOMParser();
+  const parsedDoc = parser.parseFromString(htmlString, "text/html");
+
+  // 3. Extract and Inject Stylesheets
+  const styleTagsCount = await extractAndInjectStyles(workspace, parsedDoc, baseUrl, externalStylesheetsLog);
+
+  // 4. Extract and inject head-level scripts
+  const headScripts = parsedDoc.head ? parsedDoc.head.querySelectorAll("script") : [];
+  const shadowRoot = workspace.getShadowMount().getShadowRoot();
+  for (const script of Array.from(headScripts)) {
+    injectOrExecuteScript(script, baseUrl, shadowRoot, scriptsLog, workspace, false);
+  }
+
+  // 5. Process body — ONE root node per top-level element
+  const body = parsedDoc.body;
+  if (body) {
+    const defaultPageWidth = options.defaultPageWidth ?? 1200;
+    processBodyElements(workspace, body, shadowRoot, baseUrl, defaultPageWidth, scriptsLog);
   }
 
   return {
