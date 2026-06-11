@@ -127,9 +127,11 @@ function PropField({
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setLocalValue(e.target.value);
+      const val = e.target.value;
+      setLocalValue(val);
+      onChange(val);
     },
-    [],
+    [onChange],
   );
 
   const handleBlur = useCallback(() => {
