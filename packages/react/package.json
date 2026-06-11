@@ -1,6 +1,6 @@
 {
   "name": "@canvus/react",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "React bindings for the Canvus visual layout SDK",
   "type": "module",
   "main": "dist/index.js",
@@ -22,7 +22,7 @@
     "react-dom": "^18 || ^19"
   },
   "devDependencies": {
-    "@canvus/core": ">=0.1.0",
+    "@canvus/core": "file:../..",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "react": "^18.0.0",

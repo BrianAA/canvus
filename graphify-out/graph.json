@@ -3460,7 +3460,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_drop_zone",
-      "community": 4,
+      "community": 9,
       "norm_label": "drop-zone.ts"
     },
     {
@@ -3470,7 +3470,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_drop_zone_insertionindicator",
-      "community": 4,
+      "community": 9,
       "norm_label": "insertionindicator"
     },
     {
@@ -3490,7 +3490,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "src_drop_zone_finddroptarget",
-      "community": 4,
+      "community": 9,
       "norm_label": "finddroptarget()"
     },
     {
@@ -3500,7 +3500,7 @@
       "source_location": "L307",
       "_origin": "ast",
       "id": "src_drop_zone_getgridspan",
-      "community": 4,
+      "community": 9,
       "norm_label": "getgridspan()"
     },
     {
@@ -3610,7 +3610,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "handlers_command_handler",
-      "community": 11,
+      "community": 32,
       "norm_label": "command.handler.ts"
     },
     {
@@ -3620,7 +3620,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "handlers_command_handler_matchesshortcut",
-      "community": 3,
+      "community": 32,
       "norm_label": "matchesshortcut()"
     },
     {
@@ -3630,7 +3630,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler",
-      "community": 3,
+      "community": 32,
       "norm_label": "commandhandler"
     },
     {
@@ -3640,7 +3640,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_constructor",
-      "community": 3,
+      "community": 32,
       "norm_label": ".constructor()"
     },
     {
@@ -3650,7 +3650,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_onkeydown",
-      "community": 3,
+      "community": 32,
       "norm_label": ".onkeydown()"
     },
     {
@@ -3660,7 +3660,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_registercommand",
-      "community": 3,
+      "community": 32,
       "norm_label": ".registercommand()"
     },
     {
@@ -3670,7 +3670,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_registerdefaultcommands",
-      "community": 3,
+      "community": 32,
       "norm_label": ".registerdefaultcommands()"
     },
     {
@@ -3680,7 +3680,7 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_nudgerootnodes",
-      "community": 3,
+      "community": 32,
       "norm_label": ".nudgerootnodes()"
     },
     {
@@ -3690,7 +3690,7 @@
       "source_location": "L153",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_reorderflowchildren",
-      "community": 3,
+      "community": 32,
       "norm_label": ".reorderflowchildren()"
     },
     {
@@ -3700,7 +3700,7 @@
       "source_location": "L225",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_nudgeorreorderselected",
-      "community": 3,
+      "community": 32,
       "norm_label": ".nudgeorreorderselected()"
     },
     {
@@ -3710,7 +3710,7 @@
       "source_location": "L267",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_ungroupselectedorparent",
-      "community": 3,
+      "community": 32,
       "norm_label": ".ungroupselectedorparent()"
     },
     {
@@ -3720,7 +3720,7 @@
       "source_location": "L359",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_wrapselectedinflex",
-      "community": 4,
+      "community": 32,
       "norm_label": ".wrapselectedinflex()"
     },
     {
@@ -3730,7 +3730,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "handlers_drag_handler",
-      "community": 4,
+      "community": 9,
       "norm_label": "drag.handler.ts"
     },
     {
@@ -4010,7 +4010,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "handlers_pan_handler_panhandler_onpointermove",
-      "community": 11,
+      "community": 4,
       "norm_label": ".onpointermove()"
     },
     {
@@ -4180,7 +4180,7 @@
       "source_location": "L446",
       "_origin": "ast",
       "id": "handlers_resize_handler_resizehandler_onpointerup",
-      "community": 4,
+      "community": 20,
       "norm_label": ".onpointerup()"
     },
     {
@@ -4210,7 +4210,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "handlers_selection_handler_selectionhandler",
-      "community": 9,
+      "community": 11,
       "norm_label": "selectionhandler"
     },
     {
@@ -4220,7 +4220,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "handlers_selection_handler_selectionhandler_constructor",
-      "community": 9,
+      "community": 11,
       "norm_label": ".constructor()"
     },
     {
@@ -4230,7 +4230,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "handlers_selection_handler_selectionhandler_ismarqueeselecting",
-      "community": 9,
+      "community": 11,
       "norm_label": ".ismarqueeselecting()"
     },
     {
@@ -4240,7 +4240,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "handlers_selection_handler_selectionhandler_getmarqueerect",
-      "community": 9,
+      "community": 11,
       "norm_label": ".getmarqueerect()"
     },
     {
@@ -4250,7 +4250,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "handlers_selection_handler_selectionhandler_claim",
-      "community": 9,
+      "community": 11,
       "norm_label": ".claim()"
     },
     {
@@ -4260,7 +4260,7 @@
       "source_location": "L198",
       "_origin": "ast",
       "id": "handlers_selection_handler_selectionhandler_onpointermove",
-      "community": 9,
+      "community": 11,
       "norm_label": ".onpointermove()"
     },
     {
@@ -4270,7 +4270,7 @@
       "source_location": "L252",
       "_origin": "ast",
       "id": "handlers_selection_handler_selectionhandler_onpointerup",
-      "community": 9,
+      "community": 11,
       "norm_label": ".onpointerup()"
     },
     {
@@ -4280,7 +4280,7 @@
       "source_location": "L276",
       "_origin": "ast",
       "id": "handlers_selection_handler_selectionhandler_oncancel",
-      "community": 9,
+      "community": 11,
       "norm_label": ".oncancel()"
     },
     {
@@ -4350,7 +4350,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_claim",
-      "community": 17,
+      "community": 11,
       "norm_label": ".claim()"
     },
     {
@@ -4360,7 +4360,7 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_onpointermove",
-      "community": 17,
+      "community": 11,
       "norm_label": ".onpointermove()"
     },
     {
@@ -4370,7 +4370,7 @@
       "source_location": "L290",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_onpointerup",
-      "community": 17,
+      "community": 11,
       "norm_label": ".onpointerup()"
     },
     {
@@ -4510,7 +4510,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "src_layout_detectlayout",
-      "community": 4,
+      "community": 32,
       "norm_label": "detectlayout()"
     },
     {
@@ -4520,7 +4520,7 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "src_layout_getflowaxis",
-      "community": 4,
+      "community": 32,
       "norm_label": "getflowaxis()"
     },
     {
@@ -4560,7 +4560,7 @@
       "source_location": "L255",
       "_origin": "ast",
       "id": "src_layout_getgridcellat",
-      "community": 4,
+      "community": 9,
       "norm_label": "getgridcellat()"
     },
     {
@@ -4570,7 +4570,7 @@
       "source_location": "L304",
       "_origin": "ast",
       "id": "src_layout_getgridarearect",
-      "community": 4,
+      "community": 9,
       "norm_label": "getgridarearect()"
     },
     {
@@ -4590,7 +4590,7 @@
       "source_location": "L373",
       "_origin": "ast",
       "id": "src_layout_resolvelayoutmode",
-      "community": 4,
+      "community": 32,
       "norm_label": "resolvelayoutmode()"
     },
     {
@@ -4610,7 +4610,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_matrix_screentocanvas",
-      "community": 20,
+      "community": 4,
       "norm_label": "screentocanvas()"
     },
     {
@@ -4650,7 +4650,7 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "src_matrix_applypan",
-      "community": 11,
+      "community": 4,
       "norm_label": "applypan()"
     },
     {
@@ -4660,7 +4660,7 @@
       "source_location": "L212",
       "_origin": "ast",
       "id": "src_matrix_ispointinelement",
-      "community": 4,
+      "community": 9,
       "norm_label": "ispointinelement()"
     },
     {
@@ -4720,7 +4720,7 @@
       "source_location": "L333",
       "_origin": "ast",
       "id": "src_matrix_rectsintersect",
-      "community": 4,
+      "community": 11,
       "norm_label": "rectsintersect()"
     },
     {
@@ -4740,7 +4740,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_renderer_overlaystyle",
-      "community": 32,
+      "community": 17,
       "norm_label": "overlaystyle"
     },
     {
@@ -4810,7 +4810,7 @@
       "source_location": "L243",
       "_origin": "ast",
       "id": "src_renderer_gridoverlayinfo",
-      "community": 4,
+      "community": 17,
       "norm_label": "gridoverlayinfo"
     },
     {
@@ -4850,7 +4850,7 @@
       "source_location": "L311",
       "_origin": "ast",
       "id": "src_renderer_iscontainernode",
-      "community": 17,
+      "community": 11,
       "norm_label": "iscontainernode()"
     },
     {
@@ -4970,7 +4970,7 @@
       "source_location": "L1101",
       "_origin": "ast",
       "id": "src_renderer_computealignmentguides",
-      "community": 20,
+      "community": 9,
       "norm_label": "computealignmentguides()"
     },
     {
@@ -4990,7 +4990,7 @@
       "source_location": "L1245",
       "_origin": "ast",
       "id": "src_renderer_computescreenanchors",
-      "community": 17,
+      "community": 24,
       "norm_label": "computescreenanchors()"
     },
     {
@@ -5000,7 +5000,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shadow_mount",
-      "community": 32,
+      "community": 4,
       "norm_label": "shadow-mount.ts"
     },
     {
@@ -5010,7 +5010,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_shadow_mount_rectchangecallback",
-      "community": 32,
+      "community": 4,
       "norm_label": "rectchangecallback"
     },
     {
@@ -5020,7 +5020,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_shadow_mount_mountednode",
-      "community": 32,
+      "community": 4,
       "norm_label": "mountednode"
     },
     {
@@ -5400,7 +5400,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tree",
-      "community": 4,
+      "community": 32,
       "norm_label": "tree.ts"
     },
     {
@@ -5720,7 +5720,7 @@
       "source_location": "L503",
       "_origin": "ast",
       "id": "src_tree_computeaggregatebounds",
-      "community": 4,
+      "community": 32,
       "norm_label": "computeaggregatebounds()"
     },
     {
@@ -5730,7 +5730,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_types_ts_src_types",
-      "community": 32,
+      "community": 4,
       "norm_label": "types.ts"
     },
     {
@@ -5740,7 +5740,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_types_vec2",
-      "community": 9,
+      "community": 11,
       "norm_label": "vec2"
     },
     {
@@ -5780,7 +5780,7 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "src_types_webhtmlnode",
-      "community": 32,
+      "community": 4,
       "norm_label": "webhtmlnode"
     },
     {
@@ -5800,7 +5800,7 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "src_types_resolvenode",
-      "community": 32,
+      "community": 4,
       "norm_label": "resolvenode()"
     },
     {
@@ -5820,7 +5820,7 @@
       "source_location": "L172",
       "_origin": "ast",
       "id": "src_types_interactionmode",
-      "community": 32,
+      "community": 4,
       "norm_label": "interactionmode"
     },
     {
@@ -5830,7 +5830,7 @@
       "source_location": "L189",
       "_origin": "ast",
       "id": "src_types_draghandlestate",
-      "community": 32,
+      "community": 4,
       "norm_label": "draghandlestate"
     },
     {
@@ -5840,7 +5840,7 @@
       "source_location": "L212",
       "_origin": "ast",
       "id": "src_types_createidledragstate",
-      "community": 32,
+      "community": 4,
       "norm_label": "createidledragstate()"
     },
     {
@@ -5850,7 +5850,7 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "src_types_createdefaultviewport",
-      "community": 32,
+      "community": 4,
       "norm_label": "createdefaultviewport()"
     },
     {
@@ -5870,7 +5870,7 @@
       "source_location": "L236",
       "_origin": "ast",
       "id": "src_types_operationtype",
-      "community": 32,
+      "community": 4,
       "norm_label": "operationtype"
     },
     {
@@ -5880,7 +5880,7 @@
       "source_location": "L246",
       "_origin": "ast",
       "id": "src_types_operation",
-      "community": 32,
+      "community": 17,
       "norm_label": "operation"
     },
     {
@@ -5890,7 +5890,7 @@
       "source_location": "L260",
       "_origin": "ast",
       "id": "src_types_commandshortcut",
-      "community": 32,
+      "community": 4,
       "norm_label": "commandshortcut"
     },
     {
@@ -5910,7 +5910,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_workspace",
-      "community": 32,
+      "community": 17,
       "norm_label": "workspace.ts"
     },
     {
@@ -5920,7 +5920,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_workspace_workspaceconfig",
-      "community": 32,
+      "community": 17,
       "norm_label": "workspaceconfig"
     },
     {
@@ -5930,7 +5930,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "src_workspace_workspacecallbacks",
-      "community": 32,
+      "community": 17,
       "norm_label": "workspacecallbacks"
     },
     {
@@ -6030,7 +6030,7 @@
       "source_location": "L564",
       "_origin": "ast",
       "id": "src_workspace_workspace_getnodetree",
-      "community": 0,
+      "community": 3,
       "norm_label": ".getnodetree()"
     },
     {
@@ -6110,7 +6110,7 @@
       "source_location": "L676",
       "_origin": "ast",
       "id": "src_workspace_workspace_setactivetool",
-      "community": 26,
+      "community": 0,
       "norm_label": ".setactivetool()"
     },
     {
@@ -6120,7 +6120,7 @@
       "source_location": "L681",
       "_origin": "ast",
       "id": "src_workspace_workspace_getactivetool",
-      "community": 26,
+      "community": 0,
       "norm_label": ".getactivetool()"
     },
     {
@@ -6150,7 +6150,7 @@
       "source_location": "L698",
       "_origin": "ast",
       "id": "src_workspace_workspace_getviewport",
-      "community": 0,
+      "community": 24,
       "norm_label": ".getviewport()"
     },
     {
@@ -6360,7 +6360,7 @@
       "source_location": "L938",
       "_origin": "ast",
       "id": "src_workspace_workspace_getnodes",
-      "community": 0,
+      "community": 3,
       "norm_label": ".getnodes()"
     },
     {
@@ -6550,7 +6550,7 @@
       "source_location": "L1285",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlewheel",
-      "community": 0,
+      "community": 4,
       "norm_label": ".handlewheel()"
     },
     {
@@ -6560,7 +6560,7 @@
       "source_location": "L1309",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlepointerdown",
-      "community": 0,
+      "community": 4,
       "norm_label": ".handlepointerdown()"
     },
     {
@@ -6580,7 +6580,7 @@
       "source_location": "L1471",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlepointerup",
-      "community": 0,
+      "community": 4,
       "norm_label": ".handlepointerup()"
     },
     {
@@ -6660,7 +6660,7 @@
       "source_location": "L1857",
       "_origin": "ast",
       "id": "src_workspace_workspace_getcontainerrect",
-      "community": 0,
+      "community": 4,
       "norm_label": ".getcontainerrect()"
     },
     {
@@ -8830,7 +8830,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "architecture_modules",
-      "community": 32,
+      "community": 17,
       "norm_label": "modules.mdx"
     },
     {
@@ -13562,6 +13562,66 @@
       "id": "react_demo_readme_expanding_the_eslint_configuration",
       "community": 95,
       "norm_label": "expanding the eslint configuration"
+    },
+    {
+      "label": "error-context.md",
+      "file_type": "document",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
+      "community": 188,
+      "norm_label": "error-context.md"
+    },
+    {
+      "label": "Instructions",
+      "file_type": "document",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_instructions",
+      "community": 188,
+      "norm_label": "instructions"
+    },
+    {
+      "label": "Test info",
+      "file_type": "document",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_test_info",
+      "community": 188,
+      "norm_label": "test info"
+    },
+    {
+      "label": "Error details",
+      "file_type": "document",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_error_details",
+      "community": 188,
+      "norm_label": "error details"
+    },
+    {
+      "label": "Page snapshot",
+      "file_type": "document",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L25",
+      "_origin": "ast",
+      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_page_snapshot",
+      "community": 188,
+      "norm_label": "page snapshot"
+    },
+    {
+      "label": "Test source",
+      "file_type": "document",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L82",
+      "_origin": "ast",
+      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_test_source",
+      "community": 188,
+      "norm_label": "test source"
     },
     {
       "label": "README.md",
@@ -18869,7 +18929,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Never apply styles directly inside ShadowMount that could bleed or pollute the host. All reset rules belong in SHADOW_RESET_CSS.",
-      "community": 39,
+      "community": 4,
       "norm_label": "strict styling isolation",
       "id": "architecture_guidelines_strict_styling_isolation"
     },
@@ -18883,7 +18943,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Any new wrapper classes, metadata attributes, or alignment markers must be filtered out in ShadowMount.extractHTML to ensure the consumer receives clean user markup.",
-      "community": 39,
+      "community": 4,
       "norm_label": "pristine flat string exports",
       "id": "architecture_guidelines_flat_string_exports"
     },
@@ -18910,7 +18970,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 32,
+      "community": 17,
       "norm_label": "workspace orchestrator pattern",
       "id": "architecture_modules_orchestrator_pattern"
     },
@@ -21112,9 +21172,9 @@
       "source_file": "docs-site/components/CopyMarkdownButton.jsx",
       "source_location": "L226",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_copymarkdownbutton",
-      "target": "components_copymarkdownbutton_htmltomarkdown",
-      "confidence_score": 1.0
+      "target": "components_copymarkdownbutton_htmltomarkdown"
     },
     {
       "relation": "contains",
@@ -21122,9 +21182,9 @@
       "source_file": "docs-site/components/CopyMarkdownButton.jsx",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_copymarkdownbutton",
-      "target": "components_copymarkdownbutton_processnode",
-      "confidence_score": 1.0
+      "target": "components_copymarkdownbutton_processnode"
     },
     {
       "relation": "contains",
@@ -21132,9 +21192,9 @@
       "source_file": "docs-site/components/CopyMarkdownButton.jsx",
       "source_location": "L64",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_copymarkdownbutton",
-      "target": "components_copymarkdownbutton_resolveurl",
-      "confidence_score": 1.0
+      "target": "components_copymarkdownbutton_resolveurl"
     },
     {
       "relation": "imports_from",
@@ -21154,9 +21214,9 @@
       "source_file": "docs-site/components/CopyMarkdownButton.jsx",
       "source_location": "L206",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_copymarkdownbutton_processnode",
-      "target": "components_copymarkdownbutton_resolveurl",
-      "confidence_score": 1.0
+      "target": "components_copymarkdownbutton_resolveurl"
     },
     {
       "relation": "calls",
@@ -21165,9 +21225,9 @@
       "source_file": "docs-site/components/CopyMarkdownButton.jsx",
       "source_location": "L228",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_copymarkdownbutton_htmltomarkdown",
-      "target": "components_copymarkdownbutton_processnode",
-      "confidence_score": 1.0
+      "target": "components_copymarkdownbutton_processnode"
     },
     {
       "relation": "contains",
@@ -24744,9 +24804,9 @@
       "source_file": "src/handlers/command.handler.ts",
       "source_location": "L114",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "handlers_command_handler_commandhandler",
-      "target": "handlers_command_handler_commandhandler_nudgerootnodes",
-      "confidence_score": 1.0
+      "target": "handlers_command_handler_commandhandler_nudgerootnodes"
     },
     {
       "relation": "method",
@@ -24784,9 +24844,9 @@
       "source_file": "src/handlers/command.handler.ts",
       "source_location": "L153",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "handlers_command_handler_commandhandler",
-      "target": "handlers_command_handler_commandhandler_reorderflowchildren",
-      "confidence_score": 1.0
+      "target": "handlers_command_handler_commandhandler_reorderflowchildren"
     },
     {
       "relation": "method",
@@ -24914,9 +24974,9 @@
       "source_file": "src/handlers/command.handler.ts",
       "source_location": "L251",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "handlers_command_handler_commandhandler_nudgeorreorderselected",
-      "target": "handlers_command_handler_commandhandler_nudgerootnodes",
-      "confidence_score": 1.0
+      "target": "handlers_command_handler_commandhandler_nudgerootnodes"
     },
     {
       "relation": "references",
@@ -24925,9 +24985,9 @@
       "source_file": "src/handlers/command.handler.ts",
       "source_location": "L114",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "handlers_command_handler_commandhandler_nudgerootnodes",
-      "target": "src_types_resolvednode",
-      "confidence_score": 1.0
+      "target": "src_types_resolvednode"
     },
     {
       "relation": "calls",
@@ -24936,9 +24996,9 @@
       "source_file": "src/handlers/command.handler.ts",
       "source_location": "L256",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "handlers_command_handler_commandhandler_nudgeorreorderselected",
-      "target": "handlers_command_handler_commandhandler_reorderflowchildren",
-      "confidence_score": 1.0
+      "target": "handlers_command_handler_commandhandler_reorderflowchildren"
     },
     {
       "relation": "calls",
@@ -24969,9 +25029,9 @@
       "source_file": "src/handlers/command.handler.ts",
       "source_location": "L153",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "handlers_command_handler_commandhandler_reorderflowchildren",
-      "target": "src_types_resolvednode",
-      "confidence_score": 1.0
+      "target": "src_types_resolvednode"
     },
     {
       "relation": "calls",
@@ -32551,9 +32611,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1005",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdateclassesop",
-      "target": "src_types_resolvednode",
-      "confidence_score": 1.0
+      "target": "src_types_resolvednode"
     },
     {
       "relation": "references",
@@ -32562,9 +32622,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L961",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdatestyleop",
-      "target": "src_types_resolvednode",
-      "confidence_score": 1.0
+      "target": "src_types_resolvednode"
     },
     {
       "relation": "references",
@@ -32573,9 +32633,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1031",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdatetextop",
-      "target": "src_types_resolvednode",
-      "confidence_score": 1.0
+      "target": "src_types_resolvednode"
     },
     {
       "relation": "imports",
@@ -33277,9 +33337,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1005",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace",
-      "target": "src_workspace_workspace_handleupdateclassesop",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_handleupdateclassesop"
     },
     {
       "relation": "method",
@@ -33287,9 +33347,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L961",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace",
-      "target": "src_workspace_workspace_handleupdatestyleop",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_handleupdatestyleop"
     },
     {
       "relation": "method",
@@ -33297,9 +33357,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1031",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace",
-      "target": "src_workspace_workspace_handleupdatetextop",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_handleupdatetextop"
     },
     {
       "relation": "method",
@@ -34056,9 +34116,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1010",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdateclassesop",
-      "target": "src_workspace_workspace_getcontentroot",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_getcontentroot"
     },
     {
       "relation": "calls",
@@ -34067,9 +34127,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L966",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdatestyleop",
-      "target": "src_workspace_workspace_getcontentroot",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_getcontentroot"
     },
     {
       "relation": "calls",
@@ -34078,9 +34138,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1036",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdatetextop",
-      "target": "src_workspace_workspace_getcontentroot",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_getcontentroot"
     },
     {
       "relation": "calls",
@@ -34243,9 +34303,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L996",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdatestyleop",
-      "target": "src_workspace_workspace_setnodestyles",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_setnodestyles"
     },
     {
       "relation": "calls",
@@ -34551,9 +34611,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1082",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_applyoperation",
-      "target": "src_workspace_workspace_handleupdatestyleop",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_handleupdatestyleop"
     },
     {
       "relation": "calls",
@@ -34562,9 +34622,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L999",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdatestyleop",
-      "target": "src_workspace_workspace_remeasuresubtree",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_remeasuresubtree"
     },
     {
       "relation": "calls",
@@ -34573,9 +34633,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1085",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_applyoperation",
-      "target": "src_workspace_workspace_handleupdateclassesop",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_handleupdateclassesop"
     },
     {
       "relation": "calls",
@@ -34584,9 +34644,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1025",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdateclassesop",
-      "target": "src_workspace_workspace_remeasuresubtree",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_remeasuresubtree"
     },
     {
       "relation": "calls",
@@ -34595,9 +34655,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1088",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_applyoperation",
-      "target": "src_workspace_workspace_handleupdatetextop",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_handleupdatetextop"
     },
     {
       "relation": "calls",
@@ -34606,9 +34666,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1040",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdatetextop",
-      "target": "src_workspace_getdomelementbypath",
-      "confidence_score": 1.0
+      "target": "src_workspace_getdomelementbypath"
     },
     {
       "relation": "calls",
@@ -34617,9 +34677,9 @@
       "source_file": "src/workspace.ts",
       "source_location": "L1045",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_workspace_workspace_handleupdatetextop",
-      "target": "src_workspace_workspace_remeasuresubtree",
-      "confidence_score": 1.0
+      "target": "src_workspace_workspace_remeasuresubtree"
     },
     {
       "relation": "calls",
@@ -41957,6 +42017,56 @@
       "target": "react_demo_readme_react_compiler"
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
+      "target": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_error_details",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
+      "target": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_instructions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
+      "target": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_page_snapshot",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
+      "target": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_test_info",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
+      "source_location": "L82",
+      "weight": 1.0,
+      "source": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
+      "target": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_test_source",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -47566,5 +47676,5 @@
       "source_file": "skills/writing-skills/references/cso/README.md"
     }
   ],
-  "built_at_commit": "bde528a963589657b6b402be26dcad949163ff84"
+  "built_at_commit": "5256ded68e0b8c4d858f6062f4e53823479be209"
 }

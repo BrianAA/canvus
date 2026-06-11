@@ -20,7 +20,7 @@
     "semantic_hash": "a8dab3368ec2b23cbbf4d41bb060e3c5"
   },
   "demo-electron/src/importer.ts": {
-    "mtime": 1781202121.7302077,
+    "mtime": 1781203675.0905006,
     "ast_hash": "283320ff79c5f2cf8db709e7107cabdd",
     "semantic_hash": ""
   },
@@ -30,7 +30,7 @@
     "semantic_hash": "07f28fdb1469cdbf21f844ec3037215f"
   },
   "demo-electron/tests/electron-e2e.spec.ts": {
-    "mtime": 1781201964.255009,
+    "mtime": 1781203675.0908513,
     "ast_hash": "cee1cc687dce4418d20e2acc3dab910b",
     "semantic_hash": ""
   },
@@ -45,7 +45,7 @@
     "semantic_hash": "aec191aa11667e6186a687b467f78c06"
   },
   "docs-site/components/CopyMarkdownButton.jsx": {
-    "mtime": 1781202427.988069,
+    "mtime": 1781203675.0947983,
     "ast_hash": "3c0c0cdf17e3df7792d23331b9e8af67",
     "semantic_hash": ""
   },
@@ -120,9 +120,9 @@
     "semantic_hash": "f21c8d54760dbb969c85582cd9e1ac4d"
   },
   "package.json": {
-    "mtime": 1780885603.641316,
-    "ast_hash": "fb39e08725527cc2d969c29829cd039a",
-    "semantic_hash": "fb39e08725527cc2d969c29829cd039a"
+    "mtime": 1781203715.8579094,
+    "ast_hash": "175f2bbf13588bfda7ad6cc45ba43ca0",
+    "semantic_hash": ""
   },
   "packages/react-demo/eslint.config.js": {
     "mtime": 1780774085.640037,
@@ -130,9 +130,9 @@
     "semantic_hash": "0355276bc79439afe3c53e3a2470ca1e"
   },
   "packages/react-demo/package.json": {
-    "mtime": 1780774085.6403246,
-    "ast_hash": "82656dd68f7aab16d430a26ae9b98d5d",
-    "semantic_hash": "82656dd68f7aab16d430a26ae9b98d5d"
+    "mtime": 1781204069.6386282,
+    "ast_hash": "b1802d5ba16d3becb6cc2d57dd309bad",
+    "semantic_hash": ""
   },
   "packages/react-demo/playwright.config.ts": {
     "mtime": 1780774085.6404495,
@@ -150,9 +150,9 @@
     "semantic_hash": "547253a2910927531aac80af42de59c3"
   },
   "packages/react-demo/src/components/DemoCard.tsx": {
-    "mtime": 1781193300.1783617,
-    "ast_hash": "5106924f5d40b5b9b26070431a34f938",
-    "semantic_hash": "5106924f5d40b5b9b26070431a34f938"
+    "mtime": 1781203620.6883836,
+    "ast_hash": "17a2880bc3968a685d94cd514cb2a19d",
+    "semantic_hash": ""
   },
   "packages/react-demo/src/components/EventLog.tsx": {
     "mtime": 1780774085.6423209,
@@ -160,9 +160,9 @@
     "semantic_hash": "a53cad36bf59757fafed2b193cebd249"
   },
   "packages/react-demo/src/components/PropsInspector.tsx": {
-    "mtime": 1781193300.1793022,
-    "ast_hash": "b05520c38033866b7e8e4a04e2dac6da",
-    "semantic_hash": "b05520c38033866b7e8e4a04e2dac6da"
+    "mtime": 1781203620.6893075,
+    "ast_hash": "2ba47aaf9fabb9448652aeff177a6a87",
+    "semantic_hash": ""
   },
   "packages/react-demo/src/main.tsx": {
     "mtime": 1780774085.6426487,
@@ -170,9 +170,9 @@
     "semantic_hash": "af00d3a85e73fe4c0045d04b903dd390"
   },
   "packages/react-demo/test-results/.last-run.json": {
-    "mtime": 1781193300.1801164,
-    "ast_hash": "f196824657d8858bc7fa44eecbba38b1",
-    "semantic_hash": "f196824657d8858bc7fa44eecbba38b1"
+    "mtime": 1781203620.689912,
+    "ast_hash": "b3aea53630b024c35859b6cba6023a2c",
+    "semantic_hash": ""
   },
   "packages/react-demo/tests/core-regression.spec.ts": {
     "mtime": 1780774085.6430237,
@@ -210,9 +210,9 @@
     "semantic_hash": "bd32b158101e25d484232f440284b439"
   },
   "packages/react/package.json": {
-    "mtime": 1780885608.044633,
-    "ast_hash": "747df3c64a429287661078c65439a5fa",
-    "semantic_hash": "747df3c64a429287661078c65439a5fa"
+    "mtime": 1781204068.5329633,
+    "ast_hash": "e20f643305c4d1a44593229d92128057",
+    "semantic_hash": ""
   },
   "packages/react/src/Canvus.tsx": {
     "mtime": 1780774085.6443741,
@@ -220,9 +220,9 @@
     "semantic_hash": "0c32ebcaf238d4c4c35f19399eddbc45"
   },
   "packages/react/src/context.tsx": {
-    "mtime": 1780774085.6447065,
-    "ast_hash": "3d05653d66a523c73c36e84c5f4df84b",
-    "semantic_hash": "3d05653d66a523c73c36e84c5f4df84b"
+    "mtime": 1781204176.9876873,
+    "ast_hash": "d046466b72059787611230fc56960715",
+    "semantic_hash": ""
   },
   "packages/react/src/index.ts": {
     "mtime": 1780774085.6448627,
@@ -265,7 +265,7 @@
     "semantic_hash": "d99177b5c421c5dbba27e78318e30cfc"
   },
   "src/handlers/command.handler.ts": {
-    "mtime": 1781202867.5068367,
+    "mtime": 1781203675.1444433,
     "ast_hash": "91e0a9bb9b5f02bfaf8913c35b2000d6",
     "semantic_hash": ""
   },
@@ -345,7 +345,7 @@
     "semantic_hash": "6b9a36d1b0c6c5784e1d81bc8d3e9dee"
   },
   "src/workspace.ts": {
-    "mtime": 1781202410.021764,
+    "mtime": 1781203675.1450226,
     "ast_hash": "ffbe318f4f608103ce3ef93c507454d9",
     "semantic_hash": ""
   },
@@ -885,18 +885,18 @@
     "semantic_hash": "9960a24288958394ac50e57ff638b036"
   },
   ".agents/rules/graphify.md": {
-    "mtime": 1781193477.1690533,
+    "mtime": 1781203675.0900033,
     "ast_hash": "f1e53ecc9194573d3c28fc116c743a2e",
     "semantic_hash": "f1e53ecc9194573d3c28fc116c743a2e"
   },
   ".agents/workflows/graphify.md": {
-    "mtime": 1781193477.1693206,
+    "mtime": 1781203675.0901754,
     "ast_hash": "0bc020d491fca99550c1ea3de0a5f862",
     "semantic_hash": "0bc020d491fca99550c1ea3de0a5f862"
   },
-  "demo-electron/test-results/.last-run.json": {
-    "mtime": 1781202902.846739,
-    "ast_hash": "f196824657d8858bc7fa44eecbba38b1",
+  "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md": {
+    "mtime": 1781203620.6903543,
+    "ast_hash": "cfb9962e4be6c1d18c8c7f173d8f7f45",
     "semantic_hash": ""
   }
 }

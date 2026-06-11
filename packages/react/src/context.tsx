@@ -163,7 +163,7 @@ export function CanvusProvider({
           ? (nodeId, element, commit) =>
               onTextEditRequestRef.current?.(nodeId, element, commit)
           : undefined,
-        onNodeAdded: (id) => {
+        onNodeAdded: (id: string) => {
           const deletedMeta = deletedReactNodesRef.current.get(id);
           if (deletedMeta) {
             const container = ws.getContentRoot(id);
@@ -188,7 +188,7 @@ export function CanvusProvider({
             }
           }
         },
-        onNodeRemoved: (id) => {
+        onNodeRemoved: (id: string) => {
           const root = activeRootsRef.current.get(id);
           if (root) {
             try {
@@ -204,7 +204,7 @@ export function CanvusProvider({
             reactNodeMetaRef.current.delete(id);
           }
         },
-        onNodeCloned: (originalId, cloneId) => {
+        onNodeCloned: (originalId: string, cloneId: string) => {
           const meta = reactNodeMetaRef.current.get(originalId);
           if (meta) {
             const container = ws.getContentRoot(cloneId);

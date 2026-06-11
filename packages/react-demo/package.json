@@ -12,7 +12,7 @@
     "test:headed": "playwright test --headed"
   },
   "dependencies": {
-    "@canvus/core": ">=0.1.0",
+    "@canvus/core": "file:../..",
     "@canvus/react": ">=0.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

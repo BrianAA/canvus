@@ -45,9 +45,9 @@
     "semantic_hash": "aec191aa11667e6186a687b467f78c06"
   },
   "docs-site/components/CopyMarkdownButton.jsx": {
-    "mtime": 1780800822.149953,
-    "ast_hash": "861c3c69e4e9f7fb744d6d932a55b8fa",
-    "semantic_hash": "861c3c69e4e9f7fb744d6d932a55b8fa"
+    "mtime": 1781202427.988069,
+    "ast_hash": "3c0c0cdf17e3df7792d23331b9e8af67",
+    "semantic_hash": ""
   },
   "docs-site/next.config.mjs": {
     "mtime": 1779845710.2420182,
@@ -265,9 +265,9 @@
     "semantic_hash": "d99177b5c421c5dbba27e78318e30cfc"
   },
   "src/handlers/command.handler.ts": {
-    "mtime": 1780780694.0872805,
-    "ast_hash": "53447516c4beb0c811cd5138e1876ef4",
-    "semantic_hash": "53447516c4beb0c811cd5138e1876ef4"
+    "mtime": 1781202867.5068367,
+    "ast_hash": "91e0a9bb9b5f02bfaf8913c35b2000d6",
+    "semantic_hash": ""
   },
   "src/handlers/drag.handler.ts": {
     "mtime": 1780798759.0887918,
@@ -345,9 +345,9 @@
     "semantic_hash": "6b9a36d1b0c6c5784e1d81bc8d3e9dee"
   },
   "src/workspace.ts": {
-    "mtime": 1780798817.0661507,
-    "ast_hash": "172c9369f4976a26900486d42c5a478c",
-    "semantic_hash": "172c9369f4976a26900486d42c5a478c"
+    "mtime": 1781202410.021764,
+    "ast_hash": "ffbe318f4f608103ce3ef93c507454d9",
+    "semantic_hash": ""
   },
   "test-import.mjs": {
     "mtime": 1780798617.469364,
@@ -895,7 +895,7 @@
     "semantic_hash": "0bc020d491fca99550c1ea3de0a5f862"
   },
   "demo-electron/test-results/.last-run.json": {
-    "mtime": 1781202153.8705084,
+    "mtime": 1781202902.846739,
     "ast_hash": "f196824657d8858bc7fa44eecbba38b1",
     "semantic_hash": ""
   }

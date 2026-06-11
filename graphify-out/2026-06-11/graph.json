@@ -964,6 +964,36 @@
       "norm_label": "copymarkdownbutton()"
     },
     {
+      "label": "resolveUrl()",
+      "file_type": "code",
+      "source_file": "docs-site/components/CopyMarkdownButton.jsx",
+      "source_location": "L64",
+      "_origin": "ast",
+      "id": "components_copymarkdownbutton_resolveurl",
+      "community": 42,
+      "norm_label": "resolveurl()"
+    },
+    {
+      "label": "processNode()",
+      "file_type": "code",
+      "source_file": "docs-site/components/CopyMarkdownButton.jsx",
+      "source_location": "L76",
+      "_origin": "ast",
+      "id": "components_copymarkdownbutton_processnode",
+      "community": 42,
+      "norm_label": "processnode()"
+    },
+    {
+      "label": "htmlToMarkdown()",
+      "file_type": "code",
+      "source_file": "docs-site/components/CopyMarkdownButton.jsx",
+      "source_location": "L226",
+      "_origin": "ast",
+      "id": "components_copymarkdownbutton_htmltomarkdown",
+      "community": 42,
+      "norm_label": "htmltomarkdown()"
+    },
+    {
       "label": "next.config.mjs",
       "file_type": "code",
       "source_file": "docs-site/next.config.mjs",
@@ -3450,7 +3480,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_drop_zone_droptarget",
-      "community": 4,
+      "community": 17,
       "norm_label": "droptarget"
     },
     {
@@ -3500,7 +3530,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "handlers_clipboard_handler_clipboardhandler",
-      "community": 0,
+      "community": 142,
       "norm_label": "clipboardhandler"
     },
     {
@@ -3510,7 +3540,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "handlers_clipboard_handler_clipboardhandler_constructor",
-      "community": 0,
+      "community": 142,
       "norm_label": ".constructor()"
     },
     {
@@ -3520,7 +3550,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "handlers_clipboard_handler_clipboardhandler_onkeydown",
-      "community": 0,
+      "community": 142,
       "norm_label": ".onkeydown()"
     },
     {
@@ -3530,7 +3560,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "handlers_clipboard_handler_clipboardhandler_deleteselectednode",
-      "community": 0,
+      "community": 142,
       "norm_label": ".deleteselectednode()"
     },
     {
@@ -3540,7 +3570,7 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "handlers_clipboard_handler_clipboardhandler_duplicateselectednode",
-      "community": 0,
+      "community": 142,
       "norm_label": ".duplicateselectednode()"
     },
     {
@@ -3550,7 +3580,7 @@
       "source_location": "L206",
       "_origin": "ast",
       "id": "handlers_clipboard_handler_clipboardhandler_copyselectednode",
-      "community": 0,
+      "community": 142,
       "norm_label": ".copyselectednode()"
     },
     {
@@ -3560,7 +3590,7 @@
       "source_location": "L226",
       "_origin": "ast",
       "id": "handlers_clipboard_handler_clipboardhandler_cutselectednode",
-      "community": 0,
+      "community": 142,
       "norm_label": ".cutselectednode()"
     },
     {
@@ -3570,7 +3600,7 @@
       "source_location": "L232",
       "_origin": "ast",
       "id": "handlers_clipboard_handler_clipboardhandler_pastenode",
-      "community": 0,
+      "community": 142,
       "norm_label": ".pastenode()"
     },
     {
@@ -3590,7 +3620,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "handlers_command_handler_matchesshortcut",
-      "community": 32,
+      "community": 3,
       "norm_label": "matchesshortcut()"
     },
     {
@@ -3600,7 +3630,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler",
-      "community": 32,
+      "community": 3,
       "norm_label": "commandhandler"
     },
     {
@@ -3610,7 +3640,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_constructor",
-      "community": 32,
+      "community": 3,
       "norm_label": ".constructor()"
     },
     {
@@ -3620,7 +3650,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_onkeydown",
-      "community": 32,
+      "community": 3,
       "norm_label": ".onkeydown()"
     },
     {
@@ -3630,7 +3660,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_registercommand",
-      "community": 32,
+      "community": 3,
       "norm_label": ".registercommand()"
     },
     {
@@ -3640,37 +3670,57 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_registerdefaultcommands",
-      "community": 32,
+      "community": 3,
       "norm_label": ".registerdefaultcommands()"
+    },
+    {
+      "label": ".nudgeRootNodes()",
+      "file_type": "code",
+      "source_file": "src/handlers/command.handler.ts",
+      "source_location": "L114",
+      "_origin": "ast",
+      "id": "handlers_command_handler_commandhandler_nudgerootnodes",
+      "community": 3,
+      "norm_label": ".nudgerootnodes()"
+    },
+    {
+      "label": ".reorderFlowChildren()",
+      "file_type": "code",
+      "source_file": "src/handlers/command.handler.ts",
+      "source_location": "L153",
+      "_origin": "ast",
+      "id": "handlers_command_handler_commandhandler_reorderflowchildren",
+      "community": 3,
+      "norm_label": ".reorderflowchildren()"
     },
     {
       "label": ".nudgeOrReorderSelected()",
       "file_type": "code",
       "source_file": "src/handlers/command.handler.ts",
-      "source_location": "L114",
+      "source_location": "L225",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_nudgeorreorderselected",
-      "community": 32,
+      "community": 3,
       "norm_label": ".nudgeorreorderselected()"
     },
     {
       "label": ".ungroupSelectedOrParent()",
       "file_type": "code",
       "source_file": "src/handlers/command.handler.ts",
-      "source_location": "L248",
+      "source_location": "L267",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_ungroupselectedorparent",
-      "community": 32,
+      "community": 3,
       "norm_label": ".ungroupselectedorparent()"
     },
     {
       "label": ".wrapSelectedInFlex()",
       "file_type": "code",
       "source_file": "src/handlers/command.handler.ts",
-      "source_location": "L340",
+      "source_location": "L359",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_wrapselectedinflex",
-      "community": 32,
+      "community": 4,
       "norm_label": ".wrapselectedinflex()"
     },
     {
@@ -3960,7 +4010,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "handlers_pan_handler_panhandler_onpointermove",
-      "community": 118,
+      "community": 11,
       "norm_label": ".onpointermove()"
     },
     {
@@ -4130,7 +4180,7 @@
       "source_location": "L446",
       "_origin": "ast",
       "id": "handlers_resize_handler_resizehandler_onpointerup",
-      "community": 20,
+      "community": 4,
       "norm_label": ".onpointerup()"
     },
     {
@@ -4460,7 +4510,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "src_layout_detectlayout",
-      "community": 0,
+      "community": 4,
       "norm_label": "detectlayout()"
     },
     {
@@ -4530,7 +4580,7 @@
       "source_location": "L342",
       "_origin": "ast",
       "id": "src_layout_getlayoutlabel",
-      "community": 0,
+      "community": 4,
       "norm_label": "getlayoutlabel()"
     },
     {
@@ -4550,7 +4600,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_matrix",
-      "community": 118,
+      "community": 4,
       "norm_label": "matrix.ts"
     },
     {
@@ -4560,7 +4610,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_matrix_screentocanvas",
-      "community": 118,
+      "community": 20,
       "norm_label": "screentocanvas()"
     },
     {
@@ -4570,7 +4620,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "src_matrix_canvastoscreen",
-      "community": 118,
+      "community": 4,
       "norm_label": "canvastoscreen()"
     },
     {
@@ -4580,7 +4630,7 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "src_matrix_calculatezoomanchor",
-      "community": 118,
+      "community": 4,
       "norm_label": "calculatezoomanchor()"
     },
     {
@@ -4590,7 +4640,7 @@
       "source_location": "L152",
       "_origin": "ast",
       "id": "src_matrix_applywheelzoom",
-      "community": 118,
+      "community": 4,
       "norm_label": "applywheelzoom()"
     },
     {
@@ -4600,7 +4650,7 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "src_matrix_applypan",
-      "community": 118,
+      "community": 11,
       "norm_label": "applypan()"
     },
     {
@@ -4620,7 +4670,7 @@
       "source_location": "L234",
       "_origin": "ast",
       "id": "src_matrix_hittestelements",
-      "community": 118,
+      "community": 4,
       "norm_label": "hittestelements()"
     },
     {
@@ -4630,7 +4680,7 @@
       "source_location": "L263",
       "_origin": "ast",
       "id": "src_matrix_getanchorpositions",
-      "community": 118,
+      "community": 4,
       "norm_label": "getanchorpositions()"
     },
     {
@@ -4640,7 +4690,7 @@
       "source_location": "L294",
       "_origin": "ast",
       "id": "src_matrix_clampscale",
-      "community": 118,
+      "community": 4,
       "norm_label": "clampscale()"
     },
     {
@@ -4650,7 +4700,7 @@
       "source_location": "L306",
       "_origin": "ast",
       "id": "src_matrix_lerp",
-      "community": 118,
+      "community": 4,
       "norm_label": "lerp()"
     },
     {
@@ -4660,7 +4710,7 @@
       "source_location": "L318",
       "_origin": "ast",
       "id": "src_matrix_lerpviewport",
-      "community": 118,
+      "community": 4,
       "norm_label": "lerpviewport()"
     },
     {
@@ -4670,7 +4720,7 @@
       "source_location": "L333",
       "_origin": "ast",
       "id": "src_matrix_rectsintersect",
-      "community": 9,
+      "community": 4,
       "norm_label": "rectsintersect()"
     },
     {
@@ -4680,7 +4730,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_renderer",
-      "community": 4,
+      "community": 17,
       "norm_label": "renderer.ts"
     },
     {
@@ -4690,7 +4740,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_renderer_overlaystyle",
-      "community": 4,
+      "community": 32,
       "norm_label": "overlaystyle"
     },
     {
@@ -4700,7 +4750,7 @@
       "source_location": "L108",
       "_origin": "ast",
       "id": "src_renderer_default_style",
-      "community": 4,
+      "community": 17,
       "norm_label": "default_style"
     },
     {
@@ -4710,7 +4760,7 @@
       "source_location": "L155",
       "_origin": "ast",
       "id": "src_renderer_guide",
-      "community": 4,
+      "community": 17,
       "norm_label": "guide"
     },
     {
@@ -4720,7 +4770,7 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "src_renderer_overlayframe",
-      "community": 4,
+      "community": 17,
       "norm_label": "overlayframe"
     },
     {
@@ -4740,7 +4790,7 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "src_renderer_spacingadjusterinfo",
-      "community": 11,
+      "community": 17,
       "norm_label": "spacingadjusterinfo"
     },
     {
@@ -4750,7 +4800,7 @@
       "source_location": "L233",
       "_origin": "ast",
       "id": "src_renderer_layoutbadgeinfo",
-      "community": 4,
+      "community": 17,
       "norm_label": "layoutbadgeinfo"
     },
     {
@@ -4770,7 +4820,7 @@
       "source_location": "L258",
       "_origin": "ast",
       "id": "src_renderer_anchor_order",
-      "community": 4,
+      "community": 17,
       "norm_label": "anchor_order"
     },
     {
@@ -4780,7 +4830,7 @@
       "source_location": "L265",
       "_origin": "ast",
       "id": "src_renderer_anchor_cursors",
-      "community": 4,
+      "community": 17,
       "norm_label": "anchor_cursors"
     },
     {
@@ -4930,7 +4980,7 @@
       "source_location": "L1173",
       "_origin": "ast",
       "id": "src_renderer_computesnappedposition",
-      "community": 4,
+      "community": 9,
       "norm_label": "computesnappedposition()"
     },
     {
@@ -4940,7 +4990,7 @@
       "source_location": "L1245",
       "_origin": "ast",
       "id": "src_renderer_computescreenanchors",
-      "community": 4,
+      "community": 17,
       "norm_label": "computescreenanchors()"
     },
     {
@@ -4950,7 +5000,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_shadow_mount",
-      "community": 17,
+      "community": 32,
       "norm_label": "shadow-mount.ts"
     },
     {
@@ -4960,7 +5010,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_shadow_mount_rectchangecallback",
-      "community": 17,
+      "community": 32,
       "norm_label": "rectchangecallback"
     },
     {
@@ -4970,7 +5020,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_shadow_mount_mountednode",
-      "community": 17,
+      "community": 32,
       "norm_label": "mountednode"
     },
     {
@@ -5000,7 +5050,7 @@
       "source_location": "L224",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_addnode",
-      "community": 17,
+      "community": 1,
       "norm_label": ".addnode()"
     },
     {
@@ -5010,7 +5060,7 @@
       "source_location": "L329",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_addchildnode",
-      "community": 17,
+      "community": 1,
       "norm_label": ".addchildnode()"
     },
     {
@@ -5030,7 +5080,7 @@
       "source_location": "L505",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_trackexistingelement",
-      "community": 17,
+      "community": 1,
       "norm_label": ".trackexistingelement()"
     },
     {
@@ -5060,7 +5110,7 @@
       "source_location": "L684",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_updatemarkup",
-      "community": 17,
+      "community": 1,
       "norm_label": ".updatemarkup()"
     },
     {
@@ -5130,7 +5180,7 @@
       "source_location": "L789",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_measurenode",
-      "community": 17,
+      "community": 1,
       "norm_label": ".measurenode()"
     },
     {
@@ -5140,7 +5190,7 @@
       "source_location": "L802",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_measureall",
-      "community": 17,
+      "community": 1,
       "norm_label": ".measureall()"
     },
     {
@@ -5200,7 +5250,7 @@
       "source_location": "L997",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_measurenodecanvasspace",
-      "community": 17,
+      "community": 1,
       "norm_label": ".measurenodecanvasspace()"
     },
     {
@@ -5290,7 +5340,7 @@
       "source_location": "L1290",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_readwrapperrect",
-      "community": 17,
+      "community": 1,
       "norm_label": ".readwrapperrect()"
     },
     {
@@ -5300,7 +5350,7 @@
       "source_location": "L1298",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_getboundingboxcanvasspace",
-      "community": 17,
+      "community": 1,
       "norm_label": ".getboundingboxcanvasspace()"
     },
     {
@@ -5350,7 +5400,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tree",
-      "community": 3,
+      "community": 4,
       "norm_label": "tree.ts"
     },
     {
@@ -5670,7 +5720,7 @@
       "source_location": "L503",
       "_origin": "ast",
       "id": "src_tree_computeaggregatebounds",
-      "community": 32,
+      "community": 4,
       "norm_label": "computeaggregatebounds()"
     },
     {
@@ -5730,7 +5780,7 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "src_types_webhtmlnode",
-      "community": 17,
+      "community": 32,
       "norm_label": "webhtmlnode"
     },
     {
@@ -5750,7 +5800,7 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "src_types_resolvenode",
-      "community": 0,
+      "community": 32,
       "norm_label": "resolvenode()"
     },
     {
@@ -5800,7 +5850,7 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "src_types_createdefaultviewport",
-      "community": 0,
+      "community": 32,
       "norm_label": "createdefaultviewport()"
     },
     {
@@ -5830,7 +5880,7 @@
       "source_location": "L246",
       "_origin": "ast",
       "id": "src_types_operation",
-      "community": 11,
+      "community": 32,
       "norm_label": "operation"
     },
     {
@@ -5860,7 +5910,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_workspace",
-      "community": 11,
+      "community": 32,
       "norm_label": "workspace.ts"
     },
     {
@@ -5870,7 +5920,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_workspace_workspaceconfig",
-      "community": 4,
+      "community": 32,
       "norm_label": "workspaceconfig"
     },
     {
@@ -5880,7 +5930,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "src_workspace_workspacecallbacks",
-      "community": 11,
+      "community": 32,
       "norm_label": "workspacecallbacks"
     },
     {
@@ -5900,7 +5950,7 @@
       "source_location": "L229",
       "_origin": "ast",
       "id": "src_workspace_workspace_hoveredadjustertype",
-      "community": 11,
+      "community": 0,
       "norm_label": ".hoveredadjustertype()"
     },
     {
@@ -5950,7 +6000,7 @@
       "source_location": "L487",
       "_origin": "ast",
       "id": "src_workspace_workspace_updatemarkup",
-      "community": 17,
+      "community": 0,
       "norm_label": ".updatemarkup()"
     },
     {
@@ -6344,10 +6394,40 @@
       "norm_label": ".extracthtml()"
     },
     {
+      "label": ".handleUpdateStyleOp()",
+      "file_type": "code",
+      "source_file": "src/workspace.ts",
+      "source_location": "L961",
+      "_origin": "ast",
+      "id": "src_workspace_workspace_handleupdatestyleop",
+      "community": 0,
+      "norm_label": ".handleupdatestyleop()"
+    },
+    {
+      "label": ".handleUpdateClassesOp()",
+      "file_type": "code",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1005",
+      "_origin": "ast",
+      "id": "src_workspace_workspace_handleupdateclassesop",
+      "community": 0,
+      "norm_label": ".handleupdateclassesop()"
+    },
+    {
+      "label": ".handleUpdateTextOp()",
+      "file_type": "code",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1031",
+      "_origin": "ast",
+      "id": "src_workspace_workspace_handleupdatetextop",
+      "community": 0,
+      "norm_label": ".handleupdatetextop()"
+    },
+    {
       "label": ".applyOperation()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L965",
+      "source_location": "L1055",
       "_origin": "ast",
       "id": "src_workspace_workspace_applyoperation",
       "community": 0,
@@ -6357,7 +6437,7 @@
       "label": ".addClass()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1081",
+      "source_location": "L1095",
       "_origin": "ast",
       "id": "src_workspace_workspace_addclass",
       "community": 0,
@@ -6367,7 +6447,7 @@
       "label": ".removeClass()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1113",
+      "source_location": "L1127",
       "_origin": "ast",
       "id": "src_workspace_workspace_removeclass",
       "community": 0,
@@ -6377,7 +6457,7 @@
       "label": ".toggleClass()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1145",
+      "source_location": "L1159",
       "_origin": "ast",
       "id": "src_workspace_workspace_toggleclass",
       "community": 0,
@@ -6387,7 +6467,7 @@
       "label": ".measureAll()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1164",
+      "source_location": "L1178",
       "_origin": "ast",
       "id": "src_workspace_workspace_measureall",
       "community": 0,
@@ -6397,7 +6477,7 @@
       "label": ".injectCSS()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1183",
+      "source_location": "L1197",
       "_origin": "ast",
       "id": "src_workspace_workspace_injectcss",
       "community": 0,
@@ -6407,7 +6487,7 @@
       "label": ".injectCSSLink()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1188",
+      "source_location": "L1202",
       "_origin": "ast",
       "id": "src_workspace_workspace_injectcsslink",
       "community": 0,
@@ -6417,7 +6497,7 @@
       "label": ".registerInteractionHandler()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1198",
+      "source_location": "L1212",
       "_origin": "ast",
       "id": "src_workspace_workspace_registerinteractionhandler",
       "community": 0,
@@ -6427,7 +6507,7 @@
       "label": ".registerKeyboardHandler()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1211",
+      "source_location": "L1225",
       "_origin": "ast",
       "id": "src_workspace_workspace_registerkeyboardhandler",
       "community": 0,
@@ -6437,7 +6517,7 @@
       "label": ".emitInteraction()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1224",
+      "source_location": "L1238",
       "_origin": "ast",
       "id": "src_workspace_workspace_emitinteraction",
       "community": 0,
@@ -6447,7 +6527,7 @@
       "label": ".nextElementId()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1232",
+      "source_location": "L1246",
       "_origin": "ast",
       "id": "src_workspace_workspace_nextelementid",
       "community": 0,
@@ -6457,7 +6537,7 @@
       "label": ".dispose()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1239",
+      "source_location": "L1253",
       "_origin": "ast",
       "id": "src_workspace_workspace_dispose",
       "community": 0,
@@ -6467,27 +6547,27 @@
       "label": ".handleWheel()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1271",
+      "source_location": "L1285",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlewheel",
-      "community": 118,
+      "community": 0,
       "norm_label": ".handlewheel()"
     },
     {
       "label": ".handlePointerDown()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1295",
+      "source_location": "L1309",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlepointerdown",
-      "community": 118,
+      "community": 0,
       "norm_label": ".handlepointerdown()"
     },
     {
       "label": ".handlePointerMove()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1335",
+      "source_location": "L1349",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlepointermove",
       "community": 20,
@@ -6497,17 +6577,17 @@
       "label": ".handlePointerUp()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1457",
+      "source_location": "L1471",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlepointerup",
-      "community": 118,
+      "community": 0,
       "norm_label": ".handlepointerup()"
     },
     {
       "label": ".handleKeyDown()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1491",
+      "source_location": "L1505",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlekeydown",
       "community": 0,
@@ -6517,17 +6597,17 @@
       "label": ".registerCommand()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1512",
+      "source_location": "L1526",
       "_origin": "ast",
       "id": "src_workspace_workspace_registercommand",
-      "community": 32,
+      "community": 0,
       "norm_label": ".registercommand()"
     },
     {
       "label": ".handleKeyUp()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1516",
+      "source_location": "L1530",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlekeyup",
       "community": 0,
@@ -6537,7 +6617,7 @@
       "label": ".handleResize()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1534",
+      "source_location": "L1548",
       "_origin": "ast",
       "id": "src_workspace_workspace_handleresize",
       "community": 0,
@@ -6547,7 +6627,7 @@
       "label": ".handleDblClick()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1543",
+      "source_location": "L1557",
       "_origin": "ast",
       "id": "src_workspace_workspace_handledblclick",
       "community": 0,
@@ -6557,7 +6637,7 @@
       "label": ".render()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1712",
+      "source_location": "L1726",
       "_origin": "ast",
       "id": "src_workspace_workspace_render",
       "community": 0,
@@ -6567,7 +6647,7 @@
       "label": ".renderSync()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1722",
+      "source_location": "L1736",
       "_origin": "ast",
       "id": "src_workspace_workspace_rendersync",
       "community": 0,
@@ -6577,17 +6657,17 @@
       "label": ".getContainerRect()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1843",
+      "source_location": "L1857",
       "_origin": "ast",
       "id": "src_workspace_workspace_getcontainerrect",
-      "community": 118,
+      "community": 0,
       "norm_label": ".getcontainerrect()"
     },
     {
       "label": ".syncLazyChildren()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1856",
+      "source_location": "L1870",
       "_origin": "ast",
       "id": "src_workspace_workspace_synclazychildren",
       "community": 0,
@@ -6597,7 +6677,7 @@
       "label": ".registerImmediateChildren()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1886",
+      "source_location": "L1900",
       "_origin": "ast",
       "id": "src_workspace_workspace_registerimmediatechildren",
       "community": 0,
@@ -6607,7 +6687,7 @@
       "label": ".deregisterLazyChildren()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1949",
+      "source_location": "L1963",
       "_origin": "ast",
       "id": "src_workspace_workspace_deregisterlazychildren",
       "community": 0,
@@ -6617,7 +6697,7 @@
       "label": ".getOrderedNodeList()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1977",
+      "source_location": "L1991",
       "_origin": "ast",
       "id": "src_workspace_workspace_getorderednodelist",
       "community": 0,
@@ -6627,7 +6707,7 @@
       "label": ".getTopLevelSelectedIds()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1981",
+      "source_location": "L1995",
       "_origin": "ast",
       "id": "src_workspace_workspace_gettoplevelselectedids",
       "community": 0,
@@ -6637,7 +6717,7 @@
       "label": ".hitTestRadiusHandle()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2003",
+      "source_location": "L2017",
       "_origin": "ast",
       "id": "src_workspace_workspace_hittestradiushandle",
       "community": 20,
@@ -6647,27 +6727,27 @@
       "label": ".getOtherRects()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2045",
+      "source_location": "L2059",
       "_origin": "ast",
       "id": "src_workspace_workspace_getotherrects",
-      "community": 17,
+      "community": 0,
       "norm_label": ".getotherrects()"
     },
     {
       "label": ".getOtherRectsMultiple()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2055",
+      "source_location": "L2069",
       "_origin": "ast",
       "id": "src_workspace_workspace_getotherrectsmultiple",
-      "community": 17,
+      "community": 0,
       "norm_label": ".getotherrectsmultiple()"
     },
     {
       "label": ".remeasureSubtree()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2070",
+      "source_location": "L2084",
       "_origin": "ast",
       "id": "src_workspace_workspace_remeasuresubtree",
       "community": 0,
@@ -6677,7 +6757,7 @@
       "label": ".handleEscapeKey()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2096",
+      "source_location": "L2110",
       "_origin": "ast",
       "id": "src_workspace_workspace_handleescapekey",
       "community": 0,
@@ -6687,7 +6767,7 @@
       "label": ".findSelectableNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2121",
+      "source_location": "L2135",
       "_origin": "ast",
       "id": "src_workspace_workspace_findselectablenode",
       "community": 0,
@@ -6697,7 +6777,7 @@
       "label": ".updateHover()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2159",
+      "source_location": "L2173",
       "_origin": "ast",
       "id": "src_workspace_workspace_updatehover",
       "community": 0,
@@ -6707,7 +6787,7 @@
       "label": ".clearDynamicHover()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2193",
+      "source_location": "L2207",
       "_origin": "ast",
       "id": "src_workspace_workspace_cleardynamichover",
       "community": 0,
@@ -6717,7 +6797,7 @@
       "label": ".setNodeStateClass()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2202",
+      "source_location": "L2216",
       "_origin": "ast",
       "id": "src_workspace_workspace_setnodestateclass",
       "community": 0,
@@ -6727,7 +6807,7 @@
       "label": ".updateBreadcrumb()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2231",
+      "source_location": "L2245",
       "_origin": "ast",
       "id": "src_workspace_workspace_updatebreadcrumb",
       "community": 0,
@@ -6737,7 +6817,7 @@
       "label": ".getMarqueeRect()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2248",
+      "source_location": "L2262",
       "_origin": "ast",
       "id": "src_workspace_workspace_getmarqueerect",
       "community": 0,
@@ -6747,7 +6827,7 @@
       "label": ".computeSpacingAdjusters()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2252",
+      "source_location": "L2266",
       "_origin": "ast",
       "id": "src_workspace_workspace_computespacingadjusters",
       "community": 0,
@@ -6757,7 +6837,7 @@
       "label": ".assertNotDisposed()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2416",
+      "source_location": "L2430",
       "_origin": "ast",
       "id": "src_workspace_workspace_assertnotdisposed",
       "community": 0,
@@ -6767,7 +6847,7 @@
       "label": ".safeSetPointerCapture()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2424",
+      "source_location": "L2438",
       "_origin": "ast",
       "id": "src_workspace_workspace_safesetpointercapture",
       "community": 0,
@@ -6777,17 +6857,17 @@
       "label": "getDOMPath()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2441",
+      "source_location": "L2455",
       "_origin": "ast",
       "id": "src_workspace_getdompath",
-      "community": 11,
+      "community": 0,
       "norm_label": "getdompath()"
     },
     {
       "label": "getDOMElementByPath()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2457",
+      "source_location": "L2471",
       "_origin": "ast",
       "id": "src_workspace_getdomelementbypath",
       "community": 0,
@@ -6797,7 +6877,7 @@
       "label": "isEditableTarget()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2470",
+      "source_location": "L2484",
       "_origin": "ast",
       "id": "src_workspace_iseditabletarget",
       "community": 0,
@@ -8750,7 +8830,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "architecture_modules",
-      "community": 4,
+      "community": 32,
       "norm_label": "modules.mdx"
     },
     {
@@ -10200,7 +10280,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "guides_layout_system",
-      "community": 3,
+      "community": 118,
       "norm_label": "layout-system.mdx"
     },
     {
@@ -10210,7 +10290,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "guides_layout_system_css_layout_selection_system",
-      "community": 3,
+      "community": 118,
       "norm_label": "css layout & selection system"
     },
     {
@@ -10220,7 +10300,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "guides_layout_system_hierarchical_tree_model_nodetree",
-      "community": 3,
+      "community": 118,
       "norm_label": "hierarchical tree model (`nodetree`)"
     },
     {
@@ -10230,7 +10310,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "guides_layout_system_mutation_apis",
-      "community": 3,
+      "community": 118,
       "norm_label": "mutation apis"
     },
     {
@@ -10240,7 +10320,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "guides_layout_system_layout_introspection",
-      "community": 3,
+      "community": 118,
       "norm_label": "layout introspection"
     },
     {
@@ -10250,7 +10330,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "guides_layout_system_display_detection",
-      "community": 3,
+      "community": 118,
       "norm_label": "display detection"
     },
     {
@@ -10260,7 +10340,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "guides_layout_system_spacing_adjusters_margins_paddings",
-      "community": 3,
+      "community": 118,
       "norm_label": "spacing adjusters (margins & paddings)"
     },
     {
@@ -10270,7 +10350,7 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "guides_layout_system_drop_zone_drag_and_drop_insertion",
-      "community": 3,
+      "community": 118,
       "norm_label": "drop zone & drag-and-drop insertion"
     },
     {
@@ -10280,7 +10360,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "guides_layout_system_drop_target_estimation",
-      "community": 3,
+      "community": 118,
       "norm_label": "drop target estimation"
     },
     {
@@ -10290,7 +10370,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "guides_layout_system_figma_style_selection_semantics",
-      "community": 3,
+      "community": 118,
       "norm_label": "figma-style selection semantics"
     },
     {
@@ -10490,7 +10570,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "overview_architecture",
-      "community": 142,
+      "community": 147,
       "norm_label": "architecture.mdx"
     },
     {
@@ -10500,7 +10580,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "overview_architecture_twin_layer_architecture",
-      "community": 142,
+      "community": 147,
       "norm_label": "twin-layer architecture"
     },
     {
@@ -10510,7 +10590,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "overview_architecture_the_two_layers",
-      "community": 142,
+      "community": 147,
       "norm_label": "the two layers"
     },
     {
@@ -10520,7 +10600,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "overview_architecture_projection_mutation_layer_shadow_dom",
-      "community": 142,
+      "community": 147,
       "norm_label": "projection mutation layer (shadow dom)"
     },
     {
@@ -10530,7 +10610,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "overview_architecture_viewport_surface_layer_html5_canvas",
-      "community": 142,
+      "community": 147,
       "norm_label": "viewport surface layer (html5 canvas)"
     },
     {
@@ -10540,7 +10620,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "overview_architecture_why_not_iframes",
-      "community": 142,
+      "community": 147,
       "norm_label": "why not iframes?"
     },
     {
@@ -10560,7 +10640,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "overview_goals_design_philosophy_goals",
-      "community": 16,
+      "community": 187,
       "norm_label": "design philosophy & goals"
     },
     {
@@ -10640,7 +10720,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "overview_goals_product_goals",
-      "community": 16,
+      "community": 187,
       "norm_label": "product goals"
     },
     {
@@ -10650,7 +10730,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "overview_goals_current_milestones_v0_1_x",
-      "community": 16,
+      "community": 187,
       "norm_label": "current milestones (v0.1.x)"
     },
     {
@@ -10660,7 +10740,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "overview_goals_future_roadmap",
-      "community": 16,
+      "community": 187,
       "norm_label": "future roadmap"
     },
     {
@@ -10670,7 +10750,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "overview_goals_technical_invariants",
-      "community": 16,
+      "community": 187,
       "norm_label": "technical invariants"
     },
     {
@@ -18830,7 +18910,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 32,
       "norm_label": "workspace orchestrator pattern",
       "id": "architecture_modules_orchestrator_pattern"
     },
@@ -18960,7 +19040,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 118,
       "norm_label": "hierarchical tree model (nodetree)",
       "id": "guides_layout_system_nodetree"
     },
@@ -18973,7 +19053,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 118,
       "norm_label": "css layout introspection",
       "id": "guides_layout_system_introspection"
     },
@@ -18986,7 +19066,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 118,
       "norm_label": "drop zone slot calculations",
       "id": "guides_layout_system_drop_zones"
     },
@@ -20463,9 +20543,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L153",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer",
-      "target": "src_importer_cleanoldextractedstyletags",
-      "confidence_score": 1.0
+      "target": "src_importer_cleanoldextractedstyletags"
     },
     {
       "relation": "contains",
@@ -20473,9 +20553,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L160",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer",
-      "target": "src_importer_clearworkspacenodes",
-      "confidence_score": 1.0
+      "target": "src_importer_clearworkspacenodes"
     },
     {
       "relation": "contains",
@@ -20483,9 +20563,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L170",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer",
-      "target": "src_importer_extractandinjectstyles",
-      "confidence_score": 1.0
+      "target": "src_importer_extractandinjectstyles"
     },
     {
       "relation": "contains",
@@ -20523,9 +20603,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L122",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer",
-      "target": "src_importer_injectorexecutescript",
-      "confidence_score": 1.0
+      "target": "src_importer_injectorexecutescript"
     },
     {
       "relation": "contains",
@@ -20533,9 +20613,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L226",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer",
-      "target": "src_importer_processbodyelements",
-      "confidence_score": 1.0
+      "target": "src_importer_processbodyelements"
     },
     {
       "relation": "contains",
@@ -20594,9 +20674,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L212",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_extractandinjectstyles",
-      "target": "src_importer_resolveurl",
-      "confidence_score": 1.0
+      "target": "src_importer_resolveurl"
     },
     {
       "relation": "calls",
@@ -20616,9 +20696,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L132",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_injectorexecutescript",
-      "target": "src_importer_resolveurl",
-      "confidence_score": 1.0
+      "target": "src_importer_resolveurl"
     },
     {
       "relation": "calls",
@@ -20638,9 +20718,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L192",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_extractandinjectstyles",
-      "target": "src_importer_resolvecssurls",
-      "confidence_score": 1.0
+      "target": "src_importer_resolvecssurls"
     },
     {
       "relation": "calls",
@@ -20671,9 +20751,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L192",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_extractandinjectstyles",
-      "target": "src_importer_resolvecssimports",
-      "confidence_score": 1.0
+      "target": "src_importer_resolvecssimports"
     },
     {
       "relation": "calls",
@@ -20726,9 +20806,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L273",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_processbodyelements",
-      "target": "src_importer_resolverelativeattributes",
-      "confidence_score": 1.0
+      "target": "src_importer_resolverelativeattributes"
     },
     {
       "relation": "calls",
@@ -20737,9 +20817,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L367",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_importhtmldocument",
-      "target": "src_importer_injectorexecutescript",
-      "confidence_score": 1.0
+      "target": "src_importer_injectorexecutescript"
     },
     {
       "relation": "calls",
@@ -20748,9 +20828,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L321",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_processbodyelements",
-      "target": "src_importer_injectorexecutescript",
-      "confidence_score": 1.0
+      "target": "src_importer_injectorexecutescript"
     },
     {
       "relation": "calls",
@@ -20759,9 +20839,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L351",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_importhtmldocument",
-      "target": "src_importer_cleanoldextractedstyletags",
-      "confidence_score": 1.0
+      "target": "src_importer_cleanoldextractedstyletags"
     },
     {
       "relation": "calls",
@@ -20770,9 +20850,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L354",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_importhtmldocument",
-      "target": "src_importer_clearworkspacenodes",
-      "confidence_score": 1.0
+      "target": "src_importer_clearworkspacenodes"
     },
     {
       "relation": "calls",
@@ -20781,9 +20861,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L361",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_importhtmldocument",
-      "target": "src_importer_extractandinjectstyles",
-      "confidence_score": 1.0
+      "target": "src_importer_extractandinjectstyles"
     },
     {
       "relation": "calls",
@@ -20792,9 +20872,9 @@
       "source_file": "demo-electron/src/importer.ts",
       "source_location": "L374",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_importer_importhtmldocument",
-      "target": "src_importer_processbodyelements",
-      "confidence_score": 1.0
+      "target": "src_importer_processbodyelements"
     },
     {
       "relation": "contains",
@@ -21027,6 +21107,36 @@
       "target": "components_copymarkdownbutton_copymarkdownbutton"
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-site/components/CopyMarkdownButton.jsx",
+      "source_location": "L226",
+      "weight": 1.0,
+      "source": "components_copymarkdownbutton",
+      "target": "components_copymarkdownbutton_htmltomarkdown",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-site/components/CopyMarkdownButton.jsx",
+      "source_location": "L76",
+      "weight": 1.0,
+      "source": "components_copymarkdownbutton",
+      "target": "components_copymarkdownbutton_processnode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-site/components/CopyMarkdownButton.jsx",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "components_copymarkdownbutton",
+      "target": "components_copymarkdownbutton_resolveurl",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -21036,6 +21146,28 @@
       "confidence_score": 1.0,
       "source": "docs_site_theme_config",
       "target": "components_copymarkdownbutton"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-site/components/CopyMarkdownButton.jsx",
+      "source_location": "L206",
+      "weight": 1.0,
+      "source": "components_copymarkdownbutton_processnode",
+      "target": "components_copymarkdownbutton_resolveurl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-site/components/CopyMarkdownButton.jsx",
+      "source_location": "L228",
+      "weight": 1.0,
+      "source": "components_copymarkdownbutton_htmltomarkdown",
+      "target": "components_copymarkdownbutton_processnode",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -24610,6 +24742,16 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/handlers/command.handler.ts",
+      "source_location": "L114",
+      "weight": 1.0,
+      "source": "handlers_command_handler_commandhandler",
+      "target": "handlers_command_handler_commandhandler_nudgerootnodes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/handlers/command.handler.ts",
       "source_location": "L48",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -24635,6 +24777,16 @@
       "confidence_score": 1.0,
       "source": "handlers_command_handler_commandhandler",
       "target": "handlers_command_handler_commandhandler_registerdefaultcommands"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/handlers/command.handler.ts",
+      "source_location": "L153",
+      "weight": 1.0,
+      "source": "handlers_command_handler_commandhandler",
+      "target": "handlers_command_handler_commandhandler_reorderflowchildren",
+      "confidence_score": 1.0
     },
     {
       "relation": "method",
@@ -24754,6 +24906,72 @@
       "confidence_score": 1.0,
       "source": "handlers_command_handler_commandhandler_registerdefaultcommands",
       "target": "handlers_command_handler_commandhandler_registercommand"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/handlers/command.handler.ts",
+      "source_location": "L251",
+      "weight": 1.0,
+      "source": "handlers_command_handler_commandhandler_nudgeorreorderselected",
+      "target": "handlers_command_handler_commandhandler_nudgerootnodes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/handlers/command.handler.ts",
+      "source_location": "L114",
+      "weight": 1.0,
+      "source": "handlers_command_handler_commandhandler_nudgerootnodes",
+      "target": "src_types_resolvednode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/handlers/command.handler.ts",
+      "source_location": "L256",
+      "weight": 1.0,
+      "source": "handlers_command_handler_commandhandler_nudgeorreorderselected",
+      "target": "handlers_command_handler_commandhandler_reorderflowchildren",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/handlers/command.handler.ts",
+      "source_location": "L162",
+      "weight": 1.0,
+      "source": "handlers_command_handler_commandhandler_reorderflowchildren",
+      "target": "src_layout_detectlayout"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/handlers/command.handler.ts",
+      "source_location": "L163",
+      "weight": 1.0,
+      "source": "handlers_command_handler_commandhandler_reorderflowchildren",
+      "target": "src_layout_getflowaxis"
+    },
+    {
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/handlers/command.handler.ts",
+      "source_location": "L153",
+      "weight": 1.0,
+      "source": "handlers_command_handler_commandhandler_reorderflowchildren",
+      "target": "src_types_resolvednode",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -32327,6 +32545,39 @@
       "target": "src_types_resolvednode"
     },
     {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1005",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdateclassesop",
+      "target": "src_types_resolvednode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L961",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdatestyleop",
+      "target": "src_types_resolvednode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1031",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdatetextop",
+      "target": "src_types_resolvednode",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -33019,6 +33270,36 @@
       "confidence_score": 1.0,
       "source": "src_workspace_workspace",
       "target": "src_workspace_workspace_handleresize"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1005",
+      "weight": 1.0,
+      "source": "src_workspace_workspace",
+      "target": "src_workspace_workspace_handleupdateclassesop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L961",
+      "weight": 1.0,
+      "source": "src_workspace_workspace",
+      "target": "src_workspace_workspace_handleupdatestyleop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1031",
+      "weight": 1.0,
+      "source": "src_workspace_workspace",
+      "target": "src_workspace_workspace_handleupdatetextop",
+      "confidence_score": 1.0
     },
     {
       "relation": "method",
@@ -33773,6 +34054,39 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/workspace.ts",
+      "source_location": "L1010",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdateclassesop",
+      "target": "src_workspace_workspace_getcontentroot",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L966",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdatestyleop",
+      "target": "src_workspace_workspace_getcontentroot",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1036",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdatetextop",
+      "target": "src_workspace_workspace_getcontentroot",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
       "source_location": "L1170",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -33921,6 +34235,17 @@
       "confidence_score": 1.0,
       "source": "src_workspace_workspace_applyoperation",
       "target": "src_workspace_workspace_setnodestyles"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L996",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdatestyleop",
+      "target": "src_workspace_workspace_setnodestyles",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -34218,6 +34543,83 @@
       "confidence_score": 1.0,
       "source": "src_workspace_workspace_removeclass",
       "target": "src_workspace_workspace_extracthtml"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1082",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_applyoperation",
+      "target": "src_workspace_workspace_handleupdatestyleop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L999",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdatestyleop",
+      "target": "src_workspace_workspace_remeasuresubtree",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1085",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_applyoperation",
+      "target": "src_workspace_workspace_handleupdateclassesop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1025",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdateclassesop",
+      "target": "src_workspace_workspace_remeasuresubtree",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1088",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_applyoperation",
+      "target": "src_workspace_workspace_handleupdatetextop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1040",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdatetextop",
+      "target": "src_workspace_getdomelementbypath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L1045",
+      "weight": 1.0,
+      "source": "src_workspace_workspace_handleupdatetextop",
+      "target": "src_workspace_workspace_remeasuresubtree",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
