@@ -8,7 +8,7 @@ export type { FlexDirection, FlexWrap, LayoutInfo, ChildSlot, GridTrack, } from 
 export { detectLayout, getFlowAxis, getFlowSign, getLayoutLabel, detectChildSlots, parseGridTracks, } from "./layout.js";
 export type { OverlayStyle, OverlayFrame, LayoutBadgeInfo, GridOverlayInfo, Guide, } from "./renderer.js";
 export { OverlayRenderer, anchorCursor, computeAlignmentGuides, computeSnappedPosition, } from "./renderer.js";
-export type { WorkspaceConfig, WorkspaceCallbacks, } from "./workspace.js";
+export type { WorkspaceConfig, WorkspaceCallbacks, ViewportConfig, } from "./workspace.js";
 export { Workspace } from "./workspace.js";
 export type { DropTarget, InsertionIndicator, } from "./drop-zone.js";
 export { findDropTarget } from "./drop-zone.js";
