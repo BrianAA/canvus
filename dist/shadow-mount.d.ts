@@ -27,6 +27,7 @@ export type RectChangeCallback = (id: string, rect: Rect) => void;
  * on the host element handles the canvas→screen projection.
  */
 export declare class ShadowMount {
+    scaleViewportUnits: boolean;
     /** The host element appended to the user's container. */
     private readonly host;
     /** The open ShadowRoot attached to the host. */
@@ -60,7 +61,7 @@ export declare class ShadowMount {
      * @param onRectChange - Optional callback fired whenever a
      *                       mounted node's bounding rect changes.
      */
-    constructor(container: HTMLElement, onRectChange?: RectChangeCallback);
+    constructor(container: HTMLElement, onRectChange?: RectChangeCallback, scaleViewportUnits?: boolean);
     /**
      * Mounts a `WebHTMLNode` into the shadow tree.
      *
@@ -361,6 +362,10 @@ export declare class ShadowMount {
      * external `onRectChange` callback.
      */
     private handleResizeEntries;
+    updateViewportSize(width: number, height: number): void;
+    translateViewportUnits(cssText: string): string;
+    revertViewportUnits(cssText: string): string;
+    private translateElementStyles;
     /** Throws if `dispose()` has been called. */
     private assertNotDisposed;
 }

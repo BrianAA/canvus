@@ -94,6 +94,7 @@ export {
 export type {
   WorkspaceConfig,
   WorkspaceCallbacks,
+  ViewportConfig,
 } from "./workspace.js";
 
 export { Workspace } from "./workspace.js";

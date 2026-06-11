@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Native Viewport Unit Translation & Scaling**: Introduced a native `viewport` configuration to `WorkspaceConfig` (`ViewportConfig`), dynamically translating and scaling CSS viewport units (`vh`, `vw`) inside the Shadow DOM container relative to a simulated preview frame (canvas card) size rather than the outer window viewport.
+  - Added new `ws.updateViewportSize(width, height)` and `ws.updateViewportConfig(config)` public APIs to programmatically control and update viewport dimensions.
 - **Claim-Based Handler Architecture**: Decomposed the monolithic `Workspace` class into 8 focused event handlers using the claim-based pointer dispatch and keyboard dispatch pattern. Handlers communicate with the Workspace via a defined `WorkspaceContext` interface, keeping the Workspace as a thin orchestrator (~2,400 lines down from 4,875).
   - `PanHandler`: Manages trackpad and middle-mouse spacebar panning.
   - `DrawHandler`: Manages box and text tool drawing previews and node creation.
@@ -35,6 +37,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Marquee selection for multi-node selection via drag rectangle
 
 ### Changed
+- **Inline Style & Stylesheet Viewport Translation**: Intercepted HTML node mounting (`addNode`/`addChildNode`), style changes (`setNodeStyle`/`setNodeStyles`), and CSS injections (`injectStylesheet`/`injectCSS`) to translate `vh` and `vw` units to custom CSS variables (`--canvus-vw`/`--canvus-vh`) targeting the shadow DOM host element.
+- **Pristine HTML Viewport Reversion**: Automatically reverts translated custom variable calculations back to standard viewport units during `extractHTML()` to ensure the returned HTML markup remains clean.
+- **Resize Loop Feedback Prevention**: Integrated a safety check inside the visual resize observer `/v(h|w)\b/i.test(node.rawMarkup)` to prevent root elements utilizing viewport units from triggering infinite resize feedback loops.
 - Spacing Adjuster Bottom Drag: Inverted spacing adjuster drag direction for `padding-bottom` and `margin-bottom` so dragging away from the element center consistently increases values and dragging towards decreases them.
 - Spacing Adjusters Separation: Decoupled spacing adjusters into separate `rect` bounds (for pointer hit-testing handle-bars) and `visualRect` bounds (for drawing exact padding/margin overlays).
 - Refined `NodeTree.isContainer` and `isContainerNode` to inspect tag names in `rawMarkup` to dynamically classify container elements.
@@ -55,6 +60,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Interval-driven reset during text editing: Prevented background intervals (like `updateToggleBtn` in `test-page.html`) from resetting the text and cursor of an active button while the user is actively editing it.
 
 ### Documented
+- Updated `docs-site/pages/sdk/workspace-api.mdx` — documented the new public viewport methods: `updateViewportSize()` and `updateViewportConfig()`.
+- Updated `docs-site/pages/sdk/configuration.mdx` — documented the new `ViewportConfig` and `WorkspaceConfig.viewport` option.
 - Updated `docs-site/pages/getting-started/installation.mdx` — added `npm install @canvus/core` as primary installation method, moved clone-and-build to a secondary "Contributing" section
 - Updated `docs-site/pages/getting-started/quickstart.mdx` — imports now use `@canvus/core` package instead of `./dist/index.js`
 - Updated `docs-site/pages/contributing/development.mdx` — added callout clarifying contributor vs. end-user setup paths

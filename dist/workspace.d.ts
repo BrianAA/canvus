@@ -5,6 +5,14 @@ import type { DropTarget } from "./drop-zone.js";
 import type { Guide, OverlayStyle, SpacingAdjusterType } from "./renderer.js";
 import { OverlayRenderer } from "./renderer.js";
 import type { InteractionHandler, KeyboardHandler, InteractionDetail } from "./handlers/types.js";
+export interface ViewportConfig {
+    /** Width of the viewport (frame/card). */
+    width: number;
+    /** Height of the viewport (frame/card). */
+    height: number;
+    /** Whether to scale viewport units. @default true if viewport is defined */
+    scaleViewportUnits?: boolean;
+}
 /** Configuration options for the workspace. */
 export interface WorkspaceConfig {
     /** Partial overlay style overrides. */
@@ -15,6 +23,8 @@ export interface WorkspaceConfig {
     minResizeSize?: number;
     /** Enable snap-to-align guides during drag/resize. @default true */
     enableSnapGuides?: boolean;
+    /** Optional viewport configuration for scaling relative CSS units (vh, vw). */
+    viewport?: ViewportConfig;
 }
 /** Callback signatures for workspace lifecycle events. */
 export interface WorkspaceCallbacks {
@@ -109,6 +119,7 @@ export declare class Workspace {
     readonly snapThreshold: number;
     readonly minResizeSize: number;
     readonly enableSnapGuides: boolean;
+    viewportConfig?: ViewportConfig;
     private viewport;
     private readonly tree;
     private readonly selectedIds;
@@ -235,6 +246,10 @@ export declare class Workspace {
     setViewport(vp: ViewportMatrix): void;
     /** Resets viewport to 1:1 scale, zero offset. */
     resetViewport(): void;
+    /** Updates the viewport dimensions and re-evaluates viewport units. */
+    updateViewportSize(width: number, height: number): void;
+    /** Updates the viewport configuration and re-evaluates viewport units. */
+    updateViewportConfig(config: Partial<ViewportConfig>): void;
     /** Sets whether the workspace is in Preview Mode (disables editing overlays and events). */
     setPreviewMode(enabled: boolean): void;
     /** Returns whether the workspace is currently in Preview Mode. */

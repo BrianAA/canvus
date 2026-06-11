@@ -88,6 +88,7 @@ const SHADOW_RESET_CSS = `
  */
 export class ShadowMount {
     // ── Private State ───────────────────────────────────────
+    scaleViewportUnits = false;
     /** The host element appended to the user's container. */
     host;
     /** The open ShadowRoot attached to the host. */
@@ -122,8 +123,9 @@ export class ShadowMount {
      * @param onRectChange - Optional callback fired whenever a
      *                       mounted node's bounding rect changes.
      */
-    constructor(container, onRectChange) {
+    constructor(container, onRectChange, scaleViewportUnits = false) {
         this.onRectChange = onRectChange ?? null;
+        this.scaleViewportUnits = scaleViewportUnits;
         // ── Host Element ──────────────────────────────────────
         this.host = document.createElement("div");
         this.host.setAttribute("data-canvus-shadow-host", "");
@@ -170,7 +172,7 @@ export class ShadowMount {
             wrapper.className = "canvus-node-wrapper";
             wrapper.setAttribute("data-canvus-id", node.id);
             // Inject user HTML.
-            wrapper.innerHTML = node.rawMarkup;
+            wrapper.innerHTML = this.scaleViewportUnits ? this.translateViewportUnits(node.rawMarkup) : node.rawMarkup;
             // ── Position in Canvas-Space ────────────────────────
             const cx = node.currentRect?.x ?? 0;
             const cy = node.currentRect?.y ?? 0;
@@ -178,6 +180,11 @@ export class ShadowMount {
             wrapper.style.top = `${cy}px`;
             // ── Mount to Shadow Tree ────────────────────────────
             this.shadow.appendChild(wrapper);
+        }
+        else {
+            if (this.scaleViewportUnits) {
+                this.translateElementStyles(wrapper);
+            }
         }
         // Apply explicit width and height if provided (applies to both pre-mounted and new nodes)
         if (node.currentRect) {
@@ -261,6 +268,9 @@ export class ShadowMount {
             if (directEl) {
                 wrapper = directEl;
                 isDirect = true;
+                if (this.scaleViewportUnits) {
+                    this.translateElementStyles(wrapper);
+                }
             }
         }
         if (!wrapper) {
@@ -269,7 +279,7 @@ export class ShadowMount {
             const parentContentRoot = this.getContentRootInternal(parent);
             const insertTarget = parentContentRoot ?? parent.wrapper;
             const temp = document.createElement("div");
-            temp.innerHTML = node.rawMarkup;
+            temp.innerHTML = this.scaleViewportUnits ? this.translateViewportUnits(node.rawMarkup) : node.rawMarkup;
             const newElement = temp.firstElementChild;
             if (newElement) {
                 newElement.setAttribute("data-canvus-id", node.id);
@@ -289,7 +299,7 @@ export class ShadowMount {
                 const wrapperDiv = document.createElement("div");
                 wrapperDiv.className = "canvus-node-wrapper canvus-flow-child";
                 wrapperDiv.setAttribute("data-canvus-id", node.id);
-                wrapperDiv.innerHTML = node.rawMarkup;
+                wrapperDiv.innerHTML = this.scaleViewportUnits ? this.translateViewportUnits(node.rawMarkup) : node.rawMarkup;
                 insertTarget.appendChild(wrapperDiv);
                 wrapper = wrapperDiv;
             }
@@ -549,7 +559,7 @@ export class ShadowMount {
         // Suppress observer during our own mutation to avoid
         // a redundant callback before we've finished measuring.
         this.suppressObserver = true;
-        mounted.wrapper.innerHTML = markup;
+        mounted.wrapper.innerHTML = this.scaleViewportUnits ? this.translateViewportUnits(markup) : markup;
         this.suppressObserver = false;
         // Sync layout read.
         const rect = this.readWrapperRect(mounted);
@@ -732,7 +742,8 @@ export class ShadowMount {
             contentRoot.style.removeProperty(property);
         }
         else {
-            contentRoot.style.setProperty(property, value);
+            const translated = this.scaleViewportUnits ? this.translateViewportUnits(value) : value;
+            contentRoot.style.setProperty(property, translated);
         }
         // Synchronize geometry styling with SDK wrapper chrome
         // (only needed for wrapper-based nodes)
@@ -786,7 +797,8 @@ export class ShadowMount {
                 contentRoot.style.removeProperty(property);
             }
             else {
-                contentRoot.style.setProperty(property, value);
+                const translated = this.scaleViewportUnits && value ? this.translateViewportUnits(value) : value;
+                contentRoot.style.setProperty(property, translated);
             }
             // Synchronize geometry styling with SDK wrapper chrome
             // (only needed for wrapper-based nodes)
@@ -905,7 +917,8 @@ export class ShadowMount {
         // Get the user's content element.
         const contentRoot = this.getContentRootInternal(mounted);
         if (!contentRoot) {
-            return mounted.wrapper.innerHTML;
+            const html = mounted.wrapper.innerHTML;
+            return this.scaleViewportUnits ? this.revertViewportUnits(html) : html;
         }
         // Clone the content element to avoid modifying the active DOM.
         const clone = contentRoot.cloneNode(true);
@@ -960,7 +973,8 @@ export class ShadowMount {
                 marker.remove();
             }
         }
-        return clone.outerHTML;
+        const rawHTML = clone.outerHTML;
+        return this.scaleViewportUnits ? this.revertViewportUnits(rawHTML) : rawHTML;
     }
     /**
      * Extracts the outer HTML of the wrapper (includes the wrapper
@@ -996,7 +1010,11 @@ export class ShadowMount {
     injectStylesheet(css) {
         this.assertNotDisposed();
         const el = document.createElement("style");
-        el.textContent = rewriteForShadowDOM(css);
+        let processed = rewriteForShadowDOM(css);
+        if (this.scaleViewportUnits) {
+            processed = this.translateViewportUnits(processed);
+        }
+        el.textContent = processed;
         this.shadow.appendChild(el);
         return el;
     }
@@ -1139,6 +1157,41 @@ export class ShadowMount {
             const rect = this.measureNodeCanvasSpace(id);
             if (rect) {
                 this.onRectChange(id, rect);
+            }
+        }
+    }
+    updateViewportSize(width, height) {
+        this.host.style.setProperty("--canvus-vw", `${width / 100}px`);
+        this.host.style.setProperty("--canvus-vh", `${height / 100}px`);
+    }
+    translateViewportUnits(cssText) {
+        return cssText.replace(/(-?\d+(?:\.\d+)?)(vh|vw)\b/gi, (_, val, unit) => {
+            const lowerUnit = unit.toLowerCase();
+            return `calc(${val} * var(--canvus-${lowerUnit}, 1${lowerUnit}))`;
+        });
+    }
+    revertViewportUnits(cssText) {
+        return cssText.replace(/calc\((-?\d+(?:\.\d+)?)\s*\*\s*var\(--canvus-(vh|vw),\s*1\2\)\)/gi, '$1$2');
+    }
+    translateElementStyles(element) {
+        if (!this.scaleViewportUnits)
+            return;
+        const styleAttr = element.getAttribute("style");
+        if (styleAttr) {
+            const translated = this.translateViewportUnits(styleAttr);
+            if (translated !== styleAttr) {
+                element.setAttribute("style", translated);
+            }
+        }
+        const descendants = element.querySelectorAll("*");
+        for (const el of descendants) {
+            const htmlEl = el;
+            const attr = htmlEl.getAttribute("style");
+            if (attr) {
+                const translated = this.translateViewportUnits(attr);
+                if (translated !== attr) {
+                    htmlEl.setAttribute("style", translated);
+                }
             }
         }
     }

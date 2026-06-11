@@ -252,6 +252,22 @@ Resets the workspace scale to 1:1 and offsets to 0,0.
 resetViewport(): void
 ```
 
+### `updateViewportSize(width, height)`
+
+Updates the viewport dimensions and re-evaluates CSS viewport-relative units (`vh`, `vw`) across all nodes inside the workspace container.
+
+```typescript
+updateViewportSize(width: number, height: number): void
+```
+
+### `updateViewportConfig(config)`
+
+Updates the viewport configuration options (such as dimensions and scaling behavior) dynamically, and re-evaluates viewport-relative units.
+
+```typescript
+updateViewportConfig(config: Partial<ViewportConfig>): void
+```
+
 ---
 
 ## Query Methods

@@ -3480,7 +3480,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_drop_zone_droptarget",
-      "community": 17,
+      "community": 4,
       "norm_label": "droptarget"
     },
     {
@@ -3510,7 +3510,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "handlers_clipboard_handler",
-      "community": 11,
+      "community": 4,
       "norm_label": "clipboard.handler.ts"
     },
     {
@@ -3520,7 +3520,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "handlers_clipboard_handler_clipboarditem",
-      "community": 17,
+      "community": 11,
       "norm_label": "clipboarditem"
     },
     {
@@ -3610,7 +3610,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "handlers_command_handler",
-      "community": 32,
+      "community": 4,
       "norm_label": "command.handler.ts"
     },
     {
@@ -3620,7 +3620,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "handlers_command_handler_matchesshortcut",
-      "community": 32,
+      "community": 3,
       "norm_label": "matchesshortcut()"
     },
     {
@@ -3630,7 +3630,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler",
-      "community": 32,
+      "community": 3,
       "norm_label": "commandhandler"
     },
     {
@@ -3640,7 +3640,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_constructor",
-      "community": 32,
+      "community": 3,
       "norm_label": ".constructor()"
     },
     {
@@ -3650,7 +3650,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_onkeydown",
-      "community": 32,
+      "community": 3,
       "norm_label": ".onkeydown()"
     },
     {
@@ -3660,7 +3660,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_registercommand",
-      "community": 32,
+      "community": 3,
       "norm_label": ".registercommand()"
     },
     {
@@ -3670,7 +3670,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_registerdefaultcommands",
-      "community": 32,
+      "community": 3,
       "norm_label": ".registerdefaultcommands()"
     },
     {
@@ -3680,7 +3680,7 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_nudgerootnodes",
-      "community": 32,
+      "community": 3,
       "norm_label": ".nudgerootnodes()"
     },
     {
@@ -3690,7 +3690,7 @@
       "source_location": "L153",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_reorderflowchildren",
-      "community": 32,
+      "community": 3,
       "norm_label": ".reorderflowchildren()"
     },
     {
@@ -3700,7 +3700,7 @@
       "source_location": "L225",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_nudgeorreorderselected",
-      "community": 32,
+      "community": 3,
       "norm_label": ".nudgeorreorderselected()"
     },
     {
@@ -3710,7 +3710,7 @@
       "source_location": "L267",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_ungroupselectedorparent",
-      "community": 32,
+      "community": 3,
       "norm_label": ".ungroupselectedorparent()"
     },
     {
@@ -3720,7 +3720,7 @@
       "source_location": "L359",
       "_origin": "ast",
       "id": "handlers_command_handler_commandhandler_wrapselectedinflex",
-      "community": 32,
+      "community": 20,
       "norm_label": ".wrapselectedinflex()"
     },
     {
@@ -3740,7 +3740,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "handlers_drag_handler_draghandler",
-      "community": 9,
+      "community": 11,
       "norm_label": "draghandler"
     },
     {
@@ -3750,7 +3750,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "handlers_drag_handler_draghandler_constructor",
-      "community": 9,
+      "community": 11,
       "norm_label": ".constructor()"
     },
     {
@@ -3760,7 +3760,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "handlers_drag_handler_draghandler_isdragging",
-      "community": 9,
+      "community": 11,
       "norm_label": ".isdragging()"
     },
     {
@@ -3770,7 +3770,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "handlers_drag_handler_draghandler_claim",
-      "community": 9,
+      "community": 11,
       "norm_label": ".claim()"
     },
     {
@@ -3780,7 +3780,7 @@
       "source_location": "L171",
       "_origin": "ast",
       "id": "handlers_drag_handler_draghandler_onpointermove",
-      "community": 9,
+      "community": 11,
       "norm_label": ".onpointermove()"
     },
     {
@@ -3790,7 +3790,7 @@
       "source_location": "L383",
       "_origin": "ast",
       "id": "handlers_drag_handler_draghandler_onpointerup",
-      "community": 9,
+      "community": 11,
       "norm_label": ".onpointerup()"
     },
     {
@@ -3800,7 +3800,7 @@
       "source_location": "L738",
       "_origin": "ast",
       "id": "handlers_drag_handler_draghandler_oncancel",
-      "community": 9,
+      "community": 11,
       "norm_label": ".oncancel()"
     },
     {
@@ -3820,7 +3820,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler",
-      "community": 26,
+      "community": 11,
       "norm_label": "drawhandler"
     },
     {
@@ -3830,7 +3830,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_constructor",
-      "community": 26,
+      "community": 11,
       "norm_label": ".constructor()"
     },
     {
@@ -3840,7 +3840,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_setactivetool",
-      "community": 26,
+      "community": 11,
       "norm_label": ".setactivetool()"
     },
     {
@@ -3850,7 +3850,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_getactivetool",
-      "community": 26,
+      "community": 4,
       "norm_label": ".getactivetool()"
     },
     {
@@ -3860,7 +3860,7 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_setdrawingtag",
-      "community": 26,
+      "community": 11,
       "norm_label": ".setdrawingtag()"
     },
     {
@@ -3870,7 +3870,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_getdrawingtag",
-      "community": 26,
+      "community": 11,
       "norm_label": ".getdrawingtag()"
     },
     {
@@ -3880,7 +3880,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_isdrawing",
-      "community": 26,
+      "community": 11,
       "norm_label": ".isdrawing()"
     },
     {
@@ -3890,7 +3890,7 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_getdrawingrect",
-      "community": 26,
+      "community": 11,
       "norm_label": ".getdrawingrect()"
     },
     {
@@ -3900,7 +3900,7 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_claim",
-      "community": 26,
+      "community": 11,
       "norm_label": ".claim()"
     },
     {
@@ -3910,7 +3910,7 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_onpointermove",
-      "community": 26,
+      "community": 11,
       "norm_label": ".onpointermove()"
     },
     {
@@ -3920,7 +3920,7 @@
       "source_location": "L138",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_onpointerup",
-      "community": 26,
+      "community": 11,
       "norm_label": ".onpointerup()"
     },
     {
@@ -3930,7 +3930,7 @@
       "source_location": "L242",
       "_origin": "ast",
       "id": "handlers_draw_handler_drawhandler_oncancel",
-      "community": 26,
+      "community": 11,
       "norm_label": ".oncancel()"
     },
     {
@@ -4010,7 +4010,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "handlers_pan_handler_panhandler_onpointermove",
-      "community": 4,
+      "community": 39,
       "norm_label": ".onpointermove()"
     },
     {
@@ -4060,7 +4060,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "handlers_resize_handler_getlockedpropertiesforanchor",
-      "community": 20,
+      "community": 11,
       "norm_label": "getlockedpropertiesforanchor()"
     },
     {
@@ -4120,7 +4120,7 @@
       "source_location": "L205",
       "_origin": "ast",
       "id": "handlers_resize_handler_resizehandler",
-      "community": 20,
+      "community": 11,
       "norm_label": "resizehandler"
     },
     {
@@ -4130,7 +4130,7 @@
       "source_location": "L216",
       "_origin": "ast",
       "id": "handlers_resize_handler_resizehandler_constructor",
-      "community": 20,
+      "community": 11,
       "norm_label": ".constructor()"
     },
     {
@@ -4140,7 +4140,7 @@
       "source_location": "L220",
       "_origin": "ast",
       "id": "handlers_resize_handler_resizehandler_isresizing",
-      "community": 20,
+      "community": 11,
       "norm_label": ".isresizing()"
     },
     {
@@ -4150,7 +4150,7 @@
       "source_location": "L224",
       "_origin": "ast",
       "id": "handlers_resize_handler_resizehandler_activeanchor",
-      "community": 20,
+      "community": 24,
       "norm_label": ".activeanchor()"
     },
     {
@@ -4160,7 +4160,7 @@
       "source_location": "L230",
       "_origin": "ast",
       "id": "handlers_resize_handler_resizehandler_claim",
-      "community": 20,
+      "community": 11,
       "norm_label": ".claim()"
     },
     {
@@ -4190,7 +4190,7 @@
       "source_location": "L567",
       "_origin": "ast",
       "id": "handlers_resize_handler_resizehandler_oncancel",
-      "community": 20,
+      "community": 11,
       "norm_label": ".oncancel()"
     },
     {
@@ -4290,7 +4290,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "handlers_spacing_handler",
-      "community": 11,
+      "community": 26,
       "norm_label": "spacing.handler.ts"
     },
     {
@@ -4300,7 +4300,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler",
-      "community": 11,
+      "community": 26,
       "norm_label": "spacinghandler"
     },
     {
@@ -4310,7 +4310,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_constructor",
-      "community": 11,
+      "community": 26,
       "norm_label": ".constructor()"
     },
     {
@@ -4320,7 +4320,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_activeadjustertype",
-      "community": 11,
+      "community": 26,
       "norm_label": ".activeadjustertype()"
     },
     {
@@ -4330,7 +4330,7 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_isadjustingradius",
-      "community": 11,
+      "community": 26,
       "norm_label": ".isadjustingradius()"
     },
     {
@@ -4340,7 +4340,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_activeradiuscorner",
-      "community": 11,
+      "community": 26,
       "norm_label": ".activeradiuscorner()"
     },
     {
@@ -4350,7 +4350,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_claim",
-      "community": 11,
+      "community": 26,
       "norm_label": ".claim()"
     },
     {
@@ -4360,7 +4360,7 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_onpointermove",
-      "community": 11,
+      "community": 26,
       "norm_label": ".onpointermove()"
     },
     {
@@ -4370,7 +4370,7 @@
       "source_location": "L290",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_onpointerup",
-      "community": 11,
+      "community": 26,
       "norm_label": ".onpointerup()"
     },
     {
@@ -4380,7 +4380,7 @@
       "source_location": "L374",
       "_origin": "ast",
       "id": "handlers_spacing_handler_spacinghandler_oncancel",
-      "community": 11,
+      "community": 26,
       "norm_label": ".oncancel()"
     },
     {
@@ -4390,7 +4390,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "handlers_types",
-      "community": 11,
+      "community": 4,
       "norm_label": "types.ts"
     },
     {
@@ -4400,7 +4400,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "handlers_types_interactiondetail",
-      "community": 11,
+      "community": 4,
       "norm_label": "interactiondetail"
     },
     {
@@ -4430,7 +4430,7 @@
       "source_location": "L249",
       "_origin": "ast",
       "id": "handlers_types_keyboardhandler",
-      "community": 11,
+      "community": 4,
       "norm_label": "keyboardhandler"
     },
     {
@@ -4510,7 +4510,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "src_layout_detectlayout",
-      "community": 32,
+      "community": 20,
       "norm_label": "detectlayout()"
     },
     {
@@ -4520,7 +4520,7 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "src_layout_getflowaxis",
-      "community": 32,
+      "community": 9,
       "norm_label": "getflowaxis()"
     },
     {
@@ -4590,7 +4590,7 @@
       "source_location": "L373",
       "_origin": "ast",
       "id": "src_layout_resolvelayoutmode",
-      "community": 32,
+      "community": 20,
       "norm_label": "resolvelayoutmode()"
     },
     {
@@ -4600,7 +4600,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_matrix",
-      "community": 4,
+      "community": 39,
       "norm_label": "matrix.ts"
     },
     {
@@ -4610,7 +4610,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_matrix_screentocanvas",
-      "community": 4,
+      "community": 39,
       "norm_label": "screentocanvas()"
     },
     {
@@ -4620,7 +4620,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "src_matrix_canvastoscreen",
-      "community": 4,
+      "community": 39,
       "norm_label": "canvastoscreen()"
     },
     {
@@ -4630,7 +4630,7 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "src_matrix_calculatezoomanchor",
-      "community": 4,
+      "community": 39,
       "norm_label": "calculatezoomanchor()"
     },
     {
@@ -4640,7 +4640,7 @@
       "source_location": "L152",
       "_origin": "ast",
       "id": "src_matrix_applywheelzoom",
-      "community": 4,
+      "community": 39,
       "norm_label": "applywheelzoom()"
     },
     {
@@ -4650,7 +4650,7 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "src_matrix_applypan",
-      "community": 4,
+      "community": 39,
       "norm_label": "applypan()"
     },
     {
@@ -4670,7 +4670,7 @@
       "source_location": "L234",
       "_origin": "ast",
       "id": "src_matrix_hittestelements",
-      "community": 4,
+      "community": 39,
       "norm_label": "hittestelements()"
     },
     {
@@ -4680,7 +4680,7 @@
       "source_location": "L263",
       "_origin": "ast",
       "id": "src_matrix_getanchorpositions",
-      "community": 4,
+      "community": 39,
       "norm_label": "getanchorpositions()"
     },
     {
@@ -4690,7 +4690,7 @@
       "source_location": "L294",
       "_origin": "ast",
       "id": "src_matrix_clampscale",
-      "community": 4,
+      "community": 39,
       "norm_label": "clampscale()"
     },
     {
@@ -4700,7 +4700,7 @@
       "source_location": "L306",
       "_origin": "ast",
       "id": "src_matrix_lerp",
-      "community": 4,
+      "community": 39,
       "norm_label": "lerp()"
     },
     {
@@ -4710,7 +4710,7 @@
       "source_location": "L318",
       "_origin": "ast",
       "id": "src_matrix_lerpviewport",
-      "community": 4,
+      "community": 39,
       "norm_label": "lerpviewport()"
     },
     {
@@ -4720,7 +4720,7 @@
       "source_location": "L333",
       "_origin": "ast",
       "id": "src_matrix_rectsintersect",
-      "community": 11,
+      "community": 39,
       "norm_label": "rectsintersect()"
     },
     {
@@ -4730,7 +4730,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_renderer",
-      "community": 17,
+      "community": 24,
       "norm_label": "renderer.ts"
     },
     {
@@ -4740,7 +4740,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_renderer_overlaystyle",
-      "community": 17,
+      "community": 4,
       "norm_label": "overlaystyle"
     },
     {
@@ -4750,7 +4750,7 @@
       "source_location": "L108",
       "_origin": "ast",
       "id": "src_renderer_default_style",
-      "community": 17,
+      "community": 24,
       "norm_label": "default_style"
     },
     {
@@ -4760,7 +4760,7 @@
       "source_location": "L155",
       "_origin": "ast",
       "id": "src_renderer_guide",
-      "community": 17,
+      "community": 24,
       "norm_label": "guide"
     },
     {
@@ -4770,7 +4770,7 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "src_renderer_overlayframe",
-      "community": 17,
+      "community": 24,
       "norm_label": "overlayframe"
     },
     {
@@ -4780,7 +4780,7 @@
       "source_location": "L208",
       "_origin": "ast",
       "id": "src_renderer_spacingadjustertype",
-      "community": 11,
+      "community": 26,
       "norm_label": "spacingadjustertype"
     },
     {
@@ -4790,7 +4790,7 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "src_renderer_spacingadjusterinfo",
-      "community": 17,
+      "community": 4,
       "norm_label": "spacingadjusterinfo"
     },
     {
@@ -4800,7 +4800,7 @@
       "source_location": "L233",
       "_origin": "ast",
       "id": "src_renderer_layoutbadgeinfo",
-      "community": 17,
+      "community": 24,
       "norm_label": "layoutbadgeinfo"
     },
     {
@@ -4810,7 +4810,7 @@
       "source_location": "L243",
       "_origin": "ast",
       "id": "src_renderer_gridoverlayinfo",
-      "community": 17,
+      "community": 4,
       "norm_label": "gridoverlayinfo"
     },
     {
@@ -4820,7 +4820,7 @@
       "source_location": "L258",
       "_origin": "ast",
       "id": "src_renderer_anchor_order",
-      "community": 17,
+      "community": 24,
       "norm_label": "anchor_order"
     },
     {
@@ -4830,7 +4830,7 @@
       "source_location": "L265",
       "_origin": "ast",
       "id": "src_renderer_anchor_cursors",
-      "community": 17,
+      "community": 24,
       "norm_label": "anchor_cursors"
     },
     {
@@ -4850,7 +4850,7 @@
       "source_location": "L311",
       "_origin": "ast",
       "id": "src_renderer_iscontainernode",
-      "community": 11,
+      "community": 26,
       "norm_label": "iscontainernode()"
     },
     {
@@ -4970,7 +4970,7 @@
       "source_location": "L1101",
       "_origin": "ast",
       "id": "src_renderer_computealignmentguides",
-      "community": 9,
+      "community": 20,
       "norm_label": "computealignmentguides()"
     },
     {
@@ -4980,7 +4980,7 @@
       "source_location": "L1173",
       "_origin": "ast",
       "id": "src_renderer_computesnappedposition",
-      "community": 9,
+      "community": 24,
       "norm_label": "computesnappedposition()"
     },
     {
@@ -5037,7 +5037,7 @@
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L180",
+      "source_location": "L182",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_constructor",
       "community": 1,
@@ -5047,7 +5047,7 @@
       "label": ".addNode()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L224",
+      "source_location": "L228",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_addnode",
       "community": 1,
@@ -5057,7 +5057,7 @@
       "label": ".addChildNode()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L329",
+      "source_location": "L337",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_addchildnode",
       "community": 1,
@@ -5067,7 +5067,7 @@
       "label": ".removeNode()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L471",
+      "source_location": "L482",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_removenode",
       "community": 1,
@@ -5077,7 +5077,7 @@
       "label": ".trackExistingElement()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L505",
+      "source_location": "L516",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_trackexistingelement",
       "community": 1,
@@ -5087,7 +5087,7 @@
       "label": ".untrackNode()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L551",
+      "source_location": "L562",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_untracknode",
       "community": 1,
@@ -5097,7 +5097,7 @@
       "label": ".reparentNodeDOM()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L583",
+      "source_location": "L594",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_reparentnodedom",
       "community": 1,
@@ -5107,7 +5107,7 @@
       "label": ".updateMarkup()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L684",
+      "source_location": "L695",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_updatemarkup",
       "community": 1,
@@ -5117,7 +5117,7 @@
       "label": ".hasNode()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L707",
+      "source_location": "L718",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_hasnode",
       "community": 1,
@@ -5127,7 +5127,7 @@
       "label": ".getNodeIds()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L714",
+      "source_location": "L725",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_getnodeids",
       "community": 1,
@@ -5137,7 +5137,7 @@
       "label": ".applyViewportTransform()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L732",
+      "source_location": "L743",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_applyviewporttransform",
       "community": 1,
@@ -5147,7 +5147,7 @@
       "label": ".getWrapper()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L748",
+      "source_location": "L759",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_getwrapper",
       "community": 1,
@@ -5157,7 +5157,7 @@
       "label": ".getContentRoot()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L760",
+      "source_location": "L771",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_getcontentroot",
       "community": 1,
@@ -5167,7 +5167,7 @@
       "label": ".setTransitionsEnabled()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L770",
+      "source_location": "L781",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_settransitionsenabled",
       "community": 1,
@@ -5177,7 +5177,7 @@
       "label": ".measureNode()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L789",
+      "source_location": "L800",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_measurenode",
       "community": 1,
@@ -5187,7 +5187,7 @@
       "label": ".measureAll()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L802",
+      "source_location": "L813",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_measureall",
       "community": 1,
@@ -5197,7 +5197,7 @@
       "label": ".setNodePosition()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L826",
+      "source_location": "L837",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_setnodeposition",
       "community": 1,
@@ -5207,7 +5207,7 @@
       "label": ".setNodeSize()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L852",
+      "source_location": "L863",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_setnodesize",
       "community": 1,
@@ -5217,7 +5217,7 @@
       "label": ".setNodeRect()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L876",
+      "source_location": "L887",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_setnoderect",
       "community": 1,
@@ -5227,7 +5227,7 @@
       "label": ".setNodeStyle()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L886",
+      "source_location": "L897",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_setnodestyle",
       "community": 1,
@@ -5237,7 +5237,7 @@
       "label": ".setNodeStyles()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L937",
+      "source_location": "L949",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_setnodestyles",
       "community": 1,
@@ -5247,7 +5247,7 @@
       "label": ".measureNodeCanvasSpace()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L997",
+      "source_location": "L1010",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_measurenodecanvasspace",
       "community": 1,
@@ -5257,7 +5257,7 @@
       "label": ".getElementScale()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1019",
+      "source_location": "L1032",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_getelementscale",
       "community": 1,
@@ -5267,7 +5267,7 @@
       "label": ".extractHTML()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1067",
+      "source_location": "L1080",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_extracthtml",
       "community": 1,
@@ -5277,7 +5277,7 @@
       "label": ".extractOuterHTML()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1146",
+      "source_location": "L1161",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_extractouterhtml",
       "community": 1,
@@ -5287,7 +5287,7 @@
       "label": ".getShadowRoot()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1159",
+      "source_location": "L1174",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_getshadowroot",
       "community": 1,
@@ -5297,7 +5297,7 @@
       "label": ".injectStylesheet()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1172",
+      "source_location": "L1187",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_injectstylesheet",
       "community": 1,
@@ -5307,7 +5307,7 @@
       "label": ".injectStylesheetLink()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1188",
+      "source_location": "L1207",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_injectstylesheetlink",
       "community": 1,
@@ -5317,7 +5317,7 @@
       "label": ".executeScopedScript()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1210",
+      "source_location": "L1229",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_executescopedscript",
       "community": 1,
@@ -5327,7 +5327,7 @@
       "label": ".dispose()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1274",
+      "source_location": "L1293",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_dispose",
       "community": 1,
@@ -5337,7 +5337,7 @@
       "label": ".readWrapperRect()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1290",
+      "source_location": "L1309",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_readwrapperrect",
       "community": 1,
@@ -5347,7 +5347,7 @@
       "label": ".getBoundingBoxCanvasSpace()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1298",
+      "source_location": "L1317",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_getboundingboxcanvasspace",
       "community": 1,
@@ -5357,7 +5357,7 @@
       "label": ".getContentRootInternal()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1315",
+      "source_location": "L1334",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_getcontentrootinternal",
       "community": 1,
@@ -5367,17 +5367,57 @@
       "label": ".handleResizeEntries()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1327",
+      "source_location": "L1346",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_handleresizeentries",
       "community": 1,
       "norm_label": ".handleresizeentries()"
     },
     {
+      "label": ".updateViewportSize()",
+      "file_type": "code",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L1362",
+      "_origin": "ast",
+      "id": "src_shadow_mount_shadowmount_updateviewportsize",
+      "community": 1,
+      "norm_label": ".updateviewportsize()"
+    },
+    {
+      "label": ".translateViewportUnits()",
+      "file_type": "code",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L1367",
+      "_origin": "ast",
+      "id": "src_shadow_mount_shadowmount_translateviewportunits",
+      "community": 1,
+      "norm_label": ".translateviewportunits()"
+    },
+    {
+      "label": ".revertViewportUnits()",
+      "file_type": "code",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L1374",
+      "_origin": "ast",
+      "id": "src_shadow_mount_shadowmount_revertviewportunits",
+      "community": 1,
+      "norm_label": ".revertviewportunits()"
+    },
+    {
+      "label": ".translateElementStyles()",
+      "file_type": "code",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L1378",
+      "_origin": "ast",
+      "id": "src_shadow_mount_shadowmount_translateelementstyles",
+      "community": 1,
+      "norm_label": ".translateelementstyles()"
+    },
+    {
       "label": ".assertNotDisposed()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1344",
+      "source_location": "L1403",
       "_origin": "ast",
       "id": "src_shadow_mount_shadowmount_assertnotdisposed",
       "community": 1,
@@ -5387,7 +5427,7 @@
       "label": "rewriteForShadowDOM()",
       "file_type": "code",
       "source_file": "src/shadow-mount.ts",
-      "source_location": "L1365",
+      "source_location": "L1424",
       "_origin": "ast",
       "id": "src_shadow_mount_rewriteforshadowdom",
       "community": 1,
@@ -5400,7 +5440,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_tree",
-      "community": 32,
+      "community": 4,
       "norm_label": "tree.ts"
     },
     {
@@ -5720,7 +5760,7 @@
       "source_location": "L503",
       "_origin": "ast",
       "id": "src_tree_computeaggregatebounds",
-      "community": 32,
+      "community": 4,
       "norm_label": "computeaggregatebounds()"
     },
     {
@@ -5750,7 +5790,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_types_rect",
-      "community": 17,
+      "community": 11,
       "norm_label": "rect"
     },
     {
@@ -5800,7 +5840,7 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "src_types_resolvenode",
-      "community": 4,
+      "community": 0,
       "norm_label": "resolvenode()"
     },
     {
@@ -5810,7 +5850,7 @@
       "source_location": "L159",
       "_origin": "ast",
       "id": "src_types_resizeanchor",
-      "community": 20,
+      "community": 24,
       "norm_label": "resizeanchor"
     },
     {
@@ -5860,7 +5900,7 @@
       "source_location": "L233",
       "_origin": "ast",
       "id": "src_types_canvustool",
-      "community": 26,
+      "community": 4,
       "norm_label": "canvustool"
     },
     {
@@ -5880,7 +5920,7 @@
       "source_location": "L246",
       "_origin": "ast",
       "id": "src_types_operation",
-      "community": 17,
+      "community": 4,
       "norm_label": "operation"
     },
     {
@@ -5900,7 +5940,7 @@
       "source_location": "L274",
       "_origin": "ast",
       "id": "src_types_command",
-      "community": 32,
+      "community": 4,
       "norm_label": "command"
     },
     {
@@ -5910,34 +5950,44 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_workspace",
-      "community": 17,
+      "community": 4,
       "norm_label": "workspace.ts"
+    },
+    {
+      "label": "ViewportConfig",
+      "file_type": "code",
+      "source_file": "src/workspace.ts",
+      "source_location": "L62",
+      "_origin": "ast",
+      "id": "src_workspace_viewportconfig",
+      "community": 4,
+      "norm_label": "viewportconfig"
     },
     {
       "label": "WorkspaceConfig",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L63",
+      "source_location": "L72",
       "_origin": "ast",
       "id": "src_workspace_workspaceconfig",
-      "community": 17,
+      "community": 4,
       "norm_label": "workspaceconfig"
     },
     {
       "label": "WorkspaceCallbacks",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L77",
+      "source_location": "L88",
       "_origin": "ast",
       "id": "src_workspace_workspacecallbacks",
-      "community": 17,
+      "community": 4,
       "norm_label": "workspacecallbacks"
     },
     {
       "label": "Workspace",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L188",
+      "source_location": "L199",
       "_origin": "ast",
       "id": "src_workspace_workspace",
       "community": 0,
@@ -5947,7 +5997,7 @@
       "label": ".hoveredAdjusterType()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L229",
+      "source_location": "L241",
       "_origin": "ast",
       "id": "src_workspace_workspace_hoveredadjustertype",
       "community": 0,
@@ -5957,7 +6007,7 @@
       "label": ".hoveredRadiusCorner()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L238",
+      "source_location": "L250",
       "_origin": "ast",
       "id": "src_workspace_workspace_hoveredradiuscorner",
       "community": 0,
@@ -5967,7 +6017,7 @@
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L307",
+      "source_location": "L319",
       "_origin": "ast",
       "id": "src_workspace_workspace_constructor",
       "community": 0,
@@ -5977,7 +6027,7 @@
       "label": ".addNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L429",
+      "source_location": "L473",
       "_origin": "ast",
       "id": "src_workspace_workspace_addnode",
       "community": 0,
@@ -5987,7 +6037,7 @@
       "label": ".removeNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L467",
+      "source_location": "L511",
       "_origin": "ast",
       "id": "src_workspace_workspace_removenode",
       "community": 0,
@@ -5997,7 +6047,7 @@
       "label": ".updateMarkup()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L487",
+      "source_location": "L531",
       "_origin": "ast",
       "id": "src_workspace_workspace_updatemarkup",
       "community": 0,
@@ -6007,7 +6057,7 @@
       "label": ".reparentNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L507",
+      "source_location": "L551",
       "_origin": "ast",
       "id": "src_workspace_workspace_reparentnode",
       "community": 0,
@@ -6017,7 +6067,7 @@
       "label": ".reorderChild()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L547",
+      "source_location": "L591",
       "_origin": "ast",
       "id": "src_workspace_workspace_reorderchild",
       "community": 0,
@@ -6027,17 +6077,17 @@
       "label": ".getNodeTree()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L564",
+      "source_location": "L608",
       "_origin": "ast",
       "id": "src_workspace_workspace_getnodetree",
-      "community": 3,
+      "community": 0,
       "norm_label": ".getnodetree()"
     },
     {
       "label": ".getWrapper()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L569",
+      "source_location": "L613",
       "_origin": "ast",
       "id": "src_workspace_workspace_getwrapper",
       "community": 0,
@@ -6047,7 +6097,7 @@
       "label": ".getContentRoot()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L574",
+      "source_location": "L618",
       "_origin": "ast",
       "id": "src_workspace_workspace_getcontentroot",
       "community": 0,
@@ -6057,7 +6107,7 @@
       "label": ".setNodeStyle()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L583",
+      "source_location": "L627",
       "_origin": "ast",
       "id": "src_workspace_workspace_setnodestyle",
       "community": 0,
@@ -6067,7 +6117,7 @@
       "label": ".setNodeStyles()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L616",
+      "source_location": "L660",
       "_origin": "ast",
       "id": "src_workspace_workspace_setnodestyles",
       "community": 0,
@@ -6077,7 +6127,7 @@
       "label": ".selectNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L650",
+      "source_location": "L694",
       "_origin": "ast",
       "id": "src_workspace_workspace_selectnode",
       "community": 0,
@@ -6087,7 +6137,7 @@
       "label": ".deselectAll()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L660",
+      "source_location": "L704",
       "_origin": "ast",
       "id": "src_workspace_workspace_deselectall",
       "community": 0,
@@ -6097,7 +6147,7 @@
       "label": ".getSelectedIds()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L669",
+      "source_location": "L713",
       "_origin": "ast",
       "id": "src_workspace_workspace_getselectedids",
       "community": 0,
@@ -6107,7 +6157,7 @@
       "label": ".setActiveTool()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L676",
+      "source_location": "L720",
       "_origin": "ast",
       "id": "src_workspace_workspace_setactivetool",
       "community": 0,
@@ -6117,7 +6167,7 @@
       "label": ".getActiveTool()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L681",
+      "source_location": "L725",
       "_origin": "ast",
       "id": "src_workspace_workspace_getactivetool",
       "community": 0,
@@ -6127,7 +6177,7 @@
       "label": ".setDrawingTag()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L686",
+      "source_location": "L730",
       "_origin": "ast",
       "id": "src_workspace_workspace_setdrawingtag",
       "community": 0,
@@ -6137,7 +6187,7 @@
       "label": ".getDrawingTag()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L691",
+      "source_location": "L735",
       "_origin": "ast",
       "id": "src_workspace_workspace_getdrawingtag",
       "community": 0,
@@ -6147,17 +6197,17 @@
       "label": ".getViewport()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L698",
+      "source_location": "L742",
       "_origin": "ast",
       "id": "src_workspace_workspace_getviewport",
-      "community": 24,
+      "community": 0,
       "norm_label": ".getviewport()"
     },
     {
       "label": ".setViewport()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L703",
+      "source_location": "L747",
       "_origin": "ast",
       "id": "src_workspace_workspace_setviewport",
       "community": 0,
@@ -6167,17 +6217,37 @@
       "label": ".resetViewport()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L718",
+      "source_location": "L762",
       "_origin": "ast",
       "id": "src_workspace_workspace_resetviewport",
       "community": 0,
       "norm_label": ".resetviewport()"
     },
     {
+      "label": ".updateViewportSize()",
+      "file_type": "code",
+      "source_file": "src/workspace.ts",
+      "source_location": "L767",
+      "_origin": "ast",
+      "id": "src_workspace_workspace_updateviewportsize",
+      "community": 0,
+      "norm_label": ".updateviewportsize()"
+    },
+    {
+      "label": ".updateViewportConfig()",
+      "file_type": "code",
+      "source_file": "src/workspace.ts",
+      "source_location": "L778",
+      "_origin": "ast",
+      "id": "src_workspace_workspace_updateviewportconfig",
+      "community": 0,
+      "norm_label": ".updateviewportconfig()"
+    },
+    {
       "label": ".setPreviewMode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L725",
+      "source_location": "L802",
       "_origin": "ast",
       "id": "src_workspace_workspace_setpreviewmode",
       "community": 0,
@@ -6187,7 +6257,7 @@
       "label": ".isPreviewMode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L751",
+      "source_location": "L828",
       "_origin": "ast",
       "id": "src_workspace_workspace_ispreviewmode",
       "community": 0,
@@ -6197,7 +6267,7 @@
       "label": ".deleteSelectedNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L760",
+      "source_location": "L837",
       "_origin": "ast",
       "id": "src_workspace_workspace_deleteselectednode",
       "community": 0,
@@ -6207,7 +6277,7 @@
       "label": ".duplicateSelectedNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L765",
+      "source_location": "L842",
       "_origin": "ast",
       "id": "src_workspace_workspace_duplicateselectednode",
       "community": 0,
@@ -6217,7 +6287,7 @@
       "label": ".copySelectedNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L770",
+      "source_location": "L847",
       "_origin": "ast",
       "id": "src_workspace_workspace_copyselectednode",
       "community": 0,
@@ -6227,7 +6297,7 @@
       "label": ".cutSelectedNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L775",
+      "source_location": "L852",
       "_origin": "ast",
       "id": "src_workspace_workspace_cutselectednode",
       "community": 0,
@@ -6237,7 +6307,7 @@
       "label": ".pasteNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L780",
+      "source_location": "L857",
       "_origin": "ast",
       "id": "src_workspace_workspace_pastenode",
       "community": 0,
@@ -6247,7 +6317,7 @@
       "label": ".forceNodeState()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L787",
+      "source_location": "L864",
       "_origin": "ast",
       "id": "src_workspace_workspace_forcenodestate",
       "community": 0,
@@ -6257,7 +6327,7 @@
       "label": ".markNodeHasJS()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L805",
+      "source_location": "L882",
       "_origin": "ast",
       "id": "src_workspace_workspace_marknodehasjs",
       "community": 0,
@@ -6267,7 +6337,7 @@
       "label": ".unmarkNodeHasJS()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L813",
+      "source_location": "L890",
       "_origin": "ast",
       "id": "src_workspace_workspace_unmarknodehasjs",
       "community": 0,
@@ -6277,7 +6347,7 @@
       "label": ".hasJSMark()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L821",
+      "source_location": "L898",
       "_origin": "ast",
       "id": "src_workspace_workspace_hasjsmark",
       "community": 0,
@@ -6287,7 +6357,7 @@
       "label": ".lockNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L834",
+      "source_location": "L911",
       "_origin": "ast",
       "id": "src_workspace_workspace_locknode",
       "community": 0,
@@ -6297,7 +6367,7 @@
       "label": ".unlockNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L854",
+      "source_location": "L931",
       "_origin": "ast",
       "id": "src_workspace_workspace_unlocknode",
       "community": 0,
@@ -6307,7 +6377,7 @@
       "label": ".isNodeLocked()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L862",
+      "source_location": "L939",
       "_origin": "ast",
       "id": "src_workspace_workspace_isnodelocked",
       "community": 0,
@@ -6317,7 +6387,7 @@
       "label": ".getLockedNodeIds()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L877",
+      "source_location": "L954",
       "_origin": "ast",
       "id": "src_workspace_workspace_getlockednodeids",
       "community": 0,
@@ -6327,7 +6397,7 @@
       "label": ".isPropertyLocked()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L888",
+      "source_location": "L965",
       "_origin": "ast",
       "id": "src_workspace_workspace_ispropertylocked",
       "community": 0,
@@ -6337,7 +6407,7 @@
       "label": ".notifyPropertyLockInteraction()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L898",
+      "source_location": "L975",
       "_origin": "ast",
       "id": "src_workspace_workspace_notifypropertylockinteraction",
       "community": 0,
@@ -6347,7 +6417,7 @@
       "label": ".dispatchInteractionEvent()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L914",
+      "source_location": "L991",
       "_origin": "ast",
       "id": "src_workspace_workspace_dispatchinteractionevent",
       "community": 0,
@@ -6357,7 +6427,7 @@
       "label": ".getNodes()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L938",
+      "source_location": "L1015",
       "_origin": "ast",
       "id": "src_workspace_workspace_getnodes",
       "community": 3,
@@ -6367,7 +6437,7 @@
       "label": ".getShadowMount()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L943",
+      "source_location": "L1020",
       "_origin": "ast",
       "id": "src_workspace_workspace_getshadowmount",
       "community": 1,
@@ -6377,7 +6447,7 @@
       "label": ".getOverlayRenderer()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L948",
+      "source_location": "L1025",
       "_origin": "ast",
       "id": "src_workspace_workspace_getoverlayrenderer",
       "community": 24,
@@ -6387,7 +6457,7 @@
       "label": ".extractHTML()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L957",
+      "source_location": "L1034",
       "_origin": "ast",
       "id": "src_workspace_workspace_extracthtml",
       "community": 0,
@@ -6397,7 +6467,7 @@
       "label": ".handleUpdateStyleOp()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L961",
+      "source_location": "L1038",
       "_origin": "ast",
       "id": "src_workspace_workspace_handleupdatestyleop",
       "community": 0,
@@ -6407,7 +6477,7 @@
       "label": ".handleUpdateClassesOp()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1005",
+      "source_location": "L1082",
       "_origin": "ast",
       "id": "src_workspace_workspace_handleupdateclassesop",
       "community": 0,
@@ -6417,7 +6487,7 @@
       "label": ".handleUpdateTextOp()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1031",
+      "source_location": "L1108",
       "_origin": "ast",
       "id": "src_workspace_workspace_handleupdatetextop",
       "community": 0,
@@ -6427,7 +6497,7 @@
       "label": ".applyOperation()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1055",
+      "source_location": "L1132",
       "_origin": "ast",
       "id": "src_workspace_workspace_applyoperation",
       "community": 0,
@@ -6437,7 +6507,7 @@
       "label": ".addClass()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1095",
+      "source_location": "L1172",
       "_origin": "ast",
       "id": "src_workspace_workspace_addclass",
       "community": 0,
@@ -6447,7 +6517,7 @@
       "label": ".removeClass()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1127",
+      "source_location": "L1204",
       "_origin": "ast",
       "id": "src_workspace_workspace_removeclass",
       "community": 0,
@@ -6457,7 +6527,7 @@
       "label": ".toggleClass()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1159",
+      "source_location": "L1236",
       "_origin": "ast",
       "id": "src_workspace_workspace_toggleclass",
       "community": 0,
@@ -6467,7 +6537,7 @@
       "label": ".measureAll()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1178",
+      "source_location": "L1255",
       "_origin": "ast",
       "id": "src_workspace_workspace_measureall",
       "community": 0,
@@ -6477,7 +6547,7 @@
       "label": ".injectCSS()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1197",
+      "source_location": "L1274",
       "_origin": "ast",
       "id": "src_workspace_workspace_injectcss",
       "community": 0,
@@ -6487,7 +6557,7 @@
       "label": ".injectCSSLink()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1202",
+      "source_location": "L1279",
       "_origin": "ast",
       "id": "src_workspace_workspace_injectcsslink",
       "community": 0,
@@ -6497,7 +6567,7 @@
       "label": ".registerInteractionHandler()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1212",
+      "source_location": "L1289",
       "_origin": "ast",
       "id": "src_workspace_workspace_registerinteractionhandler",
       "community": 0,
@@ -6507,7 +6577,7 @@
       "label": ".registerKeyboardHandler()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1225",
+      "source_location": "L1302",
       "_origin": "ast",
       "id": "src_workspace_workspace_registerkeyboardhandler",
       "community": 0,
@@ -6517,7 +6587,7 @@
       "label": ".emitInteraction()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1238",
+      "source_location": "L1315",
       "_origin": "ast",
       "id": "src_workspace_workspace_emitinteraction",
       "community": 0,
@@ -6527,7 +6597,7 @@
       "label": ".nextElementId()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1246",
+      "source_location": "L1323",
       "_origin": "ast",
       "id": "src_workspace_workspace_nextelementid",
       "community": 0,
@@ -6537,7 +6607,7 @@
       "label": ".dispose()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1253",
+      "source_location": "L1330",
       "_origin": "ast",
       "id": "src_workspace_workspace_dispose",
       "community": 0,
@@ -6547,47 +6617,47 @@
       "label": ".handleWheel()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1285",
+      "source_location": "L1362",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlewheel",
-      "community": 4,
+      "community": 39,
       "norm_label": ".handlewheel()"
     },
     {
       "label": ".handlePointerDown()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1309",
+      "source_location": "L1386",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlepointerdown",
-      "community": 4,
+      "community": 39,
       "norm_label": ".handlepointerdown()"
     },
     {
       "label": ".handlePointerMove()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1349",
+      "source_location": "L1426",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlepointermove",
-      "community": 20,
+      "community": 39,
       "norm_label": ".handlepointermove()"
     },
     {
       "label": ".handlePointerUp()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1471",
+      "source_location": "L1548",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlepointerup",
-      "community": 4,
+      "community": 39,
       "norm_label": ".handlepointerup()"
     },
     {
       "label": ".handleKeyDown()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1505",
+      "source_location": "L1582",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlekeydown",
       "community": 0,
@@ -6597,7 +6667,7 @@
       "label": ".registerCommand()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1526",
+      "source_location": "L1603",
       "_origin": "ast",
       "id": "src_workspace_workspace_registercommand",
       "community": 0,
@@ -6607,7 +6677,7 @@
       "label": ".handleKeyUp()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1530",
+      "source_location": "L1607",
       "_origin": "ast",
       "id": "src_workspace_workspace_handlekeyup",
       "community": 0,
@@ -6617,7 +6687,7 @@
       "label": ".handleResize()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1548",
+      "source_location": "L1625",
       "_origin": "ast",
       "id": "src_workspace_workspace_handleresize",
       "community": 0,
@@ -6627,7 +6697,7 @@
       "label": ".handleDblClick()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1557",
+      "source_location": "L1634",
       "_origin": "ast",
       "id": "src_workspace_workspace_handledblclick",
       "community": 0,
@@ -6637,7 +6707,7 @@
       "label": ".render()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1726",
+      "source_location": "L1803",
       "_origin": "ast",
       "id": "src_workspace_workspace_render",
       "community": 0,
@@ -6647,7 +6717,7 @@
       "label": ".renderSync()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1736",
+      "source_location": "L1813",
       "_origin": "ast",
       "id": "src_workspace_workspace_rendersync",
       "community": 0,
@@ -6657,17 +6727,17 @@
       "label": ".getContainerRect()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1857",
+      "source_location": "L1934",
       "_origin": "ast",
       "id": "src_workspace_workspace_getcontainerrect",
-      "community": 4,
+      "community": 39,
       "norm_label": ".getcontainerrect()"
     },
     {
       "label": ".syncLazyChildren()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1870",
+      "source_location": "L1947",
       "_origin": "ast",
       "id": "src_workspace_workspace_synclazychildren",
       "community": 0,
@@ -6677,7 +6747,7 @@
       "label": ".registerImmediateChildren()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1900",
+      "source_location": "L1977",
       "_origin": "ast",
       "id": "src_workspace_workspace_registerimmediatechildren",
       "community": 0,
@@ -6687,7 +6757,7 @@
       "label": ".deregisterLazyChildren()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1963",
+      "source_location": "L2040",
       "_origin": "ast",
       "id": "src_workspace_workspace_deregisterlazychildren",
       "community": 0,
@@ -6697,7 +6767,7 @@
       "label": ".getOrderedNodeList()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1991",
+      "source_location": "L2068",
       "_origin": "ast",
       "id": "src_workspace_workspace_getorderednodelist",
       "community": 0,
@@ -6707,7 +6777,7 @@
       "label": ".getTopLevelSelectedIds()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L1995",
+      "source_location": "L2072",
       "_origin": "ast",
       "id": "src_workspace_workspace_gettoplevelselectedids",
       "community": 0,
@@ -6717,17 +6787,17 @@
       "label": ".hitTestRadiusHandle()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2017",
+      "source_location": "L2094",
       "_origin": "ast",
       "id": "src_workspace_workspace_hittestradiushandle",
-      "community": 20,
+      "community": 39,
       "norm_label": ".hittestradiushandle()"
     },
     {
       "label": ".getOtherRects()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2059",
+      "source_location": "L2136",
       "_origin": "ast",
       "id": "src_workspace_workspace_getotherrects",
       "community": 0,
@@ -6737,7 +6807,7 @@
       "label": ".getOtherRectsMultiple()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2069",
+      "source_location": "L2146",
       "_origin": "ast",
       "id": "src_workspace_workspace_getotherrectsmultiple",
       "community": 0,
@@ -6747,7 +6817,7 @@
       "label": ".remeasureSubtree()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2084",
+      "source_location": "L2161",
       "_origin": "ast",
       "id": "src_workspace_workspace_remeasuresubtree",
       "community": 0,
@@ -6757,7 +6827,7 @@
       "label": ".handleEscapeKey()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2110",
+      "source_location": "L2187",
       "_origin": "ast",
       "id": "src_workspace_workspace_handleescapekey",
       "community": 0,
@@ -6767,7 +6837,7 @@
       "label": ".findSelectableNode()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2135",
+      "source_location": "L2212",
       "_origin": "ast",
       "id": "src_workspace_workspace_findselectablenode",
       "community": 0,
@@ -6777,7 +6847,7 @@
       "label": ".updateHover()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2173",
+      "source_location": "L2250",
       "_origin": "ast",
       "id": "src_workspace_workspace_updatehover",
       "community": 0,
@@ -6787,7 +6857,7 @@
       "label": ".clearDynamicHover()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2207",
+      "source_location": "L2284",
       "_origin": "ast",
       "id": "src_workspace_workspace_cleardynamichover",
       "community": 0,
@@ -6797,7 +6867,7 @@
       "label": ".setNodeStateClass()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2216",
+      "source_location": "L2293",
       "_origin": "ast",
       "id": "src_workspace_workspace_setnodestateclass",
       "community": 0,
@@ -6807,7 +6877,7 @@
       "label": ".updateBreadcrumb()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2245",
+      "source_location": "L2322",
       "_origin": "ast",
       "id": "src_workspace_workspace_updatebreadcrumb",
       "community": 0,
@@ -6817,7 +6887,7 @@
       "label": ".getMarqueeRect()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2262",
+      "source_location": "L2339",
       "_origin": "ast",
       "id": "src_workspace_workspace_getmarqueerect",
       "community": 0,
@@ -6827,7 +6897,7 @@
       "label": ".computeSpacingAdjusters()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2266",
+      "source_location": "L2343",
       "_origin": "ast",
       "id": "src_workspace_workspace_computespacingadjusters",
       "community": 0,
@@ -6837,7 +6907,7 @@
       "label": ".assertNotDisposed()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2430",
+      "source_location": "L2507",
       "_origin": "ast",
       "id": "src_workspace_workspace_assertnotdisposed",
       "community": 0,
@@ -6847,7 +6917,7 @@
       "label": ".safeSetPointerCapture()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2438",
+      "source_location": "L2515",
       "_origin": "ast",
       "id": "src_workspace_workspace_safesetpointercapture",
       "community": 0,
@@ -6857,7 +6927,7 @@
       "label": "getDOMPath()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2455",
+      "source_location": "L2532",
       "_origin": "ast",
       "id": "src_workspace_getdompath",
       "community": 0,
@@ -6867,7 +6937,7 @@
       "label": "getDOMElementByPath()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2471",
+      "source_location": "L2548",
       "_origin": "ast",
       "id": "src_workspace_getdomelementbypath",
       "community": 0,
@@ -6877,7 +6947,7 @@
       "label": "isEditableTarget()",
       "file_type": "code",
       "source_file": "src/workspace.ts",
-      "source_location": "L2484",
+      "source_location": "L2561",
       "_origin": "ast",
       "id": "src_workspace_iseditabletarget",
       "community": 0,
@@ -6892,6 +6962,16 @@
       "id": "test_import",
       "community": 99,
       "norm_label": "test-import.mjs"
+    },
+    {
+      "label": "test-viewport.mjs",
+      "file_type": "code",
+      "source_file": "test-viewport.mjs",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "test_viewport",
+      "community": 192,
+      "norm_label": "test-viewport.mjs"
     },
     {
       "label": "tsconfig.json",
@@ -7217,27 +7297,27 @@
       "label": "Module Roles",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L61",
+      "source_location": "L58",
       "_origin": "ast",
       "id": "ai_context_module_roles",
       "community": 14,
       "norm_label": "module roles"
     },
     {
-      "label": "Public API Surface (58 exports)",
+      "label": "Public API Surface (63 exports)",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L78",
+      "source_location": "L74",
       "_origin": "ast",
-      "id": "ai_context_public_api_surface_58_exports",
+      "id": "ai_context_public_api_surface_63_exports",
       "community": 14,
-      "norm_label": "public api surface (58 exports)"
+      "norm_label": "public api surface (63 exports)"
     },
     {
       "label": "`types.ts`",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L80",
+      "source_location": "L76",
       "_origin": "ast",
       "id": "ai_context_types_ts",
       "community": 14,
@@ -7247,7 +7327,7 @@
       "label": "`shadow-mount.ts`",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L100",
+      "source_location": "L96",
       "_origin": "ast",
       "id": "ai_context_shadow_mount_ts",
       "community": 14,
@@ -7257,7 +7337,7 @@
       "label": "`layout.ts`",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L105",
+      "source_location": "L101",
       "_origin": "ast",
       "id": "ai_context_layout_ts",
       "community": 14,
@@ -7267,7 +7347,7 @@
       "label": "`renderer.ts`",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L119",
+      "source_location": "L115",
       "_origin": "ast",
       "id": "ai_context_renderer_ts",
       "community": 14,
@@ -7277,7 +7357,7 @@
       "label": "`workspace.ts`",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L139",
+      "source_location": "L135",
       "_origin": "ast",
       "id": "ai_context_workspace_ts",
       "community": 14,
@@ -7287,17 +7367,27 @@
       "label": "`drop-zone.ts`",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L145",
+      "source_location": "L142",
       "_origin": "ast",
       "id": "ai_context_drop_zone_ts",
       "community": 14,
       "norm_label": "`drop-zone.ts`"
     },
     {
+      "label": "`handlers/types.ts`",
+      "file_type": "document",
+      "source_file": "AI_CONTEXT.md",
+      "source_location": "L148",
+      "_origin": "ast",
+      "id": "ai_context_handlers_types_ts",
+      "community": 14,
+      "norm_label": "`handlers/types.ts`"
+    },
+    {
       "label": "`matrix.ts`",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L151",
+      "source_location": "L155",
       "_origin": "ast",
       "id": "ai_context_matrix_ts",
       "community": 14,
@@ -7307,7 +7397,7 @@
       "label": "`tree.ts`",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L208",
+      "source_location": "L212",
       "_origin": "ast",
       "id": "ai_context_tree_ts",
       "community": 14,
@@ -7317,7 +7407,7 @@
       "label": "Core Type Definitions",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L217",
+      "source_location": "L221",
       "_origin": "ast",
       "id": "ai_context_core_type_definitions",
       "community": 14,
@@ -7327,7 +7417,7 @@
       "label": "Operation Types (Undo/Redo Payloads)",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L400",
+      "source_location": "L404",
       "_origin": "ast",
       "id": "ai_context_operation_types_undo_redo_payloads",
       "community": 14,
@@ -7337,7 +7427,7 @@
       "label": "Key Workspace Methods",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L412",
+      "source_location": "L416",
       "_origin": "ast",
       "id": "ai_context_key_workspace_methods",
       "community": 14,
@@ -7357,7 +7447,7 @@
       "label": "Coordinate Spaces",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L459",
+      "source_location": "L458",
       "_origin": "ast",
       "id": "ai_context_coordinate_spaces",
       "community": 14,
@@ -7367,7 +7457,7 @@
       "label": "Developer Rules",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L470",
+      "source_location": "L469",
       "_origin": "ast",
       "id": "ai_context_developer_rules",
       "community": 14,
@@ -7377,7 +7467,7 @@
       "label": "Documentation Site Map",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L481",
+      "source_location": "L480",
       "_origin": "ast",
       "id": "ai_context_documentation_site_map",
       "community": 14,
@@ -7387,7 +7477,7 @@
       "label": "architecture",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L483",
+      "source_location": "L482",
       "_origin": "ast",
       "id": "ai_context_architecture",
       "community": 14,
@@ -7397,7 +7487,7 @@
       "label": "concepts",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L492",
+      "source_location": "L491",
       "_origin": "ast",
       "id": "ai_context_concepts",
       "community": 14,
@@ -7407,7 +7497,7 @@
       "label": "contributing",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L499",
+      "source_location": "L498",
       "_origin": "ast",
       "id": "ai_context_contributing",
       "community": 14,
@@ -7417,7 +7507,7 @@
       "label": "getting-started",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L503",
+      "source_location": "L502",
       "_origin": "ast",
       "id": "ai_context_getting_started",
       "community": 14,
@@ -7427,7 +7517,7 @@
       "label": "guides",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L508",
+      "source_location": "L507",
       "_origin": "ast",
       "id": "ai_context_guides",
       "community": 14,
@@ -7437,7 +7527,7 @@
       "label": "root",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L516",
+      "source_location": "L515",
       "_origin": "ast",
       "id": "ai_context_root",
       "community": 14,
@@ -7447,17 +7537,37 @@
       "label": "overview",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L519",
+      "source_location": "L518",
       "_origin": "ast",
       "id": "ai_context_overview",
       "community": 14,
       "norm_label": "overview"
     },
     {
+      "label": "playground",
+      "file_type": "document",
+      "source_file": "AI_CONTEXT.md",
+      "source_location": "L523",
+      "_origin": "ast",
+      "id": "ai_context_playground",
+      "community": 14,
+      "norm_label": "playground"
+    },
+    {
+      "label": "react",
+      "file_type": "document",
+      "source_file": "AI_CONTEXT.md",
+      "source_location": "L526",
+      "_origin": "ast",
+      "id": "ai_context_react",
+      "community": 14,
+      "norm_label": "react"
+    },
+    {
       "label": "sdk",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L524",
+      "source_location": "L532",
       "_origin": "ast",
       "id": "ai_context_sdk",
       "community": 14,
@@ -7467,7 +7577,7 @@
       "label": "Recent Changes",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L535",
+      "source_location": "L543",
       "_origin": "ast",
       "id": "ai_context_recent_changes",
       "community": 14,
@@ -7477,7 +7587,7 @@
       "label": "Changelog",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L537",
+      "source_location": "L545",
       "_origin": "ast",
       "id": "ai_context_changelog",
       "community": 14,
@@ -7487,7 +7597,7 @@
       "label": "[Unreleased]",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L545",
+      "source_location": "L553",
       "_origin": "ast",
       "id": "ai_context_unreleased",
       "community": 14,
@@ -7497,7 +7607,7 @@
       "label": "Added",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L547",
+      "source_location": "L555",
       "_origin": "ast",
       "id": "ai_context_added",
       "community": 14,
@@ -7507,7 +7617,7 @@
       "label": "Changed",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L573",
+      "source_location": "L583",
       "_origin": "ast",
       "id": "ai_context_changed",
       "community": 14,
@@ -7517,7 +7627,7 @@
       "label": "Fixed",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L583",
+      "source_location": "L597",
       "_origin": "ast",
       "id": "ai_context_fixed",
       "community": 14,
@@ -7527,7 +7637,7 @@
       "label": "Documented",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L592",
+      "source_location": "L606",
       "_origin": "ast",
       "id": "ai_context_documented",
       "community": 14,
@@ -7537,7 +7647,7 @@
       "label": "[0.1.0] - 2026-05-25",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L621",
+      "source_location": "L637",
       "_origin": "ast",
       "id": "ai_context_0_1_0_2026_05_25",
       "community": 14,
@@ -7547,9 +7657,9 @@
       "label": "Added",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L623",
+      "source_location": "L639",
       "_origin": "ast",
-      "id": "ai_context_added_623",
+      "id": "ai_context_added_639",
       "community": 14,
       "norm_label": "added"
     },
@@ -7557,7 +7667,7 @@
       "label": "File Locations",
       "file_type": "document",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L643",
+      "source_location": "L659",
       "_origin": "ast",
       "id": "ai_context_file_locations",
       "community": 14,
@@ -7607,7 +7717,7 @@
       "label": "Changed",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L37",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "changelog_changed",
       "community": 137,
@@ -7617,7 +7727,7 @@
       "label": "Fixed",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L48",
+      "source_location": "L53",
       "_origin": "ast",
       "id": "changelog_fixed",
       "community": 137,
@@ -7627,7 +7737,7 @@
       "label": "Documented",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L57",
+      "source_location": "L62",
       "_origin": "ast",
       "id": "changelog_documented",
       "community": 137,
@@ -7637,7 +7747,7 @@
       "label": "[0.1.0] - 2026-05-25",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L86",
+      "source_location": "L93",
       "_origin": "ast",
       "id": "changelog_0_1_0_2026_05_25",
       "community": 137,
@@ -7647,9 +7757,9 @@
       "label": "Added",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L88",
+      "source_location": "L95",
       "_origin": "ast",
-      "id": "changelog_added_88",
+      "id": "changelog_added_95",
       "community": 137,
       "norm_label": "added"
     },
@@ -8760,7 +8870,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "architecture_guidelines",
-      "community": 39,
+      "community": 17,
       "norm_label": "guidelines.mdx"
     },
     {
@@ -8770,7 +8880,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "architecture_guidelines_developer_guidelines_constraints",
-      "community": 39,
+      "community": 17,
       "norm_label": "developer guidelines & constraints"
     },
     {
@@ -8780,7 +8890,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "architecture_guidelines_core_constraints",
-      "community": 39,
+      "community": 17,
       "norm_label": "core constraints"
     },
     {
@@ -8790,7 +8900,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "architecture_guidelines_coordinate_space_clarity",
-      "community": 39,
+      "community": 17,
       "norm_label": "coordinate space clarity"
     },
     {
@@ -8800,7 +8910,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "architecture_guidelines_geometry_and_tree_synchronization",
-      "community": 39,
+      "community": 17,
       "norm_label": "geometry and tree synchronization"
     },
     {
@@ -8810,7 +8920,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "architecture_guidelines_minimize_layout_thrashing",
-      "community": 39,
+      "community": 17,
       "norm_label": "minimize layout thrashing"
     },
     {
@@ -8820,7 +8930,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "architecture_guidelines_local_development",
-      "community": 39,
+      "community": 17,
       "norm_label": "local development"
     },
     {
@@ -8830,7 +8940,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "architecture_modules",
-      "community": 17,
+      "community": 4,
       "norm_label": "modules.mdx"
     },
     {
@@ -10630,7 +10740,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "overview_goals",
-      "community": 46,
+      "community": 16,
       "norm_label": "goals.mdx"
     },
     {
@@ -10640,7 +10750,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "overview_goals_design_philosophy_goals",
-      "community": 187,
+      "community": 16,
       "norm_label": "design philosophy & goals"
     },
     {
@@ -10720,7 +10830,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "overview_goals_product_goals",
-      "community": 187,
+      "community": 16,
       "norm_label": "product goals"
     },
     {
@@ -10730,7 +10840,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "overview_goals_current_milestones_v0_1_x",
-      "community": 187,
+      "community": 16,
       "norm_label": "current milestones (v0.1.x)"
     },
     {
@@ -10740,7 +10850,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "overview_goals_future_roadmap",
-      "community": 187,
+      "community": 16,
       "norm_label": "future roadmap"
     },
     {
@@ -10750,7 +10860,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "overview_goals_technical_invariants",
-      "community": 187,
+      "community": 16,
       "norm_label": "technical invariants"
     },
     {
@@ -10760,7 +10870,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "overview_index",
-      "community": 46,
+      "community": 143,
       "norm_label": "index.mdx"
     },
     {
@@ -11274,10 +11384,20 @@
       "norm_label": "workspaceconfig"
     },
     {
+      "label": "ViewportConfig",
+      "file_type": "document",
+      "source_file": "docs-site/pages/sdk/configuration.mdx",
+      "source_location": "L25",
+      "_origin": "ast",
+      "id": "sdk_configuration_viewportconfig",
+      "community": 37,
+      "norm_label": "viewportconfig"
+    },
+    {
       "label": "OverlayStyle",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L23",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "sdk_configuration_overlaystyle",
       "community": 37,
@@ -11287,7 +11407,7 @@
       "label": "WorkspaceCallbacks",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L85",
+      "source_location": "L105",
       "_origin": "ast",
       "id": "sdk_configuration_workspacecallbacks",
       "community": 37,
@@ -11297,7 +11417,7 @@
       "label": "Callback Reference",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L102",
+      "source_location": "L122",
       "_origin": "ast",
       "id": "sdk_configuration_callback_reference",
       "community": 37,
@@ -11307,7 +11427,7 @@
       "label": "`onHTMLCommit`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L104",
+      "source_location": "L124",
       "_origin": "ast",
       "id": "sdk_configuration_onhtmlcommit",
       "community": 37,
@@ -11317,7 +11437,7 @@
       "label": "`onNodeRectChange`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L114",
+      "source_location": "L134",
       "_origin": "ast",
       "id": "sdk_configuration_onnoderectchange",
       "community": 37,
@@ -11327,7 +11447,7 @@
       "label": "`onViewportChange`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L124",
+      "source_location": "L144",
       "_origin": "ast",
       "id": "sdk_configuration_onviewportchange",
       "community": 37,
@@ -11337,7 +11457,7 @@
       "label": "`onSelectionChange`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L134",
+      "source_location": "L154",
       "_origin": "ast",
       "id": "sdk_configuration_onselectionchange",
       "community": 37,
@@ -11347,7 +11467,7 @@
       "label": "`onBreadcrumbChange`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L144",
+      "source_location": "L164",
       "_origin": "ast",
       "id": "sdk_configuration_onbreadcrumbchange",
       "community": 37,
@@ -11357,7 +11477,7 @@
       "label": "`onInteractionChange`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L154",
+      "source_location": "L174",
       "_origin": "ast",
       "id": "sdk_configuration_oninteractionchange",
       "community": 37,
@@ -11367,7 +11487,7 @@
       "label": "`onOperationsGenerated`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L164",
+      "source_location": "L184",
       "_origin": "ast",
       "id": "sdk_configuration_onoperationsgenerated",
       "community": 37,
@@ -11377,7 +11497,7 @@
       "label": "`onTextEditRequest`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L174",
+      "source_location": "L194",
       "_origin": "ast",
       "id": "sdk_configuration_ontexteditrequest",
       "community": 37,
@@ -11387,7 +11507,7 @@
       "label": "`onForcePseudoState`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
-      "source_location": "L188",
+      "source_location": "L208",
       "_origin": "ast",
       "id": "sdk_configuration_onforcepseudostate",
       "community": 37,
@@ -11780,7 +11900,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "sdk_renderer",
-      "community": 177,
+      "community": 113,
       "norm_label": "renderer.mdx"
     },
     {
@@ -11790,7 +11910,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "sdk_renderer_overlay_renderer_renderer_ts",
-      "community": 177,
+      "community": 113,
       "norm_label": "overlay renderer (`renderer.ts`)"
     },
     {
@@ -11800,7 +11920,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "sdk_renderer_overlayrenderer",
-      "community": 177,
+      "community": 113,
       "norm_label": "overlayrenderer"
     },
     {
@@ -11810,7 +11930,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "sdk_renderer_constructor",
-      "community": 177,
+      "community": 113,
       "norm_label": "constructor"
     },
     {
@@ -11820,7 +11940,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "sdk_renderer_helper_functions",
-      "community": 183,
+      "community": 113,
       "norm_label": "helper functions"
     },
     {
@@ -11830,7 +11950,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "sdk_renderer_anchorcursor_anchor",
-      "community": 183,
+      "community": 113,
       "norm_label": "`anchorcursor(anchor)`"
     },
     {
@@ -11840,7 +11960,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "sdk_renderer_computealignmentguides_movingrect_otherrects_threshold",
-      "community": 183,
+      "community": 113,
       "norm_label": "`computealignmentguides(movingrect, otherrects, threshold?)`"
     },
     {
@@ -11850,7 +11970,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "sdk_renderer_computesnappedposition_movingrect_otherrects_threshold",
-      "community": 183,
+      "community": 113,
       "norm_label": "`computesnappedposition(movingrect, otherrects, threshold?)`"
     },
     {
@@ -11860,7 +11980,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "sdk_renderer_iscontainernode_node",
-      "community": 183,
+      "community": 113,
       "norm_label": "`iscontainernode(node)`"
     },
     {
@@ -12300,7 +12420,7 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "sdk_workspace_api_style_manipulation",
-      "community": 186,
+      "community": 112,
       "norm_label": "style manipulation"
     },
     {
@@ -12310,7 +12430,7 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "sdk_workspace_api_setnodestyle_id_property_value",
-      "community": 186,
+      "community": 112,
       "norm_label": "`setnodestyle(id, property, value)`"
     },
     {
@@ -12320,7 +12440,7 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "sdk_workspace_api_setnodestyles_id_styles",
-      "community": 186,
+      "community": 112,
       "norm_label": "`setnodestyles(id, styles)`"
     },
     {
@@ -12504,10 +12624,30 @@
       "norm_label": "`resetviewport()`"
     },
     {
+      "label": "`updateViewportSize(width, height)`",
+      "file_type": "document",
+      "source_file": "docs-site/pages/sdk/workspace-api.mdx",
+      "source_location": "L255",
+      "_origin": "ast",
+      "id": "sdk_workspace_api_updateviewportsize_width_height",
+      "community": 172,
+      "norm_label": "`updateviewportsize(width, height)`"
+    },
+    {
+      "label": "`updateViewportConfig(config)`",
+      "file_type": "document",
+      "source_file": "docs-site/pages/sdk/workspace-api.mdx",
+      "source_location": "L263",
+      "_origin": "ast",
+      "id": "sdk_workspace_api_updateviewportconfig_config",
+      "community": 172,
+      "norm_label": "`updateviewportconfig(config)`"
+    },
+    {
       "label": "Query Methods",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L257",
+      "source_location": "L273",
       "_origin": "ast",
       "id": "sdk_workspace_api_query_methods",
       "community": 150,
@@ -12517,7 +12657,7 @@
       "label": "`getNodes()`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L259",
+      "source_location": "L275",
       "_origin": "ast",
       "id": "sdk_workspace_api_getnodes",
       "community": 150,
@@ -12527,7 +12667,7 @@
       "label": "`getWrapper(id)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L267",
+      "source_location": "L283",
       "_origin": "ast",
       "id": "sdk_workspace_api_getwrapper_id",
       "community": 150,
@@ -12537,7 +12677,7 @@
       "label": "`extractHTML(id)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L275",
+      "source_location": "L291",
       "_origin": "ast",
       "id": "sdk_workspace_api_extracthtml_id",
       "community": 150,
@@ -12547,7 +12687,7 @@
       "label": "`measureAll()`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L283",
+      "source_location": "L299",
       "_origin": "ast",
       "id": "sdk_workspace_api_measureall",
       "community": 150,
@@ -12557,7 +12697,7 @@
       "label": "`getContentRoot(id)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L291",
+      "source_location": "L307",
       "_origin": "ast",
       "id": "sdk_workspace_api_getcontentroot_id",
       "community": 150,
@@ -12567,7 +12707,7 @@
       "label": "`computeAggregateBounds(nodes)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L299",
+      "source_location": "L315",
       "_origin": "ast",
       "id": "sdk_workspace_api_computeaggregatebounds_nodes",
       "community": 150,
@@ -12577,7 +12717,7 @@
       "label": "Preview Mode",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L312",
+      "source_location": "L328",
       "_origin": "ast",
       "id": "sdk_workspace_api_preview_mode",
       "community": 185,
@@ -12587,7 +12727,7 @@
       "label": "`setPreviewMode(enabled)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L314",
+      "source_location": "L330",
       "_origin": "ast",
       "id": "sdk_workspace_api_setpreviewmode_enabled",
       "community": 185,
@@ -12597,7 +12737,7 @@
       "label": "`isPreviewMode()`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L334",
+      "source_location": "L350",
       "_origin": "ast",
       "id": "sdk_workspace_api_ispreviewmode",
       "community": 185,
@@ -12607,7 +12747,7 @@
       "label": "Drawing Tools",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L344",
+      "source_location": "L360",
       "_origin": "ast",
       "id": "sdk_workspace_api_drawing_tools",
       "community": 163,
@@ -12617,7 +12757,7 @@
       "label": "`setActiveTool(tool)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L346",
+      "source_location": "L362",
       "_origin": "ast",
       "id": "sdk_workspace_api_setactivetool_tool",
       "community": 163,
@@ -12627,7 +12767,7 @@
       "label": "`getActiveTool()`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L354",
+      "source_location": "L370",
       "_origin": "ast",
       "id": "sdk_workspace_api_getactivetool",
       "community": 163,
@@ -12637,7 +12777,7 @@
       "label": "`setDrawingTag(tag)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L362",
+      "source_location": "L378",
       "_origin": "ast",
       "id": "sdk_workspace_api_setdrawingtag_tag",
       "community": 163,
@@ -12647,7 +12787,7 @@
       "label": "`getDrawingTag()`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L370",
+      "source_location": "L386",
       "_origin": "ast",
       "id": "sdk_workspace_api_getdrawingtag",
       "community": 163,
@@ -12657,7 +12797,7 @@
       "label": "State Forcing",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L380",
+      "source_location": "L396",
       "_origin": "ast",
       "id": "sdk_workspace_api_state_forcing",
       "community": 112,
@@ -12667,7 +12807,7 @@
       "label": "`forceNodeState(nodeId, state, enabled)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L382",
+      "source_location": "L398",
       "_origin": "ast",
       "id": "sdk_workspace_api_forcenodestate_nodeid_state_enabled",
       "community": 112,
@@ -12677,7 +12817,7 @@
       "label": "JS Badge Marking",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L406",
+      "source_location": "L422",
       "_origin": "ast",
       "id": "sdk_workspace_api_js_badge_marking",
       "community": 173,
@@ -12687,7 +12827,7 @@
       "label": "`markNodeHasJS(nodeId)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L408",
+      "source_location": "L424",
       "_origin": "ast",
       "id": "sdk_workspace_api_marknodehasjs_nodeid",
       "community": 173,
@@ -12697,7 +12837,7 @@
       "label": "`unmarkNodeHasJS(nodeId)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L418",
+      "source_location": "L434",
       "_origin": "ast",
       "id": "sdk_workspace_api_unmarknodehasjs_nodeid",
       "community": 173,
@@ -12707,7 +12847,7 @@
       "label": "`hasJSMark(nodeId)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L426",
+      "source_location": "L442",
       "_origin": "ast",
       "id": "sdk_workspace_api_hasjsmark_nodeid",
       "community": 173,
@@ -12717,7 +12857,7 @@
       "label": "Synthetic Interaction",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L449",
+      "source_location": "L465",
       "_origin": "ast",
       "id": "sdk_workspace_api_synthetic_interaction",
       "community": 112,
@@ -12727,7 +12867,7 @@
       "label": "`dispatchInteractionEvent(nodeId, eventName)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L451",
+      "source_location": "L467",
       "_origin": "ast",
       "id": "sdk_workspace_api_dispatchinteractionevent_nodeid_eventname",
       "community": 112,
@@ -12737,67 +12877,67 @@
       "label": "Stylesheet Injection",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L472",
+      "source_location": "L488",
       "_origin": "ast",
       "id": "sdk_workspace_api_stylesheet_injection",
-      "community": 184,
+      "community": 112,
       "norm_label": "stylesheet injection"
     },
     {
       "label": "`injectCSS(css)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L474",
+      "source_location": "L490",
       "_origin": "ast",
       "id": "sdk_workspace_api_injectcss_css",
-      "community": 184,
+      "community": 112,
       "norm_label": "`injectcss(css)`"
     },
     {
       "label": "`injectCSSLink(href)`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L489",
+      "source_location": "L505",
       "_origin": "ast",
       "id": "sdk_workspace_api_injectcsslink_href",
-      "community": 184,
+      "community": 112,
       "norm_label": "`injectcsslink(href)`"
     },
     {
       "label": "Subsystem Access",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L503",
+      "source_location": "L519",
       "_origin": "ast",
       "id": "sdk_workspace_api_subsystem_access",
-      "community": 112,
+      "community": 32,
       "norm_label": "subsystem access"
     },
     {
       "label": "`getShadowMount()`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L505",
+      "source_location": "L521",
       "_origin": "ast",
       "id": "sdk_workspace_api_getshadowmount",
-      "community": 112,
+      "community": 32,
       "norm_label": "`getshadowmount()`"
     },
     {
       "label": "`getOverlayRenderer()`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L513",
+      "source_location": "L529",
       "_origin": "ast",
       "id": "sdk_workspace_api_getoverlayrenderer",
-      "community": 112,
+      "community": 32,
       "norm_label": "`getoverlayrenderer()`"
     },
     {
       "label": "Lifecycle",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L523",
+      "source_location": "L539",
       "_origin": "ast",
       "id": "sdk_workspace_api_lifecycle",
       "community": 112,
@@ -12807,7 +12947,7 @@
       "label": "`dispose()`",
       "file_type": "document",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
-      "source_location": "L525",
+      "source_location": "L541",
       "_origin": "ast",
       "id": "sdk_workspace_api_dispose",
       "community": 112,
@@ -12920,7 +13060,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "adr_0004_granular_mutation_sync_boundary",
-      "community": 46,
+      "community": 16,
       "norm_label": "0004-granular-mutation-sync-boundary.md"
     },
     {
@@ -12930,7 +13070,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "adr_0004_granular_mutation_sync_boundary_4_granular_mutation_sync_boundary",
-      "community": 46,
+      "community": 16,
       "norm_label": "4. granular mutation sync boundary"
     },
     {
@@ -12994,10 +13134,20 @@
       "norm_label": "`workspaceconfig`"
     },
     {
+      "label": "`ViewportConfig`",
+      "file_type": "document",
+      "source_file": "docs/api.md",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "docs_api_viewportconfig",
+      "community": 108,
+      "norm_label": "`viewportconfig`"
+    },
+    {
       "label": "`WorkspaceCallbacks`",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L19",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "docs_api_workspacecallbacks",
       "community": 108,
@@ -13007,7 +13157,7 @@
       "label": "2. Main Workspace Classes",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L35",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "docs_api_2_main_workspace_classes",
       "community": 108,
@@ -13017,7 +13167,7 @@
       "label": "`Workspace`",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L37",
+      "source_location": "L47",
       "_origin": "ast",
       "id": "docs_api_workspace",
       "community": 108,
@@ -13027,7 +13177,7 @@
       "label": "`ShadowMount`",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L100",
+      "source_location": "L114",
       "_origin": "ast",
       "id": "docs_api_shadowmount",
       "community": 108,
@@ -13037,7 +13187,7 @@
       "label": "`OverlayRenderer`",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L106",
+      "source_location": "L120",
       "_origin": "ast",
       "id": "docs_api_overlayrenderer",
       "community": 108,
@@ -13047,7 +13197,7 @@
       "label": "`NodeTree`",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L110",
+      "source_location": "L124",
       "_origin": "ast",
       "id": "docs_api_nodetree",
       "community": 108,
@@ -13057,7 +13207,7 @@
       "label": "3. Primitives and Constants",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L116",
+      "source_location": "L130",
       "_origin": "ast",
       "id": "docs_api_3_primitives_and_constants",
       "community": 108,
@@ -13067,7 +13217,7 @@
       "label": "Spacing Boundaries",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L118",
+      "source_location": "L132",
       "_origin": "ast",
       "id": "docs_api_spacing_boundaries",
       "community": 108,
@@ -13077,7 +13227,7 @@
       "label": "Core Interface Definitions",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L122",
+      "source_location": "L136",
       "_origin": "ast",
       "id": "docs_api_core_interface_definitions",
       "community": 108,
@@ -13087,7 +13237,7 @@
       "label": "Enumeration Types",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L177",
+      "source_location": "L191",
       "_origin": "ast",
       "id": "docs_api_enumeration_types",
       "community": 108,
@@ -13097,7 +13247,7 @@
       "label": "4. Helper Functions and Subsystems",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L185",
+      "source_location": "L199",
       "_origin": "ast",
       "id": "docs_api_4_helper_functions_and_subsystems",
       "community": 108,
@@ -13107,7 +13257,7 @@
       "label": "Viewport Math (`src/matrix.ts`)",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L187",
+      "source_location": "L201",
       "_origin": "ast",
       "id": "docs_api_viewport_math_src_matrix_ts",
       "community": 108,
@@ -13117,7 +13267,7 @@
       "label": "Tree Management",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L200",
+      "source_location": "L214",
       "_origin": "ast",
       "id": "docs_api_tree_management",
       "community": 108,
@@ -13127,7 +13277,7 @@
       "label": "Layout Introspection (`src/layout.ts`)",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L206",
+      "source_location": "L220",
       "_origin": "ast",
       "id": "docs_api_layout_introspection_src_layout_ts",
       "community": 108,
@@ -13137,7 +13287,7 @@
       "label": "Overlay Renderer Elements",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L214",
+      "source_location": "L228",
       "_origin": "ast",
       "id": "docs_api_overlay_renderer_elements",
       "community": 108,
@@ -13147,7 +13297,7 @@
       "label": "Drag and Drop Placement (`src/drop-zone.ts`)",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L219",
+      "source_location": "L233",
       "_origin": "ast",
       "id": "docs_api_drag_and_drop_placement_src_drop_zone_ts",
       "community": 108,
@@ -13157,7 +13307,7 @@
       "label": "5. Type and Callback Definitions",
       "file_type": "document",
       "source_file": "docs/api.md",
-      "source_location": "L224",
+      "source_location": "L238",
       "_origin": "ast",
       "id": "docs_api_5_type_and_callback_definitions",
       "community": 108,
@@ -13562,66 +13712,6 @@
       "id": "react_demo_readme_expanding_the_eslint_configuration",
       "community": 95,
       "norm_label": "expanding the eslint configuration"
-    },
-    {
-      "label": "error-context.md",
-      "file_type": "document",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
-      "community": 188,
-      "norm_label": "error-context.md"
-    },
-    {
-      "label": "Instructions",
-      "file_type": "document",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_instructions",
-      "community": 188,
-      "norm_label": "instructions"
-    },
-    {
-      "label": "Test info",
-      "file_type": "document",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L7",
-      "_origin": "ast",
-      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_test_info",
-      "community": 188,
-      "norm_label": "test info"
-    },
-    {
-      "label": "Error details",
-      "file_type": "document",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L12",
-      "_origin": "ast",
-      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_error_details",
-      "community": 188,
-      "norm_label": "error details"
-    },
-    {
-      "label": "Page snapshot",
-      "file_type": "document",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L25",
-      "_origin": "ast",
-      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_page_snapshot",
-      "community": 188,
-      "norm_label": "page snapshot"
-    },
-    {
-      "label": "Test source",
-      "file_type": "document",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L82",
-      "_origin": "ast",
-      "id": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_test_source",
-      "community": 188,
-      "norm_label": "test source"
     },
     {
       "label": "README.md",
@@ -14767,7 +14857,7 @@
       "label": "Drop Zone & DnD (`src/drop-zone.ts`)",
       "file_type": "document",
       "source_file": "skills/docs-updater/resources/coverage-manifest.md",
-      "source_location": "L116",
+      "source_location": "L117",
       "_origin": "ast",
       "id": "resources_coverage_manifest_drop_zone_dnd_src_drop_zone_ts",
       "community": 121,
@@ -14777,7 +14867,7 @@
       "label": "Coverage Summary",
       "file_type": "document",
       "source_file": "skills/docs-updater/resources/coverage-manifest.md",
-      "source_location": "L126",
+      "source_location": "L127",
       "_origin": "ast",
       "id": "resources_coverage_manifest_coverage_summary",
       "community": 121,
@@ -14787,7 +14877,7 @@
       "label": "All Exports Covered \u2705",
       "file_type": "document",
       "source_file": "skills/docs-updater/resources/coverage-manifest.md",
-      "source_location": "L140",
+      "source_location": "L141",
       "_origin": "ast",
       "id": "resources_coverage_manifest_all_exports_covered",
       "community": 121,
@@ -14797,7 +14887,7 @@
       "label": "Docs Site Page Inventory",
       "file_type": "document",
       "source_file": "skills/docs-updater/resources/coverage-manifest.md",
-      "source_location": "L146",
+      "source_location": "L147",
       "_origin": "ast",
       "id": "resources_coverage_manifest_docs_site_page_inventory",
       "community": 121,
@@ -15950,7 +16040,7 @@
       "source_location": "L721",
       "_origin": "ast",
       "id": "writing_skills_anthropic_best_practices_evaluation_and_iteration",
-      "community": 174,
+      "community": 124,
       "norm_label": "evaluation and iteration"
     },
     {
@@ -15960,7 +16050,7 @@
       "source_location": "L723",
       "_origin": "ast",
       "id": "writing_skills_anthropic_best_practices_build_evaluations_first",
-      "community": 174,
+      "community": 124,
       "norm_label": "build evaluations first"
     },
     {
@@ -15970,7 +16060,7 @@
       "source_location": "L756",
       "_origin": "ast",
       "id": "writing_skills_anthropic_best_practices_develop_skills_iteratively_with_claude",
-      "community": 174,
+      "community": 124,
       "norm_label": "develop skills iteratively with claude"
     },
     {
@@ -15980,7 +16070,7 @@
       "source_location": "L812",
       "_origin": "ast",
       "id": "writing_skills_anthropic_best_practices_observe_how_claude_navigates_skills",
-      "community": 174,
+      "community": 124,
       "norm_label": "observe how claude navigates skills"
     },
     {
@@ -15990,7 +16080,7 @@
       "source_location": "L823",
       "_origin": "ast",
       "id": "writing_skills_anthropic_best_practices_anti_patterns_to_avoid",
-      "community": 124,
+      "community": 46,
       "norm_label": "anti-patterns to avoid"
     },
     {
@@ -16000,7 +16090,7 @@
       "source_location": "L825",
       "_origin": "ast",
       "id": "writing_skills_anthropic_best_practices_avoid_windows_style_paths",
-      "community": 124,
+      "community": 46,
       "norm_label": "avoid windows-style paths"
     },
     {
@@ -16010,7 +16100,7 @@
       "source_location": "L834",
       "_origin": "ast",
       "id": "writing_skills_anthropic_best_practices_avoid_offering_too_many_options",
-      "community": 124,
+      "community": 46,
       "norm_label": "avoid offering too many options"
     },
     {
@@ -18915,7 +19005,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Ensure the SDK core remains 100% vanilla TypeScript. No React, Vue, Svelte, or other UI framework dependencies are permitted.",
-      "community": 39,
+      "community": 17,
       "norm_label": "framework independence",
       "id": "architecture_guidelines_framework_independence"
     },
@@ -18929,7 +19019,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Never apply styles directly inside ShadowMount that could bleed or pollute the host. All reset rules belong in SHADOW_RESET_CSS.",
-      "community": 4,
+      "community": 17,
       "norm_label": "strict styling isolation",
       "id": "architecture_guidelines_strict_styling_isolation"
     },
@@ -18943,7 +19033,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Any new wrapper classes, metadata attributes, or alignment markers must be filtered out in ShadowMount.extractHTML to ensure the consumer receives clean user markup.",
-      "community": 4,
+      "community": 17,
       "norm_label": "pristine flat string exports",
       "id": "architecture_guidelines_flat_string_exports"
     },
@@ -18957,7 +19047,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Canvas overlay drawings must never run synchronously; queue them on the next animation frame to prevent redraw bottlenecks.",
-      "community": 39,
+      "community": 17,
       "norm_label": "raf-throttled rendering",
       "id": "architecture_guidelines_raf_throttled_rendering"
     },
@@ -18970,7 +19060,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 17,
+      "community": 4,
       "norm_label": "workspace orchestrator pattern",
       "id": "architecture_modules_orchestrator_pattern"
     },
@@ -19166,7 +19256,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 177,
+      "community": 113,
       "norm_label": "viewport surface layer",
       "id": "overview_architecture_viewport_surface"
     },
@@ -19193,7 +19283,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Ensures SDK is lightweight, framework-agnostic, and compiled to ESM with no external dependencies.",
-      "community": 46,
+      "community": 16,
       "norm_label": "zero runtime dependencies principle",
       "id": "overview_goals_zero_dependencies"
     },
@@ -19207,7 +19297,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Delegates CSS layout calculations to the browser's native C++ rendering engine to ensure Flexbox, Grid, wrapping and margins work natively.",
-      "community": 46,
+      "community": 16,
       "norm_label": "browser-native performance goal",
       "id": "overview_goals_browser_native_performance"
     },
@@ -19221,7 +19311,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Avoids virtual DOM reconciliation. Modifies structure exclusively through explicit mutation APIs to keep the SDK lightweight and predictable.",
-      "community": 46,
+      "community": 16,
       "norm_label": "granular synchronization principle",
       "id": "overview_goals_granular_sync"
     },
@@ -19235,7 +19325,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Guarantees that exported HTML is completely clean, stripped of all SDK wrapper elements, metadata attributes, or interaction markers.",
-      "community": 46,
+      "community": 143,
       "norm_label": "flat string bridge",
       "id": "overview_goals_flat_string_bridge"
     },
@@ -19327,7 +19417,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 177,
+      "community": 113,
       "norm_label": "computealignmentguides() function",
       "id": "sdk_renderer_computealignmentguides"
     },
@@ -19409,7 +19499,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Defines sync boundary around granular mutation APIs to avoid performance overhead and complexity of DOM diffing and reconciliation inside the SDK.",
-      "community": 46,
+      "community": 16,
       "norm_label": "granular mutation sync boundary decision",
       "id": "adr_0004_concept_sync_boundary"
     },
@@ -28715,6 +28805,17 @@
       "context": "re-export",
       "confidence": "EXTRACTED",
       "source_file": "src/index.ts",
+      "source_location": "L94",
+      "weight": 1.0,
+      "source": "src_index_ts_src_index",
+      "target": "src_workspace_viewportconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "re_exports",
+      "context": "re-export",
+      "confidence": "EXTRACTED",
+      "source_file": "src/index.ts",
       "source_location": "L99",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -30700,6 +30801,16 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/shadow-mount.ts",
+      "source_location": "L1374",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount",
+      "target": "src_shadow_mount_shadowmount_revertviewportunits"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
       "source_location": "L826",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -30770,6 +30881,26 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/shadow-mount.ts",
+      "source_location": "L1378",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount",
+      "target": "src_shadow_mount_shadowmount_translateelementstyles"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L1367",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount",
+      "target": "src_shadow_mount_shadowmount_translateviewportunits"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
       "source_location": "L551",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -30785,6 +30916,16 @@
       "confidence_score": 1.0,
       "source": "src_shadow_mount_shadowmount",
       "target": "src_shadow_mount_shadowmount_updatemarkup"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L1362",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount",
+      "target": "src_shadow_mount_shadowmount_updateviewportsize"
     },
     {
       "relation": "imports",
@@ -30840,6 +30981,28 @@
       "confidence_score": 1.0,
       "source": "src_shadow_mount_shadowmount_addnode",
       "target": "src_shadow_mount_shadowmount_getboundingboxcanvasspace"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L262",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount_addnode",
+      "target": "src_shadow_mount_shadowmount_translateelementstyles"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L249",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount_addnode",
+      "target": "src_shadow_mount_shadowmount_translateviewportunits"
     },
     {
       "relation": "references",
@@ -30906,6 +31069,28 @@
       "confidence_score": 1.0,
       "source": "src_shadow_mount_shadowmount_addchildnode",
       "target": "src_shadow_mount_shadowmount_measurenodecanvasspace"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L374",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount_addchildnode",
+      "target": "src_shadow_mount_shadowmount_translateelementstyles"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L386",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount_addchildnode",
+      "target": "src_shadow_mount_shadowmount_translateviewportunits"
     },
     {
       "relation": "references",
@@ -30994,6 +31179,17 @@
       "confidence_score": 1.0,
       "source": "src_shadow_mount_shadowmount_updatemarkup",
       "target": "src_shadow_mount_shadowmount_readwrapperrect"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L702",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount_updatemarkup",
+      "target": "src_shadow_mount_shadowmount_translateviewportunits"
     },
     {
       "relation": "references",
@@ -31154,11 +31350,33 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/shadow-mount.ts",
+      "source_location": "L907",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount_setnodestyle",
+      "target": "src_shadow_mount_shadowmount_translateviewportunits"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
       "source_location": "L941",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "src_shadow_mount_shadowmount_setnodestyles",
       "target": "src_shadow_mount_shadowmount_getcontentrootinternal"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L960",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount_setnodestyles",
+      "target": "src_shadow_mount_shadowmount_translateviewportunits"
     },
     {
       "relation": "calls",
@@ -31220,6 +31438,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/shadow-mount.ts",
+      "source_location": "L1088",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount_extracthtml",
+      "target": "src_shadow_mount_shadowmount_revertviewportunits"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
       "source_location": "L1175",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -31236,6 +31465,17 @@
       "confidence_score": 1.0,
       "source": "src_shadow_mount_shadowmount_injectstylesheet",
       "target": "src_shadow_mount_shadowmount_assertnotdisposed"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L1192",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount_injectstylesheet",
+      "target": "src_shadow_mount_shadowmount_translateviewportunits"
     },
     {
       "relation": "calls",
@@ -31291,6 +31531,17 @@
       "confidence_score": 1.0,
       "source": "src_shadow_mount_shadowmount_getboundingboxcanvasspace",
       "target": "src_types_rect"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/shadow-mount.ts",
+      "source_location": "L1383",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_shadow_mount_shadowmount_translateelementstyles",
+      "target": "src_shadow_mount_shadowmount_translateviewportunits"
     },
     {
       "relation": "references",
@@ -32865,6 +33116,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workspace.ts",
+      "source_location": "L62",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_workspace",
+      "target": "src_workspace_viewportconfig"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
       "source_location": "L188",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -33802,6 +34063,26 @@
       "target": "src_workspace_workspace_updatemarkup"
     },
     {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L778",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_workspace_workspace",
+      "target": "src_workspace_workspace_updateviewportconfig"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L767",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_workspace_workspace",
+      "target": "src_workspace_workspace_updateviewportsize"
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -33833,6 +34114,17 @@
       "confidence_score": 1.0,
       "source": "src_workspace_workspace_constructor",
       "target": "src_workspace_workspace_registerkeyboardhandler"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L386",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_workspace_workspace_constructor",
+      "target": "src_workspace_workspace_updateviewportsize"
     },
     {
       "relation": "calls",
@@ -34449,6 +34741,17 @@
       "confidence_score": 1.0,
       "source": "src_workspace_workspace_setviewport",
       "target": "src_workspace_workspace_render"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workspace.ts",
+      "source_location": "L795",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_workspace_workspace_updateviewportconfig",
+      "target": "src_workspace_workspace_updateviewportsize"
     },
     {
       "relation": "calls",
@@ -35520,11 +35823,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L78",
+      "source_location": "L74",
       "weight": 1.0,
-      "confidence_score": 1.0,
       "source": "ai_context_canvus_sdk_ai_context",
-      "target": "ai_context_public_api_surface_58_exports"
+      "target": "ai_context_public_api_surface_63_exports",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -35570,81 +35873,91 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L145",
+      "source_location": "L142",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "ai_context_public_api_surface_58_exports",
-      "target": "ai_context_drop_zone_ts"
+      "source": "ai_context_public_api_surface_63_exports",
+      "target": "ai_context_drop_zone_ts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L105",
+      "source_location": "L148",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "ai_context_public_api_surface_58_exports",
-      "target": "ai_context_layout_ts"
+      "source": "ai_context_public_api_surface_63_exports",
+      "target": "ai_context_handlers_types_ts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L151",
+      "source_location": "L101",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "ai_context_public_api_surface_58_exports",
-      "target": "ai_context_matrix_ts"
+      "source": "ai_context_public_api_surface_63_exports",
+      "target": "ai_context_layout_ts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L119",
+      "source_location": "L155",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "ai_context_public_api_surface_58_exports",
-      "target": "ai_context_renderer_ts"
+      "source": "ai_context_public_api_surface_63_exports",
+      "target": "ai_context_matrix_ts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L100",
+      "source_location": "L115",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "ai_context_public_api_surface_58_exports",
-      "target": "ai_context_shadow_mount_ts"
+      "source": "ai_context_public_api_surface_63_exports",
+      "target": "ai_context_renderer_ts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L208",
+      "source_location": "L96",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "ai_context_public_api_surface_58_exports",
-      "target": "ai_context_tree_ts"
+      "source": "ai_context_public_api_surface_63_exports",
+      "target": "ai_context_shadow_mount_ts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L80",
+      "source_location": "L212",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "ai_context_public_api_surface_58_exports",
-      "target": "ai_context_types_ts"
+      "source": "ai_context_public_api_surface_63_exports",
+      "target": "ai_context_tree_ts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L139",
+      "source_location": "L76",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "ai_context_public_api_surface_58_exports",
-      "target": "ai_context_workspace_ts"
+      "source": "ai_context_public_api_surface_63_exports",
+      "target": "ai_context_types_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "AI_CONTEXT.md",
+      "source_location": "L135",
+      "weight": 1.0,
+      "source": "ai_context_public_api_surface_63_exports",
+      "target": "ai_context_workspace_ts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -35705,6 +36018,26 @@
       "confidence_score": 1.0,
       "source": "ai_context_documentation_site_map",
       "target": "ai_context_overview"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "AI_CONTEXT.md",
+      "source_location": "L523",
+      "weight": 1.0,
+      "source": "ai_context_documentation_site_map",
+      "target": "ai_context_playground",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "AI_CONTEXT.md",
+      "source_location": "L526",
+      "weight": 1.0,
+      "source": "ai_context_documentation_site_map",
+      "target": "ai_context_react",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -35800,11 +36133,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AI_CONTEXT.md",
-      "source_location": "L623",
+      "source_location": "L639",
       "weight": 1.0,
-      "confidence_score": 1.0,
       "source": "ai_context_0_1_0_2026_05_25",
-      "target": "ai_context_added_623"
+      "target": "ai_context_added_639",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -35880,11 +36213,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L88",
+      "source_location": "L95",
       "weight": 1.0,
-      "confidence_score": 1.0,
       "source": "changelog_0_1_0_2026_05_25",
-      "target": "changelog_added_88"
+      "target": "changelog_added_95",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -39710,6 +40043,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs-site/pages/sdk/configuration.mdx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "sdk_configuration_workspaceconfig",
+      "target": "sdk_configuration_viewportconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-site/pages/sdk/configuration.mdx",
       "source_location": "L102",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -41070,6 +41413,26 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs-site/pages/sdk/workspace-api.mdx",
+      "source_location": "L263",
+      "weight": 1.0,
+      "source": "sdk_workspace_api_viewport",
+      "target": "sdk_workspace_api_updateviewportconfig_config",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-site/pages/sdk/workspace-api.mdx",
+      "source_location": "L255",
+      "weight": 1.0,
+      "source": "sdk_workspace_api_viewport",
+      "target": "sdk_workspace_api_updateviewportsize_width_height",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs-site/pages/sdk/workspace-api.mdx",
       "source_location": "L299",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -41525,6 +41888,16 @@
       "confidence_score": 1.0,
       "source": "docs_api_api_reference_guide",
       "target": "docs_api_5_type_and_callback_definitions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/api.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "docs_api_1_workspace_configuration",
+      "target": "docs_api_viewportconfig",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -42015,56 +42388,6 @@
       "confidence_score": 1.0,
       "source": "react_demo_readme_react_typescript_vite",
       "target": "react_demo_readme_react_compiler"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L12",
-      "weight": 1.0,
-      "source": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
-      "target": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_error_details",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L1",
-      "weight": 1.0,
-      "source": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
-      "target": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_instructions",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L25",
-      "weight": 1.0,
-      "source": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
-      "target": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_page_snapshot",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L7",
-      "weight": 1.0,
-      "source": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
-      "target": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_test_info",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "packages/react-demo/test-results/core-regression-Tier-1-Cor-1332b-apper-Drag-single-HTML-node-chromium/error-context.md",
-      "source_location": "L82",
-      "weight": 1.0,
-      "source": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context",
-      "target": "core_regression_tier_1_cor_1332b_apper_drag_single_html_node_chromium_error_context_test_source",
-      "confidence_score": 1.0
     },
     {
       "relation": "references",
@@ -47676,5 +47999,5 @@
       "source_file": "skills/writing-skills/references/cso/README.md"
     }
   ],
-  "built_at_commit": "5256ded68e0b8c4d858f6062f4e53823479be209"
+  "built_at_commit": "5dee465cb4d3d2778944a68880016b882f630406"
 }

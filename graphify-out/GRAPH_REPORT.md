@@ -1,16 +1,16 @@
 # Graph Report - canvus  (2026-06-11)
 
 ## Corpus Check
-- 169 files · ~133,826 words
+- 170 files · ~134,259 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1960 nodes · 2642 edges · 189 communities (157 shown, 32 thin omitted)
+- 1969 nodes · 2664 edges · 183 communities (152 shown, 31 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 53 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5256ded6`
+- Built from commit: `5dee465c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -170,24 +170,17 @@
 - [[_COMMUNITY_Community 171|Community 171]]
 - [[_COMMUNITY_Community 172|Community 172]]
 - [[_COMMUNITY_Community 173|Community 173]]
-- [[_COMMUNITY_Community 174|Community 174]]
 - [[_COMMUNITY_Community 175|Community 175]]
 - [[_COMMUNITY_Community 176|Community 176]]
-- [[_COMMUNITY_Community 177|Community 177]]
 - [[_COMMUNITY_Community 178|Community 178]]
 - [[_COMMUNITY_Community 179|Community 179]]
 - [[_COMMUNITY_Community 180|Community 180]]
-- [[_COMMUNITY_Community 183|Community 183]]
-- [[_COMMUNITY_Community 184|Community 184]]
 - [[_COMMUNITY_Community 185|Community 185]]
-- [[_COMMUNITY_Community 186|Community 186]]
-- [[_COMMUNITY_Community 187|Community 187]]
-- [[_COMMUNITY_Community 188|Community 188]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Workspace` - 109 edges
+1. `Workspace` - 111 edges
 2. `Rect` - 67 edges
-3. `ShadowMount` - 42 edges
+3. `ShadowMount` - 46 edges
 4. `Vec2` - 37 edges
 5. `WorkspaceContext` - 35 edges
 6. `NodeTree` - 34 edges
@@ -234,23 +227,23 @@
 - **Skill Architecture Tiers** — tier_1_simple_readme_tier_1_simple_skills, tier_2_expanded_readme_tier_2_expanded_skills, tier_3_platform_readme_tier_3_platform_skills [EXTRACTED 1.00]
 - **Claude Search Optimization Guidelines** — cso_readme_description_rule, cso_readme_token_efficiency, cso_readme_keyword_strategy, cso_readme_third_person_rule, cso_readme_cross_referencing [EXTRACTED 1.00]
 
-## Communities (189 total, 32 thin omitted)
+## Communities (183 total, 31 thin omitted)
 
 ### Community 0 - "Viewport Geometry & Coordinate Space"
-Cohesion: 0.06
-Nodes (4): getDOMElementByPath(), getDOMPath(), isEditableTarget(), Workspace
+Cohesion: 0.05
+Nodes (5): resolveNode(), getDOMElementByPath(), getDOMPath(), isEditableTarget(), Workspace
 
 ### Community 2 - "React Demo Assets & Branding"
 Cohesion: 0.06
 Nodes (34): React Demo Favicon, Canvus Visual Identity, Display-P3 Wide Gamut Colors, Vibrant Glowing Gradient Pattern, dependencies, @canvus/core, @canvus/react, react (+26 more)
 
 ### Community 3 - "Workspace Node Tree Hierarchy"
-Cohesion: 0.13
-Nodes (5): getDescendantIds(), isAncestor(), NodeTree, updateDepthRecursive(), ResolvedNode
+Cohesion: 0.10
+Nodes (7): CommandHandler, matchesShortcut(), getDescendantIds(), isAncestor(), NodeTree, updateDepthRecursive(), ResolvedNode
 
 ### Community 4 - "Workspace Selection & Drag Layout"
-Cohesion: 0.09
-Nodes (31): Pristine Flat String Exports, Strict Styling Isolation, ChildSlot, detectChildSlots(), FlexDirection, FlexWrap, getFlowSign(), getLayoutLabel() (+23 more)
+Cohesion: 0.12
+Nodes (32): Workspace Orchestrator Pattern, InteractionDetail, KeyboardHandler, DropTarget, ChildSlot, detectChildSlots(), FlexDirection, FlexWrap (+24 more)
 
 ### Community 5 - "Writing Skills Rules & Anti-Rationalization"
 Cohesion: 0.33
@@ -269,16 +262,16 @@ Cohesion: 0.08
 Nodes (23): dependencies, react, react-dom, devDependencies, concurrently, electron, @playwright/test, @types/react (+15 more)
 
 ### Community 9 - "Pointer & Drag/Drop Interaction Handlers"
-Cohesion: 0.20
-Nodes (9): DragHandler, findDropTarget(), getGridSpan(), InsertionIndicator, getGridAreaRect(), getGridCellAt(), isPointInElement(), computeAlignmentGuides() (+1 more)
+Cohesion: 0.42
+Nodes (7): findDropTarget(), getGridSpan(), InsertionIndicator, getFlowAxis(), getGridAreaRect(), getGridCellAt(), isPointInElement()
 
 ### Community 10 - "Demo Application UI Components"
 Cohesion: 0.10
 Nodes (16): ActiveNode, ControlPanel(), ControlPanelProps, DemoCard(), DemoCardProps, VARIANT_STYLES, EventLog(), EventLogProps (+8 more)
 
 ### Community 11 - "Workspace Gestures & Input Handlers"
-Cohesion: 0.12
-Nodes (11): PanHandler, SelectionHandler, SpacingHandler, InteractionDetail, InteractionHandler, KeyboardHandler, WorkspaceContext, rectsIntersect() (+3 more)
+Cohesion: 0.10
+Nodes (11): ClipboardItem, DragHandler, DrawHandler, PanHandler, getLockedPropertiesForAnchor(), ResizeHandler, SelectionHandler, InteractionHandler (+3 more)
 
 ### Community 12 - "Core TypeScript Config"
 Cohesion: 0.09
@@ -290,19 +283,19 @@ Nodes (22): Accessibility Tree, Lighthouse Accessibility Audit, Color Contrast C
 
 ### Community 14 - "Keyboard Commands & Command Handlers"
 Cohesion: 0.05
-Nodes (39): [0.1.0] - 2026-05-25, Added, Added, architecture, Architecture Overview, Canvus SDK — AI Context, Changed, Changelog (+31 more)
+Nodes (42): [0.1.0] - 2026-05-25, Added, Added, architecture, Architecture Overview, Canvus SDK — AI Context, Changed, Changelog (+34 more)
 
 ### Community 15 - "React Bindings TypeScript Config"
 Cohesion: 0.09
 Nodes (21): compilerOptions, declaration, declarationMap, esModuleInterop, forceConsistentCasingInFileNames, isolatedModules, jsx, lib (+13 more)
 
 ### Community 16 - "Architectural Decision Records"
-Cohesion: 0.29
-Nodes (7): 1. Zero Runtime Dependencies, 2. Browser-Native Performance, 3. Strict Styling Isolation, 4. Granular Synchronization Over Reconciliation, 5. Host-Delegated Transaction History, 6. Pristine HTML Export, Core Principles
+Cohesion: 0.11
+Nodes (17): Granular Mutation Sync Boundary Decision, 4. Granular Mutation Sync Boundary, 1. Zero Runtime Dependencies, 2. Browser-Native Performance, 3. Strict Styling Isolation, 4. Granular Synchronization Over Reconciliation, 5. Host-Delegated Transaction History, 6. Pristine HTML Export (+9 more)
 
 ### Community 17 - "Core Overlay Renderer & Modules Blueprint"
-Cohesion: 0.21
-Nodes (16): Workspace Orchestrator Pattern, ClipboardItem, DropTarget, ANCHOR_CURSORS, ANCHOR_ORDER, DEFAULT_STYLE, GridOverlayInfo, Guide (+8 more)
+Cohesion: 0.20
+Nodes (10): Coordinate Space Clarity, Core Constraints, Developer Guidelines & Constraints, Pristine Flat String Exports, Framework Independence, Geometry and Tree Synchronization, Local Development, Minimize Layout Thrashing (+2 more)
 
 ### Community 18 - "Electron Demo TypeScript Config"
 Cohesion: 0.11
@@ -313,8 +306,8 @@ Cohesion: 0.11
 Nodes (17): compilerOptions, allowImportingTsExtensions, jsx, lib, module, moduleDetection, moduleResolution, noEmit (+9 more)
 
 ### Community 20 - "Resize Gesture Handlers"
-Cohesion: 0.16
-Nodes (10): computeResizedRect(), getCellIndexAtOffset(), getGridSpan(), getGridStart(), getLockedPropertiesForAnchor(), getRealGridStart(), ResizeHandler, parseGridTracks() (+2 more)
+Cohesion: 0.24
+Nodes (10): computeResizedRect(), getCellIndexAtOffset(), getGridSpan(), getGridStart(), getRealGridStart(), detectLayout(), parseGridTracks(), resolveLayoutMode() (+2 more)
 
 ### Community 21 - "React Demo Node TypeScript Config"
 Cohesion: 0.12
@@ -329,12 +322,16 @@ Cohesion: 0.21
 Nodes (17): CommitLogEntry, SimplifiedNode, ViewportState, Window, cleanOldExtractedStyleTags(), clearWorkspaceNodes(), extractAndInjectStyles(), importHTMLDocument() (+9 more)
 
 ### Community 24 - "Canvas Overlay Grid Renderer"
-Cohesion: 0.23
-Nodes (3): computeScreenAnchors(), OverlayRenderer, ViewportMatrix
+Cohesion: 0.14
+Nodes (11): ANCHOR_CURSORS, ANCHOR_ORDER, computeScreenAnchors(), computeSnappedPosition(), DEFAULT_STYLE, Guide, LayoutBadgeInfo, OverlayFrame (+3 more)
 
 ### Community 25 - "Docs Site Package Config"
 Cohesion: 0.14
 Nodes (13): dependencies, next, nextra, nextra-theme-docs, react, react-dom, name, private (+5 more)
+
+### Community 26 - "Canvas Draw Gesture Handlers"
+Cohesion: 0.24
+Nodes (3): SpacingHandler, isContainerNode(), SpacingAdjusterType
 
 ### Community 28 - "Documentation Validation Scripts"
 Cohesion: 0.18
@@ -353,8 +350,8 @@ Cohesion: 0.31
 Nodes (7): combineGraphs(), { execSync }, extractDotBlocks(), fs, main(), path, renderToSvg()
 
 ### Community 32 - "Clipboard Interaction Handlers"
-Cohesion: 0.20
-Nodes (7): CommandHandler, matchesShortcut(), detectLayout(), getFlowAxis(), resolveLayoutMode(), computeAggregateBounds(), Command
+Cohesion: 0.67
+Nodes (3): `getOverlayRenderer()`, `getShadowMount()`, Subsystem Access
 
 ### Community 33 - "Drag Gesture Handlers"
 Cohesion: 0.07
@@ -373,16 +370,16 @@ Cohesion: 0.11
 Nodes (18): Anti-Rationalization, Claude Search Optimization (CSO), Common Mistakes, 📚 Component Index, Skill Creation, Examples, How It Works, ✅ Pre-Deploy Checklist (+10 more)
 
 ### Community 37 - "Workspace Inline Text Editing Config"
-Cohesion: 0.13
-Nodes (16): Pluggable Inline Text Editing Decision, 2. Pluggable Inline Text Editing and Escape Hatch, Callback Reference, Configuration & Callbacks, `onBreadcrumbChange`, `onForcePseudoState`, `onHTMLCommit`, `onInteractionChange` (+8 more)
+Cohesion: 0.12
+Nodes (17): Pluggable Inline Text Editing Decision, 2. Pluggable Inline Text Editing and Escape Hatch, Callback Reference, Configuration & Callbacks, `onBreadcrumbChange`, `onForcePseudoState`, `onHTMLCommit`, `onInteractionChange` (+9 more)
 
 ### Community 38 - "Twin-Layer Architecture Documents"
 Cohesion: 0.33
 Nodes (6): Flat String Bridge, Twin-Layer Architecture, Projection Mutation Layer, Viewport Surface Layer, Drop Zone Layout Placement, Custom Node Renderer
 
 ### Community 39 - "Framework Independence Guidelines"
-Cohesion: 0.25
-Nodes (8): Coordinate Space Clarity, Core Constraints, Developer Guidelines & Constraints, Framework Independence, Geometry and Tree Synchronization, Local Development, Minimize Layout Thrashing, rAF-Throttled Rendering
+Cohesion: 0.15
+Nodes (11): applyPan(), applyWheelZoom(), calculateZoomAnchor(), canvasToScreen(), clampScale(), getAnchorPositions(), hitTestElements(), lerp() (+3 more)
 
 ### Community 40 - "Claude Search Optimization Guide"
 Cohesion: 0.07
@@ -409,8 +406,8 @@ Cohesion: 0.20
 Nodes (9): ADR-0004: Granular Mutation Sync Boundary, Consequences, Context, Decision, Code Example, Host-Driven Importing Workflow, HTML/CSS Document Importing, Isolation & Stylesheet Rewriting (+1 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.22
-Nodes (6): Granular Mutation Sync Boundary Decision, 4. Granular Mutation Sync Boundary, Browser-Native Performance Goal, Flat String Bridge, Granular Synchronization Principle, Zero Runtime Dependencies Principle
+Cohesion: 0.67
+Nodes (3): Anti-patterns to avoid, Avoid offering too many options, Avoid Windows-style paths
 
 ### Community 47 - "Community 47"
 Cohesion: 0.50
@@ -481,8 +478,8 @@ Cohesion: 0.09
 Nodes (22): 1. E2E Testing Fundamentals, 2. Test Philosophy, Advanced Patterns, Best Practices, Common Pitfalls, Core Concepts, Cypress Patterns, Debugging Failing Tests (+14 more)
 
 ### Community 108 - "Community 108"
-Cohesion: 0.10
-Nodes (20): 1. Workspace Configuration, 2. Main Workspace Classes, 3. Primitives and Constants, 4. Helper Functions and Subsystems, 5. Type and Callback Definitions, API Reference Guide, Core Interface Definitions, Drag and Drop Placement (`src/drop-zone.ts`) (+12 more)
+Cohesion: 0.09
+Nodes (21): 1. Workspace Configuration, 2. Main Workspace Classes, 3. Primitives and Constants, 4. Helper Functions and Subsystems, 5. Type and Callback Definitions, API Reference Guide, Core Interface Definitions, Drag and Drop Placement (`src/drop-zone.ts`) (+13 more)
 
 ### Community 109 - "Community 109"
 Cohesion: 0.10
@@ -497,12 +494,12 @@ Cohesion: 0.10
 Nodes (19): 1. Executive Summary & Product Vision, 2.1 Non-Negotiable Constraints (The Guardrails), 2.2 Product Goals, 2. Core Objectives & Constraints, 3.1 Kernel Evolution: The Hook and Lifecycle System, 3.2 Test Bench Architecture Preservation, 3. Feature & Technical Requirements, 4. Step-by-Step Implementation Plan (+11 more)
 
 ### Community 112 - "Community 112"
-Cohesion: 0.15
-Nodes (13): `applyOperation(op)`, Constructor, `dispatchInteractionEvent(nodeId, eventName)`, `dispose()`, `forceNodeState(nodeId, state, enabled)`, `getOverlayRenderer()`, `getShadowMount()`, Lifecycle (+5 more)
+Cohesion: 0.12
+Nodes (16): `applyOperation(op)`, Constructor, `dispatchInteractionEvent(nodeId, eventName)`, `dispose()`, `forceNodeState(nodeId, state, enabled)`, `injectCSS(css)`, `injectCSSLink(href)`, Lifecycle (+8 more)
 
 ### Community 113 - "Community 113"
-Cohesion: 0.29
-Nodes (7): `GridOverlayInfo`, `Guide`, `LayoutBadgeInfo`, `OverlayFrame`, `SpacingAdjusterInfo`, `SpacingAdjusterType`, Type Definitions
+Cohesion: 0.12
+Nodes (17): Viewport Surface Layer, `anchorCursor(anchor)`, computeAlignmentGuides() Function, `computeAlignmentGuides(movingRect, otherRects, threshold?)`, `computeSnappedPosition(movingRect, otherRects, threshold?)`, Constructor, `GridOverlayInfo`, `Guide` (+9 more)
 
 ### Community 114 - "Community 114"
 Cohesion: 0.11
@@ -545,8 +542,8 @@ Cohesion: 0.17
 Nodes (11): 1. Gather context, 2. Explore the codebase (optional), 3. Draft vertical slices, 4. Quiz the user, 5. Create the Local markdown issues, Acceptance criteria, Blocked by, Parent (+3 more)
 
 ### Community 124 - "Community 124"
-Cohesion: 0.17
-Nodes (12): Advanced: Skills with executable code, [Analysis Title], Anti-patterns to avoid, Avoid offering too many options, Avoid Windows-style paths, Conditional workflow pattern, Examples pattern, Executive summary (+4 more)
+Cohesion: 0.15
+Nodes (13): Advanced: Skills with executable code, [Analysis Title], Build evaluations first, Conditional workflow pattern, Develop Skills iteratively with Claude, Evaluation and iteration, Examples pattern, Executive summary (+5 more)
 
 ### Community 125 - "Community 125"
 Cohesion: 0.18
@@ -617,8 +614,8 @@ Cohesion: 0.25
 Nodes (7): 1. The Twin-Layer Architecture, 2. The Synchronous Reflow Loop, 3. Module Roles Blueprint, A. The Projection Mutation Layer (Shadow DOM), Architecture & Reflow Loop, B. The Viewport Surface Layer (HTML5 Canvas), Breakdown of the Loop Phases:
 
 ### Community 143 - "Community 143"
-Cohesion: 0.25
-Nodes (8): Developer Integration, Key Capabilities, Layout Intelligence, The Canvus Approach, The Problem, Visual Interaction, What is Canvus?, Who Is Canvus For?
+Cohesion: 0.20
+Nodes (9): Flat String Bridge, Developer Integration, Key Capabilities, Layout Intelligence, The Canvus Approach, The Problem, Visual Interaction, What is Canvus? (+1 more)
 
 ### Community 144 - "Community 144"
 Cohesion: 0.25
@@ -733,16 +730,12 @@ Cohesion: 0.50
 Nodes (4): `getNodeTree()`, `reorderChild(nodeId, newIndex)`, `reparentNode(nodeId, newParentId, index?)`, Tree Operations
 
 ### Community 172 - "Community 172"
-Cohesion: 0.50
-Nodes (4): `getViewport()`, `resetViewport()`, `setViewport(vp)`, Viewport
+Cohesion: 0.33
+Nodes (6): `getViewport()`, `resetViewport()`, `setViewport(vp)`, `updateViewportConfig(config)`, `updateViewportSize(width, height)`, Viewport
 
 ### Community 173 - "Community 173"
 Cohesion: 0.50
 Nodes (4): `hasJSMark(nodeId)`, JS Badge Marking, `markNodeHasJS(nodeId)`, `unmarkNodeHasJS(nodeId)`
-
-### Community 174 - "Community 174"
-Cohesion: 0.50
-Nodes (4): Build evaluations first, Develop Skills iteratively with Claude, Evaluation and iteration, Observe how Claude navigates Skills
 
 ### Community 175 - "Community 175"
 Cohesion: 0.50
@@ -752,53 +745,29 @@ Nodes (4): Checklist for effective Skills, Code and scripts, Core quality, Testi
 Cohesion: 0.50
 Nodes (4): Concise is key, Core principles, Set appropriate degrees of freedom, Test with all models you plan to use
 
-### Community 177 - "Community 177"
-Cohesion: 0.40
-Nodes (5): Viewport Surface Layer, computeAlignmentGuides() Function, Constructor, Overlay Renderer (`renderer.ts`), OverlayRenderer
-
-### Community 183 - "Community 183"
-Cohesion: 0.40
-Nodes (5): `anchorCursor(anchor)`, `computeAlignmentGuides(movingRect, otherRects, threshold?)`, `computeSnappedPosition(movingRect, otherRects, threshold?)`, Helper Functions, `isContainerNode(node)`
-
-### Community 184 - "Community 184"
-Cohesion: 0.67
-Nodes (3): `injectCSS(css)`, `injectCSSLink(href)`, Stylesheet Injection
-
 ### Community 185 - "Community 185"
 Cohesion: 0.67
 Nodes (3): `isPreviewMode()`, Preview Mode, `setPreviewMode(enabled)`
 
-### Community 186 - "Community 186"
-Cohesion: 0.67
-Nodes (3): `setNodeStyle(id, property, value)`, `setNodeStyles(id, styles)`, Style Manipulation
-
-### Community 187 - "Community 187"
-Cohesion: 0.40
-Nodes (5): Current Milestones (v0.1.x), Design Philosophy & Goals, Future Roadmap, Product Goals, Technical Invariants
-
-### Community 188 - "Community 188"
-Cohesion: 0.33
-Nodes (5): Error details, Instructions, Page snapshot, Test info, Test source
-
 ## Knowledge Gaps
-- **1050 isolated node(s):** `name`, `version`, `type`, `main`, `dev` (+1045 more)
+- **1052 isolated node(s):** `name`, `version`, `type`, `main`, `dev` (+1047 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **32 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **31 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Workspace` connect `Viewport Geometry & Coordinate Space` to `Clipboard Interaction Handlers`, `Shadow DOM Rendering & Mounting`, `Workspace Node Tree Hierarchy`, `Workspace Selection & Drag Layout`, `Pointer & Drag/Drop Interaction Handlers`, `Workspace Gestures & Input Handlers`, `Community 142`, `Core Overlay Renderer & Modules Blueprint`, `Resize Gesture Handlers`, `Canvas Overlay Grid Renderer`, `Canvas Draw Gesture Handlers`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `Module Roles Blueprint` connect `Community 119` to `Core Overlay Renderer & Modules Blueprint`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
-- **Why does `NodeTree` connect `Workspace Node Tree Hierarchy` to `Clipboard Interaction Handlers`, `Workspace Selection & Drag Layout`, `Pointer & Drag/Drop Interaction Handlers`, `Workspace Gestures & Input Handlers`, `Core Overlay Renderer & Modules Blueprint`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **Why does `Workspace` connect `Viewport Geometry & Coordinate Space` to `Shadow DOM Rendering & Mounting`, `Workspace Node Tree Hierarchy`, `Workspace Selection & Drag Layout`, `Framework Independence Guidelines`, `Workspace Gestures & Input Handlers`, `Community 142`, `Canvas Overlay Grid Renderer`, `Canvas Draw Gesture Handlers`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **Why does `Shadow DOM Style & Script Isolation` connect `Community 136` to `Workspace Selection & Drag Layout`?**
+  _High betweenness centrality (0.010) - this node is a cross-community bridge._
 - **What connects `name`, `version`, `type` to the rest of the system?**
-  _1081 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1083 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Viewport Geometry & Coordinate Space` be split into smaller, more focused modules?**
-  _Cohesion score 0.055364314400458976 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05132788559754852 - nodes in this community are weakly interconnected._
 - **Should `Shadow DOM Rendering & Mounting` be split into smaller, more focused modules?**
-  _Cohesion score 0.09388335704125178 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09291521486643438 - nodes in this community are weakly interconnected._
 - **Should `React Demo Assets & Branding` be split into smaller, more focused modules?**
   _Cohesion score 0.05714285714285714 - nodes in this community are weakly interconnected._
+- **Should `Workspace Node Tree Hierarchy` be split into smaller, more focused modules?**
+  _Cohesion score 0.09634551495016612 - nodes in this community are weakly interconnected._

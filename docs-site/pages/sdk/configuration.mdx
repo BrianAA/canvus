@@ -10,6 +10,7 @@ const ws = new Workspace(container, callbacks, {
   snapThreshold: 5,
   minResizeSize: 40,
   enableSnapGuides: true,
+  viewport: { width: 960, height: 600 },
 })
 ```
 
@@ -19,6 +20,25 @@ const ws = new Workspace(container, callbacks, {
 | `snapThreshold` | `number` | `5` | Alignment guidelines snapping distance in canvas-space pixels |
 | `minResizeSize` | `number` | `40` | Minimum width or height allowed when resizing a node wrapper |
 | `enableSnapGuides` | `boolean` | `true` | Enables drawing snapping alignment lines during drag gestures |
+| `viewport` | `ViewportConfig` | `undefined` | Viewport scaling options for resolving CSS relative units (vh, vw) |
+
+### ViewportConfig
+
+Options controlling the translation and scaling of CSS viewport units (`vh`, `vw`) relative to a simulated preview frame (canvas card) size.
+
+```typescript
+interface ViewportConfig {
+  width: number;
+  height: number;
+  scaleViewportUnits?: boolean; // Defaults to true if viewport is defined
+}
+```
+
+When `scaleViewportUnits` is enabled, Canvus will:
+- Define `--canvus-vh` and `--canvus-vw` CSS variables on the root shadow DOM host, representing 1% of the card's width and height.
+- Automatically rewrite inline styles and injected stylesheet contents, translating `vh` and `vw` into `calc(value * var(--canvus-vh/vw, 1vh/vw))` so they scale relative to the frame rather than the window.
+- Automatically revert translated properties during `extractHTML` to keep the returned HTML clean and pristine.
+- Dynamically update custom variable properties when the root frame node is resized via workspace tools or public methods.
 
 ### OverlayStyle
 

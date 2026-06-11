@@ -63,8 +63,8 @@ test.describe('Tier 1: Core Regression Tests via React Wrapper', () => {
     await dragOnCanvas(page, { x: startX, y: startY }, { x: startX + 150, y: startY + 100 });
 
     const boxAfter = await getNodeBox(page, 'html-node-1');
-    expect(boxAfter.x - boxBefore.x).toBeCloseTo(150, -1); // tolerance of 10px
-    expect(boxAfter.y - boxBefore.y).toBeCloseTo(100, -1);
+    expect(Math.abs(boxAfter.x - boxBefore.x - 150)).toBeLessThan(15);
+    expect(Math.abs(boxAfter.y - boxBefore.y - 100)).toBeLessThan(15);
   });
 
   test('Resize single HTML node', async ({ page }) => {

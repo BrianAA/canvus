@@ -15,6 +15,16 @@ Options passed to the `Workspace` constructor to customize interaction tolerance
 | `snapThreshold` | `number` | `5` | Alignment guidelines snapping distance in canvas-space pixels. |
 | `minResizeSize` | `number` | `40` | The minimum width or height allowed when resizing a node wrapper. |
 | `enableSnapGuides` | `boolean` | `true` | Enables drawing snapping alignment lines during drag gestures. |
+| `viewport` | `ViewportConfig` | `undefined` | Viewport scaling options for resolving CSS relative units (vh, vw). |
+
+### `ViewportConfig`
+Options controlling the translation and scaling of CSS viewport units (`vh`, `vw`) relative to a simulated preview frame (canvas card) size.
+
+| Property | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `width` | `number` | | Simulated viewport width in pixels. |
+| `height` | `number` | | Simulated viewport height in pixels. |
+| `scaleViewportUnits` | `boolean` | `true` | Whether to translate and scale vh/vw units to custom CSS properties relative to the card. |
 
 ### `WorkspaceCallbacks`
 Hook callbacks triggered on workspace events.
@@ -72,6 +82,10 @@ The core engine orchestrating events, DOM mounting, and overlay drawing.
   Forces a viewport update.
 - **`resetViewport(): void`**  
   Resets the workspace scale to 1:1 and offsets to 0,0.
+- **`updateViewportSize(width: number, height: number): void`**  
+  Updates the viewport dimensions and re-evaluates CSS viewport-relative units (`vh`, `vw`) across all nodes inside the workspace container.
+- **`updateViewportConfig(config: Partial<ViewportConfig>): void`**  
+  Updates the viewport configuration options (such as dimensions and scaling behavior) dynamically, and re-evaluates viewport units.
 - **`getNodes(): ReadonlyArray<Readonly<ResolvedNode>>`**  
   Returns a flat array of all registered nodes in topological order.
 - **`getShadowMount(): ShadowMount`**  
@@ -236,3 +250,10 @@ export interface Operation {
 *   `Guide` = `{ type: "h" \| "v"; coord: number; start: number; end: number; }`
 *   `DropTarget` = `{ parentId: string \| null; index: number; indicator: InsertionIndicator; }`
 *   `InsertionIndicator` = `{ type: "h" \| "v"; coord: number; start: number; end: number; }`
+*   `CommandShortcut` = `{ key?: string; code?: string; metaOrCtrl?: boolean; shift?: boolean; alt?: boolean; }` key/modifier match configuration for keyboard events.
+*   `Command` = `{ id: string; name: string; description?: string; shortcut?: CommandShortcut | CommandShortcut[]; execute: (workspace: any, event?: KeyboardEvent) => void; enabled?: (workspace: any) => boolean; }` modular keyboard command descriptor.
+*   `InteractionHandler` = Interface for modular pointer gesture handlers. Methods: `claim(...)`, `onPointerMove(...)`, `onPointerUp(...)`, `onCancel()`.
+*   `KeyboardHandler` = Interface for modular keyboard handlers. Methods: `onKeyDown(...)`, `onKeyUp(...)`.
+*   `InteractionDetail` = `{ nodeIds?: string[]; property?: string; handler?: string; }` payload for detailed workspace interactions.
+*   `WorkspaceContext` = Shared state and subsystem contract interface implemented by `Workspace` and consumed by handlers.
+

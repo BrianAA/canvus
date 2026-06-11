@@ -59,6 +59,15 @@ import { SelectionHandler } from "./handlers/selection.handler.js";
 
 // ── Configuration ───────────────────────────────────────────
 
+export interface ViewportConfig {
+  /** Width of the viewport (frame/card). */
+  width: number;
+  /** Height of the viewport (frame/card). */
+  height: number;
+  /** Whether to scale viewport units. @default true if viewport is defined */
+  scaleViewportUnits?: boolean;
+}
+
 /** Configuration options for the workspace. */
 export interface WorkspaceConfig {
   /** Partial overlay style overrides. */
@@ -69,6 +78,8 @@ export interface WorkspaceConfig {
   minResizeSize?: number;
   /** Enable snap-to-align guides during drag/resize. @default true */
   enableSnapGuides?: boolean;
+  /** Optional viewport configuration for scaling relative CSS units (vh, vw). */
+  viewport?: ViewportConfig;
 }
 
 // ── Event Callbacks ─────────────────────────────────────────
@@ -199,6 +210,7 @@ export class Workspace {
   public readonly snapThreshold: number;
   public readonly minResizeSize: number;
   public readonly enableSnapGuides: boolean;
+  public viewportConfig?: ViewportConfig;
 
   // ── Workspace State ─────────────────────────────
 
@@ -316,6 +328,13 @@ export class Workspace {
     this.enableSnapGuides = config.enableSnapGuides ?? true;
     this.viewport = createDefaultViewport();
 
+    if (config.viewport) {
+      this.viewportConfig = {
+        ...config.viewport,
+        scaleViewportUnits: config.viewport.scaleViewportUnits ?? true,
+      };
+    }
+
     // ── Ensure container is positioned ────────────
     const pos = getComputedStyle(container).position;
     if (pos === "static") {
@@ -332,15 +351,40 @@ export class Workspace {
     // ── Initialize Subsystems ─────────────────────
     this.renderer = new OverlayRenderer(this.canvas, config.overlayStyle);
 
-    this.mount = new ShadowMount(container, (id, rect) => {
-      // ResizeObserver callback — update cache and re-render.
-      const node = this.tree.get(id);
-      if (node) {
-        node.currentRect = rect;
-        this.callbacks.onNodeRectChange?.(id, rect);
-        this.render();
-      }
-    });
+    this.mount = new ShadowMount(
+      container,
+      (id, rect) => {
+        // ResizeObserver callback — update cache and re-render.
+        const node = this.tree.get(id);
+        if (node) {
+          node.currentRect = rect;
+
+          // Dynamically update viewport variables if a root frame node is resized.
+          if (
+            node.parentId === null &&
+            this.viewportConfig &&
+            this.viewportConfig.scaleViewportUnits !== false
+          ) {
+            // Safety check: prevent feedback loop if the root node itself uses viewport units.
+            const usesViewportUnits = /v(h|w)\b/i.test(node.rawMarkup);
+            if (!usesViewportUnits) {
+              this.viewportConfig.width = rect.width;
+              this.viewportConfig.height = rect.height;
+              this.mount.updateViewportSize(rect.width, rect.height);
+            }
+          }
+
+          this.callbacks.onNodeRectChange?.(id, rect);
+          this.render();
+        }
+      },
+      this.viewportConfig?.scaleViewportUnits ?? false
+    );
+
+    // Set initial size of the viewport variables in the mount if scaleViewportUnits is enabled.
+    if (this.viewportConfig && this.viewportConfig.scaleViewportUnits !== false) {
+      this.mount.updateViewportSize(this.viewportConfig.width, this.viewportConfig.height);
+    }
 
     this.mount.applyViewportTransform(this.viewport);
 
@@ -717,6 +761,39 @@ export class Workspace {
   /** Resets viewport to 1:1 scale, zero offset. */
   resetViewport(): void {
     this.setViewport(createDefaultViewport());
+  }
+
+  /** Updates the viewport dimensions and re-evaluates viewport units. */
+  updateViewportSize(width: number, height: number): void {
+    if (this.viewportConfig) {
+      this.viewportConfig.width = width;
+      this.viewportConfig.height = height;
+      if (this.viewportConfig.scaleViewportUnits !== false) {
+        this.mount.updateViewportSize(width, height);
+      }
+    }
+  }
+
+  /** Updates the viewport configuration and re-evaluates viewport units. */
+  updateViewportConfig(config: Partial<ViewportConfig>): void {
+    if (!this.viewportConfig) {
+      this.viewportConfig = {
+        width: config.width ?? 0,
+        height: config.height ?? 0,
+        scaleViewportUnits: config.scaleViewportUnits ?? true,
+      };
+    } else {
+      if (config.width !== undefined) this.viewportConfig.width = config.width;
+      if (config.height !== undefined) this.viewportConfig.height = config.height;
+      if (config.scaleViewportUnits !== undefined) {
+        this.viewportConfig.scaleViewportUnits = config.scaleViewportUnits;
+      }
+    }
+
+    this.mount.scaleViewportUnits = this.viewportConfig.scaleViewportUnits ?? false;
+    if (this.viewportConfig.scaleViewportUnits) {
+      this.mount.updateViewportSize(this.viewportConfig.width, this.viewportConfig.height);
+    }
   }
 
   // ── Public API: Preview Mode ────────────────────

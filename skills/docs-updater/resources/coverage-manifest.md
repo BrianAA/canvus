@@ -109,6 +109,7 @@ This manifest tracks documentation coverage for every public export in the Canvu
 |--------|------|-----------|--------|
 | `WorkspaceConfig` | type | `sdk/configuration.mdx` | ✅ |
 | `WorkspaceCallbacks` | type | `sdk/configuration.mdx` | ✅ |
+| `ViewportConfig` | type | `sdk/configuration.mdx` | ✅ |
 | `Workspace` | class | `sdk/workspace-api.mdx` | ✅ |
 
 ---
@@ -133,9 +134,9 @@ This manifest tracks documentation coverage for every public export in the Canvu
 | `tree.ts` | 2 | 2 | 0 | 0 |
 | `layout.ts` | 11 | 11 | 0 | 0 |
 | `renderer.ts` | 11 | 11 | 0 | 0 |
-| `workspace.ts` | 3 | 3 | 0 | 0 |
+| `workspace.ts` | 4 | 4 | 0 | 0 |
 | `drop-zone.ts` | 3 | 3 | 0 | 0 |
-| **TOTAL** | **58** | **58** | **0** | **0** |
+| **TOTAL** | **59** | **59** | **0** | **0** |
 
 ### All Exports Covered ✅
 

@@ -72,6 +72,7 @@ export class Workspace {
     snapThreshold;
     minResizeSize;
     enableSnapGuides;
+    viewportConfig;
     // ── Workspace State ─────────────────────────────
     viewport;
     tree = new NodeTree();
@@ -164,6 +165,12 @@ export class Workspace {
         this.minResizeSize = config.minResizeSize ?? 40;
         this.enableSnapGuides = config.enableSnapGuides ?? true;
         this.viewport = createDefaultViewport();
+        if (config.viewport) {
+            this.viewportConfig = {
+                ...config.viewport,
+                scaleViewportUnits: config.viewport.scaleViewportUnits ?? true,
+            };
+        }
         // ── Ensure container is positioned ────────────
         const pos = getComputedStyle(container).position;
         if (pos === "static") {
@@ -182,10 +189,26 @@ export class Workspace {
             const node = this.tree.get(id);
             if (node) {
                 node.currentRect = rect;
+                // Dynamically update viewport variables if a root frame node is resized.
+                if (node.parentId === null &&
+                    this.viewportConfig &&
+                    this.viewportConfig.scaleViewportUnits !== false) {
+                    // Safety check: prevent feedback loop if the root node itself uses viewport units.
+                    const usesViewportUnits = /v(h|w)\b/i.test(node.rawMarkup);
+                    if (!usesViewportUnits) {
+                        this.viewportConfig.width = rect.width;
+                        this.viewportConfig.height = rect.height;
+                        this.mount.updateViewportSize(rect.width, rect.height);
+                    }
+                }
                 this.callbacks.onNodeRectChange?.(id, rect);
                 this.render();
             }
-        });
+        }, this.viewportConfig?.scaleViewportUnits ?? false);
+        // Set initial size of the viewport variables in the mount if scaleViewportUnits is enabled.
+        if (this.viewportConfig && this.viewportConfig.scaleViewportUnits !== false) {
+            this.mount.updateViewportSize(this.viewportConfig.width, this.viewportConfig.height);
+        }
         this.mount.applyViewportTransform(this.viewport);
         // Intercept and prevent click and submit events inside Shadow DOM when in Edit Mode
         const shadowRoot = this.mount.getShadowRoot();
@@ -492,6 +515,39 @@ export class Workspace {
     /** Resets viewport to 1:1 scale, zero offset. */
     resetViewport() {
         this.setViewport(createDefaultViewport());
+    }
+    /** Updates the viewport dimensions and re-evaluates viewport units. */
+    updateViewportSize(width, height) {
+        if (this.viewportConfig) {
+            this.viewportConfig.width = width;
+            this.viewportConfig.height = height;
+            if (this.viewportConfig.scaleViewportUnits !== false) {
+                this.mount.updateViewportSize(width, height);
+            }
+        }
+    }
+    /** Updates the viewport configuration and re-evaluates viewport units. */
+    updateViewportConfig(config) {
+        if (!this.viewportConfig) {
+            this.viewportConfig = {
+                width: config.width ?? 0,
+                height: config.height ?? 0,
+                scaleViewportUnits: config.scaleViewportUnits ?? true,
+            };
+        }
+        else {
+            if (config.width !== undefined)
+                this.viewportConfig.width = config.width;
+            if (config.height !== undefined)
+                this.viewportConfig.height = config.height;
+            if (config.scaleViewportUnits !== undefined) {
+                this.viewportConfig.scaleViewportUnits = config.scaleViewportUnits;
+            }
+        }
+        this.mount.scaleViewportUnits = this.viewportConfig.scaleViewportUnits ?? false;
+        if (this.viewportConfig.scaleViewportUnits) {
+            this.mount.updateViewportSize(this.viewportConfig.width, this.viewportConfig.height);
+        }
     }
     // ── Public API: Preview Mode ────────────────────
     /** Sets whether the workspace is in Preview Mode (disables editing overlays and events). */
