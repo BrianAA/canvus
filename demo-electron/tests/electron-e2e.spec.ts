@@ -5,18 +5,25 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+async function launchApp() {
+  const appPath = path.resolve(__dirname, '../main.cjs');
+  const electronApp = await electron.launch({
+    args: [appPath]
+  });
+  const window = await electronApp.firstWindow();
+  await window.waitForLoadState('domcontentloaded');
+  window.on('console', msg => console.log('PAGE LOG:', msg.text()));
+  window.on('pageerror', err => console.error('PAGE ERROR:', err));
+  return { electronApp, window };
+}
+
+
+
 test.describe('Electron E2E Integration Suite', () => {
   test('launches electron, mounts shadow DOM workspace, and renders initial card', async () => {
     // Launch Electron application
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      // Retrieve the first BrowserWindow instance
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Verify the window title matches
       expect(await window.title()).toBe('Canvus — Electron Demo');
@@ -34,7 +41,7 @@ test.describe('Electron E2E Integration Suite', () => {
       await expect(welcomeCard).toBeVisible({ timeout: 5000 });
 
       // Click on the welcome card card in the node list to select it
-      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
@@ -95,14 +102,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('loads Standard Test Page template, verifies native CSS forced states via CDP, and guest script execution', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Locate template select dropdown
       const templateSelect = window.locator('#sel-template');
@@ -178,16 +179,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('loads CSS Layer Pressure Test, selects a card, and performs drag-and-drop grid repositioning', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
-      window.on('pageerror', err => console.error('PAGE ERROR:', err));
-      await window.waitForLoadState('domcontentloaded');
 
       // Select 'CSS Layer Pressure Test'
       const templateSelect = window.locator('#sel-template');
@@ -238,14 +231,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('loads CSS Layer Pressure Test, selects a zoomed card, and verifies scaled spacing adjusters', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Select 'CSS Layer Pressure Test'
       const templateSelect = window.locator('#sel-template');
@@ -301,16 +288,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('keyboard interaction nudges absolute nodes and reorders flow children', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
-      window.on('pageerror', err => console.error('PAGE ERROR:', err));
-      await window.waitForLoadState('domcontentloaded');
 
       // Select 'Standard Test Page'
       const templateSelect = window.locator('#sel-template');
@@ -361,16 +340,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('floating toolbar can switch tools, select drawing tag, and draw a box', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
-      window.on('pageerror', err => console.error('PAGE ERROR:', err));
-      await window.waitForLoadState('domcontentloaded');
 
       // Verify that floating toolbar exists
       const toolbar = window.locator('.figma-toolbar');
@@ -436,17 +407,11 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('Alt-drag duplication clones the selected node immediately on drag start', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Click on the welcome card card in the node list to select it
-      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
@@ -470,11 +435,11 @@ test.describe('Electron E2E Integration Suite', () => {
       await window.keyboard.up('Alt');
 
       // Verify that a clone is created
-      const clonedCard = window.locator('#node-list .node-card', { hasText: 'cloned-' });
+      const clonedCard = window.locator('#node-list .node-card', { hasText: 'cloned-' }).first();
       await expect(clonedCard).toBeVisible({ timeout: 5000 });
 
       // Verify that the original welcome-card is still present in its original position (e.g. still exists in node list)
-      const originalCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
+      const originalCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first().first();
       await expect(originalCard).toBeVisible();
 
       // Retrieve the clone ID
@@ -512,16 +477,22 @@ test.describe('Electron E2E Integration Suite', () => {
       expect(selectionCountAfterClick).toBe(1);
       expect(selectedIdAfterClick).toBe(clonedId);
 
+      // Programmatically select the child heading node to allow editing
+      await window.evaluate((pid) => {
+        const ws = (window as any).ws;
+        const node = ws.getNodes().find((n: any) => n.parentId === pid);
+        if (node) ws.selectNode(node.id);
+      }, clonedId);
+
       // Double-click it to verify inline text editing triggers correctly on the clone
       await clonedH2.dblclick();
       await expect(clonedH2).toHaveAttribute('contenteditable', 'plaintext-only');
-      const clonedWrapper = window.locator(`div[data-canvus-id="${clonedId}"]`);
-      await expect(clonedWrapper).toHaveClass(/canvus-editing/);
+      await expect(clonedH2).toHaveClass(/canvus-editing/);
 
       // Press Escape to cancel editing
       await window.keyboard.press('Escape');
       await expect(clonedH2).not.toHaveAttribute('contenteditable', 'plaintext-only');
-      await expect(clonedWrapper).not.toHaveClass(/canvus-editing/);
+      await expect(clonedH2).not.toHaveClass(/canvus-editing/);
 
     } finally {
       await electronApp.close();
@@ -529,14 +500,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('nested drawing allows drawing a box inside a newly drawn empty structural container', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Select Box Tool from toolbar
       const btnBox = window.locator('#btn-tool-box');
@@ -605,17 +570,11 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('Cmd+D duplicates the selected node immediately as a sibling', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Click on the welcome card card in the node list to select it
-      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
@@ -632,7 +591,7 @@ test.describe('Electron E2E Integration Suite', () => {
       });
 
       // Verify that a cloned card is created and visible in the node tree
-      const clonedCard = window.locator('#node-list .node-card', { hasText: 'cloned-' });
+      const clonedCard = window.locator('#node-list .node-card', { hasText: 'cloned-' }).first();
       await expect(clonedCard).toBeVisible({ timeout: 5000 });
 
       // Verify the new node is selected
@@ -648,17 +607,11 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('Alt-key symmetrical resizing keeps center fixed and expands bounds symmetrically', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Click welcome-card
-      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
@@ -698,19 +651,11 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('Figma-style corner radius drag handles allow dragging to adjust border-radius', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
-      window.on('pageerror', err => console.error('PAGE ERROR:', err));
-      await window.waitForLoadState('domcontentloaded');
 
       // Click welcome-card
-      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
@@ -744,16 +689,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('loads CSS Layer Pressure Test, selects the card button wrapper and resizes it without jumping to the top', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
-      window.on('pageerror', err => console.error('PAGE ERROR:', err));
-      await window.waitForLoadState('domcontentloaded');
 
       // Select 'CSS Layer Pressure Test'
       const templateSelect = window.locator('#sel-template');
@@ -851,14 +788,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('Cmd+Delete ungroups the parent container of the selected node without breaking the canvas root wrapper', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Select 'Standard Test Page'
       const templateSelect = window.locator('#sel-template');
@@ -958,14 +889,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('Shift+A on single node transforms it into a flex container in-place', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Select 'Standard Test Page'
       const templateSelect = window.locator('#sel-template');
@@ -1042,17 +967,11 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('keyboard shortcuts Cmd+Z (Undo) and Cmd+Shift+Z (Redo) propagate correctly and revert/reapply actions', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Click on the welcome card card in the node list to select it
-      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
@@ -1069,7 +988,7 @@ test.describe('Electron E2E Integration Suite', () => {
       });
 
       // Verify that a cloned card exists
-      const clonedCard = window.locator('#node-list .node-card', { hasText: 'cloned-' });
+      const clonedCard = window.locator('#node-list .node-card', { hasText: 'cloned-' }).first();
       await expect(clonedCard).toBeVisible({ timeout: 5000 });
 
       // Hit Cmd+Z to Undo the duplication
@@ -1109,16 +1028,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('multi-select dragging/moving and Shift+A wrapping works', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      window.on('console', msg => console.log('PAGE LOG Test 16:', msg.text()));
-      window.on('pageerror', err => console.error('PAGE ERROR Test 16:', err));
-      await window.waitForLoadState('domcontentloaded');
 
       // Select 'Blank Workspace'
       const templateSelect = window.locator('#sel-template');
@@ -1244,14 +1155,8 @@ test.describe('Electron E2E Integration Suite', () => {
   });
 
   test('multi-select keyboard shortcuts copy, paste, duplicate, delete work', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({
-      args: [appPath]
-    });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Select 'Standard Test Page'
       const templateSelect = window.locator('#sel-template');
@@ -1291,7 +1196,7 @@ test.describe('Electron E2E Integration Suite', () => {
       // Verify that two cloned cards are created (cloned-card-1 and cloned-card-2)
       const clonedNodesCount = await window.evaluate(() => {
         const ws = (window as any).ws;
-        return ws.getNodes().filter((n: any) => n.id.includes('cloned-')).length;
+        return ws.getNodes().filter((n: any) => n.id.includes('cloned-') && !n.id.includes('__child-')).length;
       });
       expect(clonedNodesCount).toBe(2);
 
@@ -1316,7 +1221,7 @@ test.describe('Electron E2E Integration Suite', () => {
       // Verify clones are gone
       const clonedNodesCountAfterDelete = await window.evaluate(() => {
         const ws = (window as any).ws;
-        return ws.getNodes().filter((n: any) => n.id.includes('cloned-')).length;
+        return ws.getNodes().filter((n: any) => n.id.includes('cloned-') && !n.id.includes('__child-')).length;
       });
       expect(clonedNodesCountAfterDelete).toBe(0);
 
@@ -1363,7 +1268,7 @@ test.describe('Electron E2E Integration Suite', () => {
       // Verify copies are pasted as children of main-container
       const pastedChildren = await window.evaluate(() => {
         const ws = (window as any).ws;
-        const pastedNodes = ws.getNodes().filter((n: any) => n.id.includes('pasted-'));
+        const pastedNodes = ws.getNodes().filter((n: any) => n.id.includes('pasted-') && !n.id.includes('__child-'));
         return pastedNodes.map((n: any) => ({
           id: n.id,
           parentId: n.parentId
@@ -1387,12 +1292,8 @@ test.describe('Electron E2E Integration Suite', () => {
 test.describe('Property Lock System', () => {
 
   test('locked padding blocks spacing adjuster drag and fires lock interaction callback', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({ args: [appPath] });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Register mock lock callbacks
       await window.evaluate(() => {
@@ -1408,7 +1309,7 @@ test.describe('Property Lock System', () => {
       });
 
       // Select the welcome-card
-      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
@@ -1423,8 +1324,8 @@ test.describe('Property Lock System', () => {
 
       // Attempt to click inside the padding area (top padding region)
       // The spacing adjuster for padding-top is near the top edge of the element
-      const padTopY = box!.y + 5; // Inside the top padding
-      const padTopX = box!.x + box!.width / 2;
+      const padTopY = box!.y + 12; // Inside the top padding
+      const padTopX = box!.x + 120; // Shifted horizontally to avoid North resize anchor
 
       await window.mouse.move(padTopX, padTopY);
       await window.mouse.down();
@@ -1446,12 +1347,8 @@ test.describe('Property Lock System', () => {
   });
 
   test('locked width blocks resize handle and fires lock interaction callback', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({ args: [appPath] });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Register mock lock callbacks
       await window.evaluate(() => {
@@ -1466,7 +1363,7 @@ test.describe('Property Lock System', () => {
       });
 
       // Select the welcome-card
-      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
@@ -1506,13 +1403,8 @@ test.describe('Property Lock System', () => {
   });
 
   test('locked border-radius blocks corner-radius drag and fires lock interaction callback', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({ args: [appPath] });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
-      await window.waitForLoadState('domcontentloaded');
 
       // Register mock lock callbacks
       await window.evaluate(() => {
@@ -1527,7 +1419,7 @@ test.describe('Property Lock System', () => {
       });
 
       // Select the welcome-card
-      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
@@ -1574,12 +1466,8 @@ test.describe('Property Lock System', () => {
   });
 
   test('unlocking a previously locked property re-enables interaction', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({ args: [appPath] });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      await window.waitForLoadState('domcontentloaded');
 
       // Register mock lock callbacks — width starts LOCKED
       await window.evaluate(() => {
@@ -1587,7 +1475,9 @@ test.describe('Property Lock System', () => {
         (window as any).__widthLocked = true;
         (window as any).__lockLog = [];
         (ws as any).callbacks.isPropertyLocked = (nodeId: string, property: string) => {
-          return nodeId === 'welcome-card' && property === 'width' && (window as any).__widthLocked;
+          const locked = nodeId === 'welcome-card' && property === 'width' && (window as any).__widthLocked;
+          console.log(`[DEBUG_LOCK] isPropertyLocked nodeId=${nodeId} property=${property} locked=${locked}`);
+          return locked;
         };
         (ws as any).callbacks.onPropertyLockInteraction = (nodeId: string, property: string, currentValue: string) => {
           (window as any).__lockLog.push({ nodeId, property, currentValue });
@@ -1595,7 +1485,7 @@ test.describe('Property Lock System', () => {
       });
 
       // Select the welcome-card
-      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' });
+      const welcomeNodeCard = window.locator('#node-list .node-card', { hasText: 'welcome-card' }).first();
       await expect(welcomeNodeCard).toBeVisible();
       await welcomeNodeCard.click();
 
@@ -1627,8 +1517,7 @@ test.describe('Property Lock System', () => {
         (window as any).__widthLocked = false;
       });
 
-      // Re-select to ensure fresh state
-      await welcomeNodeCard.click();
+      await window.waitForTimeout(400);
 
       const box2 = await welcomeCard.boundingBox();
       expect(box2).not.toBeNull();
@@ -1654,13 +1543,8 @@ test.describe('Property Lock System', () => {
   });
 
   test('multi-node drag is blocked when any selected node has a locked position property', async () => {
-    const appPath = path.resolve(__dirname, '../main.cjs');
-    const electronApp = await electron.launch({ args: [appPath] });
-
+    const { electronApp, window } = await launchApp();
     try {
-      const window = await electronApp.firstWindow();
-      window.on('console', msg => console.log('PAGE LOG:', msg.text()));
-      await window.waitForLoadState('domcontentloaded');
 
       // Load test page template
       const templateSelect = window.locator('#sel-template');

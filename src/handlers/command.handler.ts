@@ -111,66 +111,50 @@ export class CommandHandler implements KeyboardHandler {
 
   // ── Command Implementations ─────────────────────────
 
-  private nudgeOrReorderSelected(key: string, shiftKey: boolean): void {
-    const topLevelIds = this.ctx.getTopLevelSelectedIds();
-    if (topLevelIds.length === 0) return;
+  private nudgeRootNodes(
+    rootNodes: ResolvedNode[],
+    key: string,
+    shiftKey: boolean,
+    ops: any[],
+  ): void {
+    const nudgeAmount = shiftKey ? 10 : 1;
+    for (const node of rootNodes) {
+      const currentX = node.currentRect ? node.currentRect.x : 0;
+      const currentY = node.currentRect ? node.currentRect.y : 0;
 
-    const rootNodes: ResolvedNode[] = [];
-    const groupedByParent = new Map<string, ResolvedNode[]>();
+      let newX = currentX;
+      let newY = currentY;
 
-    for (const id of topLevelIds) {
-      const node = this.ctx.tree.get(id);
-      if (!node) continue;
-      if (node.parentId === null) {
-        rootNodes.push(node);
-      } else {
-        if (!groupedByParent.has(node.parentId)) {
-          groupedByParent.set(node.parentId, []);
-        }
-        groupedByParent.get(node.parentId)!.push(node);
-      }
-    }
+      if (key === "ArrowLeft") newX -= nudgeAmount;
+      if (key === "ArrowRight") newX += nudgeAmount;
+      if (key === "ArrowUp") newY -= nudgeAmount;
+      if (key === "ArrowDown") newY += nudgeAmount;
 
-    this.ctx.mount.setTransitionsEnabled(false);
+      if (newX !== currentX || newY !== currentY) {
+        const payload = { left: `${newX}px`, top: `${newY}px` };
+        const undoPayload = { left: `${currentX}px`, top: `${currentY}px` };
 
-    const ops: any[] = [];
+        this.ctx.setNodeStyles(node.id, payload);
 
-    // ── Absolute Nudging (Root Nodes) ─────────────
-    if (rootNodes.length > 0) {
-      const nudgeAmount = shiftKey ? 10 : 1;
-      for (const node of rootNodes) {
-        const currentX = node.currentRect ? node.currentRect.x : 0;
-        const currentY = node.currentRect ? node.currentRect.y : 0;
+        ops.push({
+          type: "update-style",
+          nodeId: node.id,
+          payload,
+          undoPayload
+        });
 
-        let newX = currentX;
-        let newY = currentY;
-
-        if (key === "ArrowLeft") newX -= nudgeAmount;
-        if (key === "ArrowRight") newX += nudgeAmount;
-        if (key === "ArrowUp") newY -= nudgeAmount;
-        if (key === "ArrowDown") newY += nudgeAmount;
-
-        if (newX !== currentX || newY !== currentY) {
-          const payload = { left: `${newX}px`, top: `${newY}px` };
-          const undoPayload = { left: `${currentX}px`, top: `${currentY}px` };
-
-          this.ctx.setNodeStyles(node.id, payload);
-
-          ops.push({
-            type: "update-style",
-            nodeId: node.id,
-            payload,
-            undoPayload
-          });
-
-          if (node.currentRect) {
-            this.ctx.callbacks.onNodeRectChange?.(node.id, node.currentRect);
-          }
+        if (node.currentRect) {
+          this.ctx.callbacks.onNodeRectChange?.(node.id, node.currentRect);
         }
       }
     }
+  }
 
-    // ── Flow Child Reordering (Grouped by Parent) ──
+  private reorderFlowChildren(
+    groupedByParent: Map<string, ResolvedNode[]>,
+    key: string,
+    ops: any[],
+  ): void {
     for (const [parentId, nodes] of groupedByParent.entries()) {
       const parentContent = this.ctx.mount.getContentRoot(parentId);
       if (!parentContent) continue;
@@ -235,6 +219,41 @@ export class CommandHandler implements KeyboardHandler {
           this.ctx.callbacks.onHTMLCommit?.(parentId, html);
         }
       }
+    }
+  }
+
+  private nudgeOrReorderSelected(key: string, shiftKey: boolean): void {
+    const topLevelIds = this.ctx.getTopLevelSelectedIds();
+    if (topLevelIds.length === 0) return;
+
+    const rootNodes: ResolvedNode[] = [];
+    const groupedByParent = new Map<string, ResolvedNode[]>();
+
+    for (const id of topLevelIds) {
+      const node = this.ctx.tree.get(id);
+      if (!node) continue;
+      if (node.parentId === null) {
+        rootNodes.push(node);
+      } else {
+        if (!groupedByParent.has(node.parentId)) {
+          groupedByParent.set(node.parentId, []);
+        }
+        groupedByParent.get(node.parentId)!.push(node);
+      }
+    }
+
+    this.ctx.mount.setTransitionsEnabled(false);
+
+    const ops: any[] = [];
+
+    // ── Absolute Nudging (Root Nodes) ─────────────
+    if (rootNodes.length > 0) {
+      this.nudgeRootNodes(rootNodes, key, shiftKey, ops);
+    }
+
+    // ── Flow Child Reordering (Grouped by Parent) ──
+    if (groupedByParent.size > 0) {
+      this.reorderFlowChildren(groupedByParent, key, ops);
     }
 
     if (ops.length > 0) {

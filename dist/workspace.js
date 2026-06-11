@@ -703,6 +703,77 @@ export class Workspace {
     extractHTML(id) {
         return this.mount.extractHTML(id);
     }
+    handleUpdateStyleOp(nodeId, styles, node) {
+        const contentRoot = this.mount.getContentRoot(nodeId);
+        if (!contentRoot)
+            return;
+        const stylesToApply = {};
+        for (const [prop, val] of Object.entries(styles)) {
+            const value = val;
+            // Check if it's wrapper geometric positioning styles for root elements
+            if (node.parentId === null && (prop === "left" || prop === "top" || prop === "width" || prop === "height")) {
+                if (prop === "left" || prop === "top") {
+                    const currentX = node.currentRect ? node.currentRect.x : 0;
+                    const currentY = node.currentRect ? node.currentRect.y : 0;
+                    const parsedVal = value ? parseFloat(value) : 0;
+                    const newX = prop === "left" ? parsedVal : currentX;
+                    const newY = prop === "top" ? parsedVal : currentY;
+                    this.mount.setNodePosition(nodeId, newX, newY);
+                }
+                else {
+                    const parsedVal = value ? (value === "auto" ? "auto" : parseFloat(value)) : "auto";
+                    const newW = prop === "width" ? parsedVal : null;
+                    const newH = prop === "height" ? parsedVal : null;
+                    this.mount.setNodeSize(nodeId, newW, newH);
+                }
+            }
+            else {
+                // Apply property directly to content root stylesheet
+                stylesToApply[prop] = value;
+            }
+        }
+        if (Object.keys(stylesToApply).length > 0) {
+            this.mount.setNodeStyles(nodeId, stylesToApply);
+        }
+        this.remeasureSubtree(nodeId);
+        if (node.parentId) {
+            this.remeasureSubtree(node.parentId);
+        }
+    }
+    handleUpdateClassesOp(nodeId, payload, node) {
+        const contentRoot = this.mount.getContentRoot(nodeId);
+        if (!contentRoot)
+            return;
+        const { add, remove } = payload;
+        if (Array.isArray(remove)) {
+            for (const cls of remove) {
+                contentRoot.classList.remove(cls);
+            }
+        }
+        if (Array.isArray(add)) {
+            for (const cls of add) {
+                contentRoot.classList.add(cls);
+            }
+        }
+        this.remeasureSubtree(nodeId);
+        if (node.parentId) {
+            this.remeasureSubtree(node.parentId);
+        }
+    }
+    handleUpdateTextOp(nodeId, payload, node) {
+        const contentRoot = this.mount.getContentRoot(nodeId);
+        if (!contentRoot)
+            return;
+        const { path, html } = payload;
+        const targetEl = getDOMElementByPath(contentRoot, path);
+        if (targetEl) {
+            targetEl.innerHTML = html;
+        }
+        this.remeasureSubtree(nodeId);
+        if (node.parentId) {
+            this.remeasureSubtree(node.parentId);
+        }
+    }
     /**
      * Programmatically replays an Operation (mutation payload) onto the workspace.
      * This is the core API used for Undo/Redo replay and collaboration sync.
@@ -726,95 +797,23 @@ export class Workspace {
         if (!node)
             return;
         switch (op.type) {
-            case "reparent": {
-                const { newParentId, index } = op.payload;
-                this.reparentNode(op.nodeId, newParentId, index);
+            case "reparent":
+                this.reparentNode(op.nodeId, op.payload.newParentId, op.payload.index);
                 break;
-            }
-            case "reorder": {
-                const { index } = op.payload;
-                this.reorderChild(op.nodeId, index);
+            case "reorder":
+                this.reorderChild(op.nodeId, op.payload.index);
                 break;
-            }
-            case "update-style": {
-                const styles = op.payload;
-                const contentRoot = this.mount.getContentRoot(op.nodeId);
-                if (!contentRoot)
-                    break;
-                const stylesToApply = {};
-                for (const [prop, val] of Object.entries(styles)) {
-                    const value = val;
-                    // Check if it's wrapper geometric positioning styles for root elements
-                    if (node.parentId === null && (prop === "left" || prop === "top" || prop === "width" || prop === "height")) {
-                        if (prop === "left" || prop === "top") {
-                            const currentX = node.currentRect ? node.currentRect.x : 0;
-                            const currentY = node.currentRect ? node.currentRect.y : 0;
-                            const parsedVal = value ? parseFloat(value) : 0;
-                            const newX = prop === "left" ? parsedVal : currentX;
-                            const newY = prop === "top" ? parsedVal : currentY;
-                            this.mount.setNodePosition(op.nodeId, newX, newY);
-                        }
-                        else {
-                            const parsedVal = value ? (value === "auto" ? "auto" : parseFloat(value)) : "auto";
-                            const newW = prop === "width" ? parsedVal : null;
-                            const newH = prop === "height" ? parsedVal : null;
-                            this.mount.setNodeSize(op.nodeId, newW, newH);
-                        }
-                    }
-                    else {
-                        // Apply property directly to content root stylesheet
-                        stylesToApply[prop] = value;
-                    }
-                }
-                if (Object.keys(stylesToApply).length > 0) {
-                    this.mount.setNodeStyles(op.nodeId, stylesToApply);
-                }
-                this.remeasureSubtree(op.nodeId);
-                if (node.parentId) {
-                    this.remeasureSubtree(node.parentId);
-                }
-                this.render();
+            case "update-style":
+                this.handleUpdateStyleOp(op.nodeId, op.payload, node);
                 break;
-            }
-            case "update-classes": {
-                const { add, remove } = op.payload;
-                const contentRoot = this.mount.getContentRoot(op.nodeId);
-                if (!contentRoot)
-                    break;
-                if (Array.isArray(remove)) {
-                    for (const cls of remove) {
-                        contentRoot.classList.remove(cls);
-                    }
-                }
-                if (Array.isArray(add)) {
-                    for (const cls of add) {
-                        contentRoot.classList.add(cls);
-                    }
-                }
-                this.remeasureSubtree(op.nodeId);
-                if (node.parentId) {
-                    this.remeasureSubtree(node.parentId);
-                }
-                this.render();
+            case "update-classes":
+                this.handleUpdateClassesOp(op.nodeId, op.payload, node);
                 break;
-            }
-            case "update-text": {
-                const { path, html } = op.payload;
-                const contentRoot = this.mount.getContentRoot(op.nodeId);
-                if (!contentRoot)
-                    break;
-                const targetEl = getDOMElementByPath(contentRoot, path);
-                if (targetEl) {
-                    targetEl.innerHTML = html;
-                }
-                this.remeasureSubtree(op.nodeId);
-                if (node.parentId) {
-                    this.remeasureSubtree(node.parentId);
-                }
-                this.render();
+            case "update-text":
+                this.handleUpdateTextOp(op.nodeId, op.payload, node);
                 break;
-            }
         }
+        this.render();
     }
     /** Adds a CSS class name directly to the content root of a node. */
     addClass(id, className) {

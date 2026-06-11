@@ -314,6 +314,9 @@ export declare class Workspace {
      * to read the current semantic HTML string.
      */
     extractHTML(id: string): string | null;
+    private handleUpdateStyleOp;
+    private handleUpdateClassesOp;
+    private handleUpdateTextOp;
     /**
      * Programmatically replays an Operation (mutation payload) onto the workspace.
      * This is the core API used for Undo/Redo replay and collaboration sync.
